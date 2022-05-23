@@ -90,14 +90,20 @@ function _createTestVariants<TArgs extends object>(
     function onError(err) {
       console.error(JSON.stringify(variantArgs, null, 2))
       console.error(err)
-      // again for debug
-      try {
-        // eslint-disable-next-line no-debugger
-        debugger
-        test(variantArgs)
-      } catch {
-        // eslint-disable-next-line no-debugger
-        debugger
+
+      // rerun failed variant 5 times for debug
+      const time0 = Date.now()
+      // eslint-disable-next-line no-debugger
+      debugger
+      if (Date.now() - time0 > 5) {
+        for (let i = 0; i < 5; i++) {
+          try {
+            test(variantArgs)
+          } catch {
+            // eslint-disable-next-line no-debugger
+            debugger
+          }
+        }
       }
       throw err
     }
