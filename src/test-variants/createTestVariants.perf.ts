@@ -4,7 +4,7 @@ import {createTestVariants, createTestVariantsSync} from './createTestVariants'
 describe('test > testVariants perf', function () {
 	this.timeout(300000)
 
-	it('sync/async', async function () {
+	it('sync/async', function () {
 		let value = 0
 		const testVariantsAsync = createTestVariants(({a, b, c}: {a: number, b: string, c: boolean}) => {
 			if (a === 1 && b === '4' && c === false) {

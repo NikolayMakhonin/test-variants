@@ -6,7 +6,7 @@ describe('test > testVariants', function () {
 	describe('sync', function () {
 		it('base', function () {
 			const result = []
-			createTestVariantsSync(({a, b, c}: { a: number, b: string, c: boolean }) => {
+			const count = createTestVariantsSync(({a, b, c}: { a: number, b: string, c: boolean }) => {
 				result.push([a, b, c])
 			})({
 				a: [1, 2],
@@ -24,11 +24,12 @@ describe('test > testVariants', function () {
 				[2, '4', true],
 				[2, '4', false],
 			])
+			assert.strictEqual(count, result.length)
 		})
 
 		it('empty end', function () {
 			const result = []
-			createTestVariantsSync(({a, b, c}: { a: number, b: string, c: boolean }) => {
+			const count = createTestVariantsSync(({a, b, c}: { a: number, b: string, c: boolean }) => {
 				result.push([a, b, c])
 			})({
 				a: [1, 2],
@@ -37,6 +38,7 @@ describe('test > testVariants', function () {
 			})
 
 			assert.deepStrictEqual(result, [])
+			assert.strictEqual(count, result.length)
 		})
 
 		it('empty middle', function () {
@@ -44,7 +46,7 @@ describe('test > testVariants', function () {
 			const test = createTestVariantsSync(({a, b, c}: { a: number, b: string, c: boolean }) => {
 				result.push([a, b, c])
 			})
-			test({
+			const count = test({
 				a: [1, 2],
 				b: [],
 				d: [2, 3],
@@ -52,11 +54,12 @@ describe('test > testVariants', function () {
 			})
 
 			assert.deepStrictEqual(result, [])
+			assert.strictEqual(count, result.length)
 		})
 
 		it('empty start', function () {
 			const result = []
-			createTestVariantsSync(({a, b, c}: { a: number, b: string, c: boolean }) => {
+			const count = createTestVariantsSync(({a, b, c}: { a: number, b: string, c: boolean }) => {
 				result.push([a, b, c])
 			})({
 				a: [],
@@ -65,11 +68,12 @@ describe('test > testVariants', function () {
 			})
 
 			assert.deepStrictEqual(result, [])
+			assert.strictEqual(count, result.length)
 		})
 
 		it('calculated', function () {
 			const result = []
-			createTestVariantsSync(({a, b, c}: { a: number, b: string, c: boolean }) => {
+			const count = createTestVariantsSync(({a, b, c}: { a: number, b: string, c: boolean }) => {
 				result.push([a, b, c])
 			})({
 				a: () => [1, 2],
@@ -86,13 +90,14 @@ describe('test > testVariants', function () {
 				[2, '2', false],
 				[2, '2', true],
 			])
+			assert.strictEqual(count, result.length)
 		})
 	})
 
 	describe('async as sync', function () {
 		it('base', function () {
 			const result = []
-			createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
+			const count = createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
 				result.push([a, b, c])
 			})({
 				a: [1, 2],
@@ -110,11 +115,12 @@ describe('test > testVariants', function () {
 				[2, '4', true],
 				[2, '4', false],
 			])
+			assert.strictEqual(count, result.length)
 		})
 
 		it('empty end', function () {
 			const result = []
-			createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
+			const count = createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
 				result.push([a, b, c])
 			})({
 				a: [1, 2],
@@ -123,6 +129,7 @@ describe('test > testVariants', function () {
 			})
 
 			assert.deepStrictEqual(result, [])
+			assert.strictEqual(count, result.length)
 		})
 
 		it('empty middle', function () {
@@ -130,7 +137,7 @@ describe('test > testVariants', function () {
 			const test = createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
 				result.push([a, b, c])
 			})
-			test({
+			const count = test({
 				a: [1, 2],
 				b: [],
 				d: [2, 3],
@@ -138,11 +145,12 @@ describe('test > testVariants', function () {
 			})
 
 			assert.deepStrictEqual(result, [])
+			assert.strictEqual(count, result.length)
 		})
 
 		it('empty start', function () {
 			const result = []
-			createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
+			const count = createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
 				result.push([a, b, c])
 			})({
 				a: [],
@@ -151,11 +159,12 @@ describe('test > testVariants', function () {
 			})
 
 			assert.deepStrictEqual(result, [])
+			assert.strictEqual(count, result.length)
 		})
 
 		it('calculated', function () {
 			const result = []
-			createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
+			const count = createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
 				result.push([a, b, c])
 			})({
 				a: () => [1, 2],
@@ -172,13 +181,14 @@ describe('test > testVariants', function () {
 				[2, '2', false],
 				[2, '2', true],
 			])
+			assert.strictEqual(count, result.length)
 		})
 	})
 
 	describe('async', function () {
 		it('base', async function () {
 			const result = []
-			await createTestVariants(async ({a, b, c}: { a: number, b: string, c: boolean }) => {
+			const count = await createTestVariants(async ({a, b, c}: { a: number, b: string, c: boolean }) => {
 				await delay(100)
 				result.push([a, b, c])
 			})({
@@ -197,11 +207,12 @@ describe('test > testVariants', function () {
 				[2, '4', true],
 				[2, '4', false],
 			])
+			assert.strictEqual(count, result.length)
 		})
 
 		it('empty end', async function () {
 			const result = []
-			await createTestVariants(async ({a, b, c}: { a: number, b: string, c: boolean }) => {
+			const count = await createTestVariants(async ({a, b, c}: { a: number, b: string, c: boolean }) => {
 				await delay(100)
 				result.push([a, b, c])
 			})({
@@ -211,6 +222,7 @@ describe('test > testVariants', function () {
 			})
 
 			assert.deepStrictEqual(result, [])
+			assert.strictEqual(count, result.length)
 		})
 
 		it('empty middle', async function () {
@@ -219,7 +231,7 @@ describe('test > testVariants', function () {
 				await delay(100)
 				result.push([a, b, c])
 			})
-			await test({
+			const count = await test({
 				a: [1, 2],
 				b: [],
 				d: [2, 3],
@@ -227,11 +239,12 @@ describe('test > testVariants', function () {
 			})
 
 			assert.deepStrictEqual(result, [])
+			assert.strictEqual(count, result.length)
 		})
 
 		it('empty start', async function () {
 			const result = []
-			await createTestVariants(async ({a, b, c}: { a: number, b: string, c: boolean }) => {
+			const count = await createTestVariants(async ({a, b, c}: { a: number, b: string, c: boolean }) => {
 				await delay(100)
 				result.push([a, b, c])
 			})({
@@ -241,11 +254,12 @@ describe('test > testVariants', function () {
 			})
 
 			assert.deepStrictEqual(result, [])
+			assert.strictEqual(count, result.length)
 		})
 
 		it('calculated', async function () {
 			const result = []
-			await createTestVariants(async ({a, b, c}: { a: number, b: string, c: boolean }) => {
+			const count = await createTestVariants(async ({a, b, c}: { a: number, b: string, c: boolean }) => {
 				await delay(100)
 				result.push([a, b, c])
 			})({
@@ -263,6 +277,7 @@ describe('test > testVariants', function () {
 				[2, '2', false],
 				[2, '2', true],
 			])
+			assert.strictEqual(count, result.length)
 		})
 	})
 })
