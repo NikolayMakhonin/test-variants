@@ -1,0 +1,26 @@
+{
+  "name": "test-variants",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NikolayMakhonin/test-variants.git"
+  },
+  "keywords": [
+    "test",
+    "variants",
+    "combinations",
+    "enumeration",
+    "helper"
+  ],
+  "author": "Nikolay Makhonin",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/NikolayMakhonin/test-variants/issues"
+  },
+  "homepage": "https://github.com/NikolayMakhonin/test-variants#readme"
+}
