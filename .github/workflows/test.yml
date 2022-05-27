@@ -45,7 +45,6 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pnpm i npx -g
           pnpm install --frozen-lockfile
           pnpm rebuild
 

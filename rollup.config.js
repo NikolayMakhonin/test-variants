@@ -194,7 +194,10 @@ const browserTestsConfig = {
       extensions  : ['.ts', '.js', '.cjs', '.mjs'],
       babelHelpers: 'runtime',
       exclude     : [
-        'node_modules/{.pnpm/,/}{rollup*,tslib,@babel,core-js*}/**',
+        '**/node_modules/rollup*/**',
+        '**/node_modules/tslib/**',
+        '**/node_modules/@babel/**',
+        '**/node_modules/core-js*/**',
       ],
     }),
   ],
