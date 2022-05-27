@@ -40,7 +40,7 @@ function _createTestVariants<TArgs extends object>(
 ): TestVariantsFuncAsync<TArgs> {
   return function _testVariants(args) {
     const argsKeys = Object.keys(args)
-    const argsValues = Object.values(args)
+    const argsValues: any[] = Object.values(args)
     const argsLength = argsKeys.length
 
     const variantArgs: TArgs = {} as any
@@ -86,6 +86,8 @@ function _createTestVariants<TArgs extends object>(
     }
 
     let iteration = 0
+    let debug = false
+    let debugIteration = 0
 
     function onError(err) {
       console.error(JSON.stringify(variantArgs, null, 2))
@@ -95,16 +97,10 @@ function _createTestVariants<TArgs extends object>(
       const time0 = Date.now()
       // eslint-disable-next-line no-debugger
       debugger
-      if (Date.now() - time0 > 5) {
-        for (let i = 0; i < 5; i++) {
-          try {
-            test(variantArgs)
-          }
-          catch {
-            // eslint-disable-next-line no-debugger
-            debugger
-          }
-        }
+      if (Date.now() - time0 > 5 && debugIteration < 5) {
+        debug = true
+        next()
+        debugIteration++
       }
       throw err
     }
@@ -113,8 +109,8 @@ function _createTestVariants<TArgs extends object>(
       // console.log('variants: ' + iteration)
     }
 
-    const next = function next() {
-      while (nextVariant()) {
+    function next() {
+      while (debug || nextVariant()) {
         try {
           iteration++
           const promise = test(variantArgs)

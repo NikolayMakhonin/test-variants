@@ -2,6 +2,7 @@
 /dist/**/*.test.*
 /tmp
 /node_modules
-/package-lock.json
-/yarn-error.log
 .eslintcache
+/package-lock.json
+/yarn.lock
+/yarn-error.log

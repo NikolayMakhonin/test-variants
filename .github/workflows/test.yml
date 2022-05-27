@@ -21,26 +21,48 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'yarn'
 
-      - name: Install
+      # from: https://github.com/pnpm/action-setup
+      - name: Install pnpm
+        id: pnpm-install
+        uses: pnpm/action-setup@v2.1.0
+        with:
+          version: 7
+          run_install: false
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
         run: |
-          yarn install --frozen-lockfile
+          echo "::set-output name=pnpm_cache_dir::$(pnpm store path)"
+
+      - uses: actions/cache@v3
+        name: Setup pnpm cache
+        with:
+          path: ${{ steps.pnpm-cache.outputs.pnpm_cache_dir }}
+          key: ${{ runner.os }}-${{ runner.node-version }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.node-version }}-pnpm-store-
+
+      - name: Install dependencies
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm rebuild
 
       - name: Lint
         shell: bash
         run: |
-          yarn run lint
+          pnpm run audit
+          pnpm run lint
 
       - name: Build
         shell: bash
         run: |
-          yarn run build
+          pnpm run build
 
       - name: Mocha tests
         shell: bash
         run: |
-          yarn run test:mocha:ci
+          pnpm run test:mocha:ci
 
       - name: Install chromium dependencies
         if: ${{ matrix.node-version == '18.x' }}
@@ -61,7 +83,7 @@ jobs:
           CHROMIUM_BIN: /opt/hostedtoolcache/chromium/297097/x64/chrome
         with:
           run: |
-            yarn run test:karma
+            pnpm run test:karma
 
       - name: Coveralls
         if: ${{ matrix.node-version == '18.x' }}
@@ -69,5 +91,5 @@ jobs:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
         shell: bash
         run: |
-          yarn add coveralls -D
-          yarn run coveralls
+          pnpm add coveralls -D
+          pnpm run coveralls

@@ -4,9 +4,7 @@
   "description": "Runs a test function with all possible combinations of its parameters.",
   "main": "dist/node/index.cjs",
   "types": "dist/node/index.d.ts",
-  "engines": {
-    "yarn": "^1.22"
-  },
+  "engines": {},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NikolayMakhonin/test-variants.git"
@@ -18,31 +16,34 @@
     "enumeration",
     "helper"
   ],
-  "author": "NikolayMakhonin",
+  "author": {
+    "name": "Nikolay Makhonin",
+    "url": "https://github.com/NikolayMakhonin/"
+  },
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/NikolayMakhonin/test-variants/issues"
   },
-  "homepage": "https://github.com/NikolayMakhonin/test-variants#readme",
+  "homepage": "https://github.com/NikolayMakhonin/test-variants",
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "_preinstall": "npx only-allow pnpm",
-    "prepublishOnly": "yarn run lint && yarn build && yarn run test:mocha:ci && yarn run test:karma",
+    "prepublishOnly": "pnpm run audit && pnpm run lint && pnpm build && pnpm run test:mocha:ci && pnpm run test:karma",
+    "audit": "pnpm audit --prod",
     "lint": "eslint ./**/*.{js,cjs,mjs,ts,tsx,svelte,html}",
-    "lint:wizard": "eslint-nibble --cache --multi ./**/*.{js,cjs,mjs,ts,tsx,svelte,html}",
+    "lint:wizard": "npx eslint-nibble --cache --multi ./**/*.{js,cjs,mjs,ts,tsx,svelte,html}",
     "build:js": "rollup -c && cpy \"**/assets/**\" \"../dist/\" --parents --cwd=src",
     "build:types": "tsc --outDir dist/node --declaration",
-    "build": "rimraf dist && yarn run build:js && yarn run build:types",
+    "build": "rimraf dist && pnpm run build:js && pnpm run build:types",
     "coverage:merge": "rimraf tmp/coverage/{all,merge} && cp-flat \"tmp/coverage/*/json/**/*.json\" \"tmp/coverage/merge\" && nyc report -r lcov --report-dir tmp/coverage/all/lcov --temp-dir \"tmp/coverage/merge/\"",
-    "coverage:check": "yarn run coverage:merge && nyc check-coverage --report-dir tmp/coverage/all/lcov --lines 50 --functions 50 --branches 50 --statements 50",
-    "test:mocha": "mocha ./src/**/*.test.ts",
-    "test:mocha:coverage": "rimraf tmp/coverage/mocha && nyc --all mocha ./src/**/*.test.ts",
-    "test:mocha:watch": "mocha --watch ./src/**/*.test.ts",
+    "coverage:check": "pnpm run coverage:merge && nyc check-coverage --report-dir tmp/coverage/all/lcov --lines 50 --functions 50 --branches 50 --statements 50",
+    "test:mocha": "mocha ./src/**/*.test.*",
+    "test:mocha:coverage": "rimraf tmp/coverage/mocha && nyc --all mocha ./src/**/*.test.*",
+    "test:mocha:watch": "mocha --watch ./src/**/*.test.*",
     "test:karma": "rimraf tmp/coverage/karma && karma start --single-run --log-level debug",
-    "test:mocha:ci": "rimraf tmp/coverage/mocha && nyc --all mocha ./src/**/*.test.ts ./dist/**/*.test.cjs",
-    "coveralls": "yarn run coverage:check && nyc report --reporter=text-lcov --temp-dir \"tmp/coverage/merge/\" | coveralls"
+    "test:mocha:ci": "rimraf tmp/coverage/mocha && nyc --all mocha ./{src,dist/node}/**/*.test.*",
+    "coveralls": "pnpm run coverage:check && nyc report --reporter=text-lcov --temp-dir \"tmp/coverage/merge/\" | coveralls"
   },
   "devDependencies": {
     "@babel/core": "^7.18.0",
@@ -64,15 +65,14 @@
     "@rollup/plugin-typescript": "^8.3.1",
     "@types/assert": "^1.5.6",
     "@types/fs-extra": "^9.0.13",
-    "@types/mocha": "^9.1.0",
-    "@types/node": "^17.0.23",
+    "@types/mocha": "^9.1.1",
+    "@types/node": "^17.0.35",
     "@typescript-eslint/eslint-plugin": "^5.17.0",
     "@typescript-eslint/parser": "^5.17.0",
     "cpy-cli": "^3.1.1",
-    "eslint": "^8.12.0",
-    "eslint-config-pro": "D:\\projects\\my\\node\\modules\\eslint-config-pro",
-    "eslint-nibble": "^8.0.2",
-    "fs-extra": "^10.0.1",
+    "eslint": "^8.16.0",
+    "eslint-config-pro": "3.0.2",
+    "fs-extra": "^10.1.0",
     "globby": "^11.1.0",
     "karma": "^6.3.20",
     "karma-chrome-launcher": "^3.1.1",
@@ -91,9 +91,9 @@
     "rollup-plugin-multi-input": "^1.3.1",
     "rollup-plugin-node-polyfills": "^0.2.1",
     "rollup-plugin-terser": "^7.0.2",
-    "ts-node": "^10.7.0",
+    "ts-node": "^10.8.0",
     "tsconfig-paths": "^3.14.1",
-    "typescript": "^4.6.4"
+    "typescript": "^4.7.2"
   },
   "dependencies": {
     "tslib": "^2.3.1"

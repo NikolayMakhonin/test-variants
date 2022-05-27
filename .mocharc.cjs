@@ -1,3 +1,5 @@
+'use strict'
+
 module.exports = {
   require: [
     'tsconfig-paths/register',
@@ -5,7 +7,8 @@ module.exports = {
     './src/helpers/test/register.ts',
   ],
   'watch-files': ['./src/**'],
-  "node-option": [
+  ignore       : ['./**/*.d.ts'],
+  'node-option': [
 
   ],
 }
