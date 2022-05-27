@@ -39,14 +39,15 @@ jobs:
         name: Setup pnpm cache
         with:
           path: ${{ steps.pnpm-cache.outputs.pnpm_cache_dir }}
-          key: ${{ runner.os }}-${{ matrix.node-version }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-${{ runner.node-version }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.node-version }}-pnpm-store-
+            ${{ runner.os }}-${{ runner.node-version }}-pnpm-store-
 
       - name: Install dependencies
         run: |
           pnpm i npx -g
           pnpm install --frozen-lockfile
+          pnpm rebuild
 
       - name: Lint
         shell: bash
