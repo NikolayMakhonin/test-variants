@@ -28,9 +28,10 @@
     "access": "public"
   },
   "scripts": {
-    "prepublishOnly": "yarn build && yarn run test:mocha:ci && yarn run test:karma",
-    "lint": "eslint \"./src/**/*.{ts,js,cjs,mjs}\"",
-    "lint:fix": "eslint --fix \"./src/**/*.{ts,js,cjs,mjs}\"",
+    "_preinstall": "npx only-allow pnpm",
+    "prepublishOnly": "yarn run lint && yarn build && yarn run test:mocha:ci && yarn run test:karma",
+    "lint": "eslint ./**/*.{js,cjs,mjs,ts,tsx,svelte,html}",
+    "lint:wizard": "eslint-nibble --cache --multi ./**/*.{js,cjs,mjs,ts,tsx,svelte,html}",
     "build:js": "rollup -c && cpy \"**/assets/**\" \"../dist/\" --parents --cwd=src",
     "build:types": "tsc --outDir dist/node --declaration",
     "build": "rimraf dist && yarn run build:js && yarn run build:types",
@@ -69,7 +70,8 @@
     "@typescript-eslint/parser": "^5.17.0",
     "cpy-cli": "^3.1.1",
     "eslint": "^8.12.0",
-    "eslint-config-pro": "^2.1.1",
+    "eslint-config-pro": "D:\\projects\\my\\node\\modules\\eslint-config-pro",
+    "eslint-nibble": "^8.0.2",
     "fs-extra": "^10.0.1",
     "globby": "^11.1.0",
     "karma": "^6.3.20",

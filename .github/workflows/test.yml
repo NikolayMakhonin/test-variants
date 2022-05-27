@@ -23,9 +23,18 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'yarn'
 
-      - name: Install node modules and build
+      - name: Install
         run: |
           yarn install --frozen-lockfile
+
+      - name: Lint
+        shell: bash
+        run: |
+          yarn run lint
+
+      - name: Build
+        shell: bash
+        run: |
           yarn run build
 
       - name: Mocha tests
