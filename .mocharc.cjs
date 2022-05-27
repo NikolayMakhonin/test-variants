@@ -1,5 +1,5 @@
-module.exports = {
-  require: [
+ module.exports = {
+   require: [
     'tsconfig-paths/register',
     'ts-node/register',
     './src/helpers/test/register.ts',
