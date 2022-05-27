@@ -40,7 +40,7 @@ function _createTestVariants<TArgs extends object>(
 ): TestVariantsFuncAsync<TArgs> {
   return function _testVariants(args) {
     const argsKeys = Object.keys(args)
-    const argsValues = Object.values(args) as any[]
+    const argsValues = Object.values(args)
     const argsLength = argsKeys.length
 
     const variantArgs: TArgs = {} as any
@@ -99,7 +99,8 @@ function _createTestVariants<TArgs extends object>(
         for (let i = 0; i < 5; i++) {
           try {
             test(variantArgs)
-          } catch {
+          }
+          catch {
             // eslint-disable-next-line no-debugger
             debugger
           }
@@ -123,7 +124,8 @@ function _createTestVariants<TArgs extends object>(
             }
             return promise.then(next).catch(onError)
           }
-        } catch (err) {
+        }
+        catch (err) {
           onError(err)
         }
       }
