@@ -1,35 +1,35 @@
-"use strict"
+'use strict'
 
 console.log('ENV_VARS', process.env)
 
-module.exports = function(config) {
+module.exports = function (config) {
   config.set({
-    browserNoActivityTimeout: 300000,
-    browserDisconnectTimeout: 300000,
-    browserSocketTimeout    : 300000,
+    browserNoActivityTimeout: 5 * 60 * 1000,
+    browserDisconnectTimeout: 5 * 60 * 1000,
+    browserSocketTimeout    : 5 * 60 * 1000,
     // captureTimeout: 900000,
     // processKillTimeout: 2000,
 
     browsers: process.env.GITHUB_WORKFLOW
       ? (
         process.platform === 'linux' ? [
-          "ChromiumCI",
-          "ChromeLatest",
+          'ChromiumCI',
+          'ChromeLatest',
         ]
-        : process.platform === 'darwin' ? [
-          "SafariLatest",
-        ]
-        : []
+          : process.platform === 'darwin' ? [
+            'SafariLatest',
+          ]
+            : []
       )
       : [
-        "LocalChromium39",
-        "ChromeLatest",
-        "FirefoxHeadless",
+        'LocalChromium39',
+        'ChromeLatest',
+        'FirefoxHeadless',
       ],
-    files: ["dist/browser/browser.test.js"],
-    frameworks: ["mocha"],
-    reporters: ["progress", 'coverage'],
-    plugins: [
+    files     : ['dist/browser/browser.test.js'],
+    frameworks: ['mocha'],
+    reporters : ['progress', 'coverage'],
+    plugins   : [
       'karma-chrome-launcher',
       'karma-firefox-launcher',
       'karma-safari-launcher',
