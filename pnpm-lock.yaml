@@ -24,7 +24,7 @@ specifiers:
   '@types/node': ^17.0.35
   cpy-cli: ^3.1.1
   eslint: ^8.16.0
-  eslint-config-pro: 3.0.2
+  eslint-config-pro: file:D:/projects/my/node/modules/eslint-config-pro
   fs-extra: ^10.1.0
   globby: ^11.1.0
   karma: ^6.3.20
@@ -76,7 +76,7 @@ devDependencies:
   '@types/node': 17.0.35
   cpy-cli: 3.1.1
   eslint: 8.16.0
-  eslint-config-pro: 3.0.2_xztl6dhthcahlo6akmb2bmjmle
+  eslint-config-pro: file:../eslint-config-pro_xztl6dhthcahlo6akmb2bmjmle
   fs-extra: 10.1.0
   globby: 11.1.0
   karma: 6.3.20
@@ -2850,28 +2850,6 @@ packages:
   /escape-string-regexp/4.0.0:
     resolution: {integrity: sha512-TtpcNJ3XAzx3Gq8sWRzJaVajRs0uVxA2YAkdb1jm2YkPz4G6egUFAyA3n5vtEIZefPk5Wa4UXbKuS5fKkJWdgA==}
     engines: {node: '>=10'}
-    dev: true
-
-  /eslint-config-pro/3.0.2_xztl6dhthcahlo6akmb2bmjmle:
-    resolution: {integrity: sha512-ByouFyW37rV7OKPocL7CeFx2KJVA76assFRvv/a3SqX+OIIf6DA9B1sE2X2x2LfRDtbYLIGzitmEHi7c5tKlaw==}
-    requiresBuild: true
-    peerDependencies:
-      eslint: '>=7.4.0'
-      eslint-plugin-html: '>=6.2.0'
-      eslint-plugin-svelte3: '>=4.0.0'
-      typescript: '>=3.3.1'
-    dependencies:
-      '@typescript-eslint/eslint-plugin': 5.26.0_hzuh7e2up357pvq3mkokjvu2lq
-      '@typescript-eslint/parser': 5.26.0_xztl6dhthcahlo6akmb2bmjmle
-      eslint: 8.16.0
-      eslint-plugin-import: 2.26.0_grfei5yostfimvqdpf73rlhy3e
-      eslint-plugin-node: 11.1.0_eslint@8.16.0
-      tslib: 2.4.0
-      typescript: 4.7.2
-    transitivePeerDependencies:
-      - eslint-import-resolver-typescript
-      - eslint-import-resolver-webpack
-      - supports-color
     dev: true
 
   /eslint-import-resolver-node/0.3.6:
@@ -6391,4 +6369,29 @@ packages:
   /yocto-queue/0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
+    dev: true
+
+  file:../eslint-config-pro_xztl6dhthcahlo6akmb2bmjmle:
+    resolution: {directory: ../eslint-config-pro, type: directory}
+    id: file:../eslint-config-pro
+    name: eslint-config-pro
+    version: 3.0.3
+    engines: {pnpm: ^7.1.6}
+    peerDependencies:
+      eslint: '>=7.4.0'
+      eslint-plugin-html: '>=6.2.0'
+      eslint-plugin-svelte3: '>=4.0.0'
+      typescript: '>=3.3.1'
+    dependencies:
+      '@typescript-eslint/eslint-plugin': 5.26.0_hzuh7e2up357pvq3mkokjvu2lq
+      '@typescript-eslint/parser': 5.26.0_xztl6dhthcahlo6akmb2bmjmle
+      eslint: 8.16.0
+      eslint-plugin-import: 2.26.0_grfei5yostfimvqdpf73rlhy3e
+      eslint-plugin-node: 11.1.0_eslint@8.16.0
+      tslib: 2.4.0
+      typescript: 4.7.2
+    transitivePeerDependencies:
+      - eslint-import-resolver-typescript
+      - eslint-import-resolver-webpack
+      - supports-color
     dev: true

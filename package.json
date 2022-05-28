@@ -71,7 +71,7 @@
     "@types/node": "^17.0.35",
     "cpy-cli": "^3.1.1",
     "eslint": "^8.16.0",
-    "eslint-config-pro": "3.0.2",
+    "eslint-config-pro": "file:D:/projects/my/node/modules/eslint-config-pro",
     "fs-extra": "^10.1.0",
     "globby": "^11.1.0",
     "karma": "^6.3.20",
