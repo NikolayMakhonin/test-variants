@@ -4,7 +4,9 @@
   "description": "Runs a test function with all possible combinations of its parameters.",
   "main": "dist/node/index.cjs",
   "types": "dist/node/index.d.ts",
-  "engines": {},
+  "engines": {
+    "pnpm": "^7.1.6"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NikolayMakhonin/test-variants.git"
