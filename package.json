@@ -4,7 +4,10 @@
   "description": "Runs a test function with all possible combinations of its parameters.",
   "main": "dist/node/index.cjs",
   "types": "dist/node/index.d.ts",
-  "engines": {},
+  "engines": {
+    "pnpm": "^7.1.6",
+    "node": "^9.3.0"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NikolayMakhonin/test-variants.git"
@@ -20,7 +23,7 @@
     "name": "Nikolay Makhonin",
     "url": "https://github.com/NikolayMakhonin/"
   },
-  "license": "ISC",
+  "license": "Unlimited Free",
   "bugs": {
     "url": "https://github.com/NikolayMakhonin/test-variants/issues"
   },
@@ -31,8 +34,8 @@
   "scripts": {
     "prepublishOnly": "pnpm run audit && pnpm run lint && pnpm build && pnpm run test:mocha:ci && pnpm run test:karma",
     "audit": "pnpm audit --prod",
-    "lint": "eslint ./**/*.{js,cjs,mjs,ts,tsx,svelte,html}",
-    "lint:wizard": "npx eslint-nibble --cache --multi ./**/*.{js,cjs,mjs,ts,tsx,svelte,html}",
+    "lint": "eslint ./**/*.{js,cjs,mjs,ts,tsx}",
+    "lint:wizard": "npx eslint-nibble --cache --multi ./**/*.{js,cjs,mjs,ts,tsx}",
     "build:js": "rollup -c && cpy \"**/assets/**\" \"../dist/\" --parents --cwd=src",
     "build:types": "tsc --outDir dist/node --declaration",
     "build": "rimraf dist && pnpm run build:js && pnpm run build:types",
@@ -67,11 +70,9 @@
     "@types/fs-extra": "^9.0.13",
     "@types/mocha": "^9.1.1",
     "@types/node": "^17.0.35",
-    "@typescript-eslint/eslint-plugin": "^5.17.0",
-    "@typescript-eslint/parser": "^5.17.0",
     "cpy-cli": "^3.1.1",
     "eslint": "^8.16.0",
-    "eslint-config-pro": "3.0.2",
+    "eslint-config-pro": "^3.0.10",
     "fs-extra": "^10.1.0",
     "globby": "^11.1.0",
     "karma": "^6.3.20",

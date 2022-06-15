@@ -60,6 +60,10 @@ const count = await testVariants({
 })
 ```
 
+# License
+
+[Unlimited Free](LICENSE)
+
 [npm-image]: https://img.shields.io/npm/v/@flemist/test-variants.svg
 [npm-url]: https://npmjs.org/package/@flemist/test-variants
 [downloads-image]: https://img.shields.io/npm/dm/@flemist/test-variants.svg
