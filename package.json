@@ -35,6 +35,7 @@
     "prepublishOnly": "pnpm run audit && pnpm run lint && pnpm build && pnpm run test:mocha:ci && pnpm run test:karma",
     "audit": "pnpm audit --prod",
     "lint": "eslint ./**/*.{js,cjs,mjs,ts,tsx}",
+    "lint:fix": "eslint --fix ./**/*.{js,cjs,mjs,ts,tsx}",
     "lint:wizard": "eslint-nibble --cache --multi ./**/*.{js,cjs,mjs,ts,tsx}",
     "build:js": "rollup -c && cpy \"**/assets/**\" \"../dist/\" --parents --cwd=src",
     "build:types": "tsc --outDir dist/node --declaration",

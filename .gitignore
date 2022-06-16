@@ -1,10 +1,10 @@
 /dist/**/test/**
 /dist/**/*.test.*
-/tmp
-/node_modules
+/tmp/
+/node_modules/
 
-.eslintcache
+/.eslintcache
 /package-lock.json
 /yarn.lock
 /yarn-error.log
-.pnpm-debug.log
+/.pnpm-debug.log
