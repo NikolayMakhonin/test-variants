@@ -5,8 +5,8 @@
   "main": "dist/node/index.cjs",
   "types": "dist/node/index.d.ts",
   "engines": {
-    "pnpm": "^7.1.6",
-    "node": "^9.3.0"
+    "node": ">=9.3.0",
+    "pnpm": "^7.1.6"
   },
   "repository": {
     "type": "git",
