@@ -1,14 +1,14 @@
 'use strict';
 
 var rdtsc = require('rdtsc');
-var testVariants_createTestVariants = require('./createTestVariants.cjs');
+var createTestVariants = require('../createTestVariants.cjs');
 
 describe('test > testVariants perf', function () {
     this.timeout(300000);
     it('sync/async', function () {
-        const testVariantsAsync = testVariants_createTestVariants.createTestVariants(({ a, b, c }) => {
+        const testVariantsAsync = createTestVariants.createTestVariants(({ a, b, c }) => {
         });
-        const testVariantsSync = testVariants_createTestVariants.createTestVariantsSync(({ a, b, c }) => {
+        const testVariantsSync = createTestVariants.createTestVariantsSync(({ a, b, c }) => {
         });
         const args = {
             a: [1, 2],
