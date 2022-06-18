@@ -27,15 +27,15 @@ export type TestVariantsFuncSync<TArgs> = TestVariantsFunc<TArgs, number>
 export type TestVariantsFuncAsync<TArgs> = TestVariantsFunc<TArgs, Promise<number> | number>
 
 function _createTestVariants<TArgs extends object>(
-  test: (args: TArgs) => Promise<void> | void,
+  test: (args: TArgs) => Promise<number|void> | number | void,
   sync: false,
 ): TestVariantsFuncAsync<TArgs>
 function _createTestVariants<TArgs extends object>(
-  test: (args: TArgs) => Promise<void> | void,
+  test: (args: TArgs) => Promise<number|void> | number | void,
   sync: true,
 ): TestVariantsFuncSync<TArgs>
 function _createTestVariants<TArgs extends object>(
-  test: (args: TArgs) => Promise<void> | void,
+  test: (args: TArgs) => Promise<number|void> | number | void,
   sync: boolean,
 ): TestVariantsFuncAsync<TArgs> {
   return function _testVariants(args) {
@@ -85,7 +85,7 @@ function _createTestVariants<TArgs extends object>(
       return false
     }
 
-    let iteration = 0
+    let iterations = 0
     let debug = false
     let debugIteration = 0
 
@@ -97,9 +97,9 @@ function _createTestVariants<TArgs extends object>(
       const time0 = Date.now()
       // eslint-disable-next-line no-debugger
       debugger
-      if (Date.now() - time0 > 5 && debugIteration < 5) {
+      if (Date.now() - time0 > 50 && debugIteration < 5) {
         debug = true
-        next()
+        next(0)
         debugIteration++
       }
       throw err
@@ -109,16 +109,18 @@ function _createTestVariants<TArgs extends object>(
       // console.log('variants: ' + iteration)
     }
 
-    function next() {
+    function next(value: number) {
+      iterations += typeof value === 'number' ? value : 1
       while (debug || nextVariant()) {
         try {
-          iteration++
           const promise = test(variantArgs)
-          if (promise && typeof promise.then === 'function') {
+          if (typeof promise === 'object' && promise && typeof promise.then === 'function') {
             if (sync) {
               onError(new Error('Unexpected Promise result for sync test function'))
             }
             return promise.then(next).catch(onError)
+          } else {
+            iterations += typeof promise === 'number' ? promise : 1
           }
         }
         catch (err) {
@@ -126,10 +128,10 @@ function _createTestVariants<TArgs extends object>(
         }
       }
       onCompleted()
-      return iteration
+      return iterations
     }
 
-    return next()
+    return next(0)
   }
 }
 
