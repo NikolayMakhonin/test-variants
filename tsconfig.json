@@ -21,6 +21,7 @@
     "resolveJsonModule": true,
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
+    "downlevelIteration": true,
     "newLine": "LF",
     "typeRoots": [
       "node_modules/@types"
@@ -29,6 +30,11 @@
       "DOM",
       "ESNext"
     ],
-    "baseUrl": "."
+    "baseUrl": ".",
+    "paths": {
+      "src/*": [
+        "src/*"
+      ]
+    }
   }
 }

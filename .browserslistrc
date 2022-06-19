@@ -1,8 +1,7 @@
-# > 10%
-# not dead
-# Safari >= 10
-Chrome >= 39
-# Chrome 33
-# Chrome 37
-# Chrome 39
-# Chrome 44
+> 1%
+not IE <= 20
+safari >= 10 # iPhone >= 5
+chrome >= 39 # Android >= 5.1
+UCAndroid >= 12
+op_mob >= 39
+FirefoxAndroid >= 11

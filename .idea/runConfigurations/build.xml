@@ -5,8 +5,9 @@
     <scripts>
       <script value="build" />
     </scripts>
-    <node-interpreter value="E:/Program Files/nodejs/16.15.0/node" />
-    <package-manager value="npm" />
+    <node-interpreter 
+value="project" 
+/>
     <envs />
     <method v="2" />
   </configuration>

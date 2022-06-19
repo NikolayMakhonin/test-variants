@@ -43,7 +43,7 @@ function _createTestVariants(test, sync) {
             }
             return false;
         }
-        let iteration = 0;
+        let iterations = 0;
         let debug = false;
         let debugIteration = 0;
         function onError(err) {
@@ -53,32 +53,35 @@ function _createTestVariants(test, sync) {
             const time0 = Date.now();
             // eslint-disable-next-line no-debugger
             debugger;
-            if (Date.now() - time0 > 5 && debugIteration < 5) {
+            if (Date.now() - time0 > 50 && debugIteration < 5) {
                 debug = true;
-                next();
+                next(0);
                 debugIteration++;
             }
             throw err;
         }
-        function next() {
+        function next(value) {
+            iterations += typeof value === 'number' ? value : 1;
             while (debug || nextVariant()) {
                 try {
-                    iteration++;
                     const promise = test(variantArgs);
-                    if (promise && typeof promise.then === 'function') {
+                    if (typeof promise === 'object' && promise && typeof promise.then === 'function') {
                         if (sync) {
                             onError(new Error('Unexpected Promise result for sync test function'));
                         }
                         return promise.then(next).catch(onError);
+                    }
+                    else {
+                        iterations += typeof promise === 'number' ? promise : 1;
                     }
                 }
                 catch (err) {
                     onError(err);
                 }
             }
-            return iteration;
+            return iterations;
         }
-        return next();
+        return next(0);
     };
 }
 function createTestVariantsSync(test) {
