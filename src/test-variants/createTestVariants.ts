@@ -28,8 +28,9 @@ type TestVariantsSetArgs<TArgs> = <TAdditionalArgs>(args: VariantsArgs<{
 }>) => TestVariantsCall
 
 export type TestVariantsCallParams = {
-  /** force await and log iterations, required to prevent the karma browserNoActivityTimeout */
-  forceAwaitInterval?: number,
+  /** pause test and log iterations count, required to prevent the karma browserNoActivityTimeout */
+  pauseInterval?: number,
+  pauseTime?: number,
 }
 
 export function createTestVariants<TArgs extends object>(
@@ -37,7 +38,8 @@ export function createTestVariants<TArgs extends object>(
 ): TestVariantsSetArgs<TArgs> {
   return function testVariantsArgs(args) {
     return function testVariantsCall({
-      forceAwaitInterval,
+      pauseInterval,
+      pauseTime = 10,
     }: TestVariantsCallParams = {}) {
       const argsKeys = Object.keys(args)
       const argsValues: any[] = Object.values(args)
@@ -111,9 +113,9 @@ export function createTestVariants<TArgs extends object>(
 
       let prevLogTime = Date.now()
       function next(value: number) {
-        const now = forceAwaitInterval && Date.now()
+        const now = pauseInterval && Date.now()
         if (now) {
-          if (now - prevLogTime >= forceAwaitInterval) {
+          if (now - prevLogTime >= pauseInterval) {
             // the log is required to prevent the karma browserNoActivityTimeout
             console.log(iterations)
             prevLogTime = now
@@ -134,8 +136,16 @@ export function createTestVariants<TArgs extends object>(
               return promiseOrIterations.then(next).catch(onError)
             }
 
-            if (syncCallStartTime && Date.now() - syncCallStartTime >= forceAwaitInterval) {
-              return Promise.resolve(promiseOrIterations).then(next)
+            if (syncCallStartTime && Date.now() - syncCallStartTime >= pauseInterval) {
+              const pausePromise = pauseTime
+                ? new Promise(resolve => {
+                  setTimeout(() => {
+                    resolve(promiseOrIterations)
+                  }, pauseTime)
+                })
+                : Promise.resolve(promiseOrIterations)
+
+              return pausePromise.then(next)
             }
 
             iterations += typeof promiseOrIterations === 'number' ? promiseOrIterations : 1

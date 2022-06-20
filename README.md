@@ -18,7 +18,8 @@ const count = await testVariants({
     b: ['3', '4'],
     c: [true, false],
 })({
-  forceAwaitInterval: 10000, // await after each 10 seconds, needed for karma tests
+  pauseInterval: 10000, // pause after each 10 seconds and log inerations count, it needed for karma tests
+  pauseTime: 10, // continue after 10 milliseconds
 })
 
 // result == [
