@@ -28,6 +28,7 @@ type TestVariantsSetArgs<TArgs> = <TAdditionalArgs>(args: VariantsArgs<{
 }>) => TestVariantsCall
 
 export type TestVariantsCallParams = {
+  /** force await and log iterations, required to prevent the karma browserNoActivityTimeout */
   forceAwaitInterval?: number,
 }
 
@@ -113,6 +114,7 @@ export function createTestVariants<TArgs extends object>(
         const now = forceAwaitInterval && Date.now()
         if (now) {
           if (now - prevLogTime >= forceAwaitInterval) {
+            // the log is required to prevent the karma browserNoActivityTimeout
             console.log(iterations)
             prevLogTime = now
           }

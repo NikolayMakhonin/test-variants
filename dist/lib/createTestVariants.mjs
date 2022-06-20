@@ -59,9 +59,17 @@ function createTestVariants(test) {
                 }
                 throw err;
             }
+            let prevLogTime = Date.now();
             function next(value) {
+                const now = forceAwaitInterval && Date.now();
+                if (now) {
+                    if (now - prevLogTime >= forceAwaitInterval) {
+                        console.log(iterations);
+                        prevLogTime = now;
+                    }
+                }
                 iterations += typeof value === 'number' ? value : 1;
-                const time0 = forceAwaitInterval && Date.now();
+                const syncCallStartTime = now;
                 while (debug || nextVariant()) {
                     try {
                         const promiseOrIterations = test(variantArgs);
@@ -70,7 +78,7 @@ function createTestVariants(test) {
                             && typeof promiseOrIterations.then === 'function') {
                             return promiseOrIterations.then(next).catch(onError);
                         }
-                        if (forceAwaitInterval && Date.now() - time0 >= forceAwaitInterval) {
+                        if (syncCallStartTime && Date.now() - syncCallStartTime >= forceAwaitInterval) {
                             return Promise.resolve(promiseOrIterations).then(next);
                         }
                         iterations += typeof promiseOrIterations === 'number' ? promiseOrIterations : 1;
