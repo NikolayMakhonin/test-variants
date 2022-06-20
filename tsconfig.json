@@ -5,6 +5,7 @@
     },
   },
   "include": [
+    "@types/**/*",
     "src/**/*"
   ],
   "exclude": [
@@ -24,7 +25,8 @@
     "downlevelIteration": true,
     "newLine": "LF",
     "typeRoots": [
-      "node_modules/@types"
+      "node_modules/@types",
+      "@types"
     ],
     "lib": [
       "DOM",
@@ -34,6 +36,9 @@
     "paths": {
       "src/*": [
         "src/*"
+      ],
+      "~/*": [
+        "./*"
       ]
     }
   }

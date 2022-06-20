@@ -56,22 +56,27 @@ const aliasOptions = {
       find       : 'src',
       replacement: path.resolve(__dirname, 'src'),
     },
+    {
+      find       : '~',
+      replacement: path.resolve(__dirname),
+    },
   ],
 }
 
-const nodeConfig = ({input, outputDir, relative}) => ({
+const nodeConfig = ({
+  input, outputDir, relative, format, extension,
+}) => ({
   cache : true,
   input,
   output: {
     dir           : outputDir,
-    format        : 'cjs',
+    format        : format,
     exports       : 'named',
-    entryFileNames: `[name].cjs`,
-    chunkFileNames: '[name].cjs',
+    entryFileNames: '[name].' + extension,
+    chunkFileNames: '[name].' + extension,
     sourcemap     : dev,
   },
   plugins: [
-    del({ targets: outputDir }),
     multiInput({relative}),
     alias(aliasOptions),
     json(),
@@ -147,18 +152,18 @@ const browserConfig = ({input, outputDir, outputFile}) => ({
 const browserTestsConfig = {
   cache: true,
   input: [
-    'src/helpers/test/show-useragent.ts',
-    'src/helpers/test/register.ts',
+    'node_modules/@flemist/test-utils/dist/lib/register/show-useragent.mjs',
+    'node_modules/@flemist/test-utils/dist/lib/register/register.mjs',
     'src/**/*.test.ts',
   ],
   output: {
-    dir      : 'dist/browser',
+    dir      : 'dist/bundle',
     format   : 'iife',
     exports  : 'named',
     sourcemap: 'inline',
   },
   plugins: [
-    del({ targets: 'dist/browser/browser.test.js' }),
+    del({ targets: 'dist/bundle/browser.test.js' }),
     multiEntry({
       entryFileName: 'browser.test.js',
     }),
@@ -205,12 +210,21 @@ const browserTestsConfig = {
 export default [
   nodeConfig({
     input    : ['src/**/*.ts'],
-    outputDir: 'dist/node',
+    outputDir: 'dist/lib',
     relative : 'src',
+    format   : 'es',
+    extension: 'mjs',
+  }),
+  nodeConfig({
+    input    : ['src/**/*.ts'],
+    outputDir: 'dist/lib',
+    relative : 'src',
+    format   : 'cjs',
+    extension: 'cjs',
   }),
   browserConfig({
     input     : ['src/index.ts'],
-    outputDir : 'dist/browser',
+    outputDir : 'dist/bundle',
     outputFile: 'browser.js',
   }),
   browserTestsConfig,

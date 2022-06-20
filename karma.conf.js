@@ -28,7 +28,7 @@ module.exports = function (config) {
         'ChromeLatest',
         'FirefoxHeadless',
       ],
-    files     : ['dist/browser/browser.test.js'],
+    files     : ['dist/bundle/browser.test.js'],
     frameworks: ['mocha'],
     reporters : ['progress', 'coverage'],
     plugins   : [

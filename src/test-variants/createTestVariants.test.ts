@@ -1,18 +1,18 @@
 /* eslint-disable @typescript-eslint/no-shadow */
-import {createTestVariants, createTestVariantsSync} from './createTestVariants'
+import {createTestVariants} from './createTestVariants'
 import {delay} from '../helpers/test/delay'
 
 describe('test > testVariants', function () {
   describe('sync', function () {
-    it('base', function () {
+    it('base', async function () {
       const result = []
-      const count = createTestVariantsSync(({a, b, c}: { a: number, b: string, c: boolean }) => {
+      const count = await createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
         result.push([a, b, c])
       })({
         a: [1, 2],
         b: ['3', '4'],
         c: [true, false],
-      })
+      })()
 
       assert.deepStrictEqual(result, [
         [1, '3', true],
@@ -27,53 +27,53 @@ describe('test > testVariants', function () {
       assert.strictEqual(count, result.length)
     })
 
-    it('empty end', function () {
+    it('empty end', async function () {
       const result = []
-      const count = createTestVariantsSync(({a, b, c}: { a: number, b: string, c: boolean }) => {
+      const count = await createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
         result.push([a, b, c])
       })({
         a: [1, 2],
         b: ['3', '4'],
         c: [],
-      })
+      })()
 
       assert.deepStrictEqual(result, [])
       assert.strictEqual(count, result.length)
     })
 
-    it('empty middle', function () {
+    it('empty middle', async function () {
       const result = []
-      const test = createTestVariantsSync(({a, b, c}: { a: number, b: string, c: boolean }) => {
+      const test = createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
         result.push([a, b, c])
       })
-      const count = test({
+      const count = await test({
         a: [1, 2],
         b: [],
         d: [2, 3],
         c: [false, true],
-      })
+      })()
 
       assert.deepStrictEqual(result, [])
       assert.strictEqual(count, result.length)
     })
 
-    it('empty start', function () {
+    it('empty start', async function () {
       const result = []
-      const count = createTestVariantsSync(({a, b, c}: { a: number, b: string, c: boolean }) => {
+      const count = await createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
         result.push([a, b, c])
       })({
         a: [],
         b: ['3', '4'],
         c: [false, true],
-      })
+      })()
 
       assert.deepStrictEqual(result, [])
       assert.strictEqual(count, result.length)
     })
 
-    it('calculated', function () {
+    it('calculated', async function () {
       const result = []
-      const count = createTestVariantsSync(({a, b, c}: { a: number, b: string, c: boolean }) => {
+      const count = await createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
         result.push([a, b, c])
       })({
         a: () => [1, 2],
@@ -81,7 +81,7 @@ describe('test > testVariants', function () {
         c: ({b}) => b === '2' ? [false, true]
           : b === '3' ? []
             : [true],
-      })
+      })()
 
       assert.deepStrictEqual(result, [
         [1, '2', false],
@@ -95,15 +95,15 @@ describe('test > testVariants', function () {
   })
 
   describe('async as sync', function () {
-    it('base', function () {
+    it('base', async function () {
       const result = []
-      const count = createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
+      const count = await createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
         result.push([a, b, c])
       })({
         a: [1, 2],
         b: ['3', '4'],
         c: [true, false],
-      })
+      })()
 
       assert.deepStrictEqual(result, [
         [1, '3', true],
@@ -118,53 +118,53 @@ describe('test > testVariants', function () {
       assert.strictEqual(count, result.length)
     })
 
-    it('empty end', function () {
+    it('empty end', async function () {
       const result = []
-      const count = createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
+      const count = await createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
         result.push([a, b, c])
       })({
         a: [1, 2],
         b: ['3', '4'],
         c: [],
-      })
+      })()
 
       assert.deepStrictEqual(result, [])
       assert.strictEqual(count, result.length)
     })
 
-    it('empty middle', function () {
+    it('empty middle', async function () {
       const result = []
       const test = createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
         result.push([a, b, c])
       })
-      const count = test({
+      const count = await test({
         a: [1, 2],
         b: [],
         d: [2, 3],
         c: [false, true],
-      })
+      })()
 
       assert.deepStrictEqual(result, [])
       assert.strictEqual(count, result.length)
     })
 
-    it('empty start', function () {
+    it('empty start', async function () {
       const result = []
-      const count = createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
+      const count = await createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
         result.push([a, b, c])
       })({
         a: [],
         b: ['3', '4'],
         c: [false, true],
-      })
+      })()
 
       assert.deepStrictEqual(result, [])
       assert.strictEqual(count, result.length)
     })
 
-    it('calculated', function () {
+    it('calculated', async function () {
       const result = []
-      const count = createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
+      const count = await createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
         result.push([a, b, c])
       })({
         a: () => [1, 2],
@@ -172,7 +172,7 @@ describe('test > testVariants', function () {
         c: ({b}) => b === '2' ? [false, true]
           : b === '3' ? []
             : [true],
-      })
+      })()
 
       assert.deepStrictEqual(result, [
         [1, '2', false],
@@ -185,7 +185,7 @@ describe('test > testVariants', function () {
     })
   })
 
-  describe('async', function () {
+  describe('async', async function () {
     it('base', async function () {
       const result = []
       const count = await createTestVariants(async ({a, b, c}: { a: number, b: string, c: boolean }) => {
@@ -195,7 +195,7 @@ describe('test > testVariants', function () {
         a: [1, 2],
         b: ['3', '4'],
         c: [true, false],
-      })
+      })()
 
       assert.deepStrictEqual(result, [
         [1, '3', true],
@@ -219,7 +219,7 @@ describe('test > testVariants', function () {
         a: [1, 2],
         b: ['3', '4'],
         c: [],
-      })
+      })()
 
       assert.deepStrictEqual(result, [])
       assert.strictEqual(count, result.length)
@@ -236,7 +236,7 @@ describe('test > testVariants', function () {
         b: [],
         d: [2, 3],
         c: [false, true],
-      })
+      })()
 
       assert.deepStrictEqual(result, [])
       assert.strictEqual(count, result.length)
@@ -251,7 +251,7 @@ describe('test > testVariants', function () {
         a: [],
         b: ['3', '4'],
         c: [false, true],
-      })
+      })()
 
       assert.deepStrictEqual(result, [])
       assert.strictEqual(count, result.length)
@@ -268,7 +268,7 @@ describe('test > testVariants', function () {
         c: ({b}) => b === '2' ? [false, true]
           : b === '3' ? []
             : [true],
-      })
+      })()
 
       assert.deepStrictEqual(result, [
         [1, '2', false],

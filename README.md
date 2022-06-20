@@ -10,13 +10,15 @@ Runs a test function with all possible combinations of its parameters.
 ## Sync only
 ```ts
 const result = []
-const testVariants = createTestVariantsSync(({a, b, c}: { a: number, b: string, c: boolean }) => {
+const testVariants = createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
     result.push([a, b, c])
 })
-const count = testVariants({
+const count = await testVariants({
     a: [1, 2],
     b: ['3', '4'],
     c: [true, false],
+})({
+  forceAwaitInterval: 10000, // await after each 10 seconds, needed for karma tests
 })
 
 // result == [
@@ -32,7 +34,7 @@ const count = testVariants({
 // count == 8
 ```
 
-## Sync or Async
+## Async
 ```ts
 const result = []
 const testVariants = createTestVariants(async ({a, b, c}: { a: number, b: string, c: boolean }) => {
@@ -43,7 +45,7 @@ const count = await testVariants({
     a: [1, 2],
     b: ['3', '4'],
     c: [true, false],
-})
+})() // no extra parameters
 ```
 
 ## Calculable variants
@@ -57,7 +59,7 @@ const count = await testVariants({
     a: [1, 2],
     b: ({a}) => [ a + 1, a + 2 ], // you can use 'a', but you can't use 'c' because it will initialize after 'b' 
     c: ({a, b}) => [ a, b, a + b ],
-})
+})()
 ```
 
 # License
