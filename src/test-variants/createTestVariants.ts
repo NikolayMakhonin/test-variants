@@ -108,9 +108,18 @@ export function createTestVariants<TArgs extends object>(
         // console.log('variants: ' + iteration)
       }
 
+      let prevLogTime = Date.now()
       function next(value: number) {
+        const now = forceAwaitInterval && Date.now()
+        if (now) {
+          if (now - prevLogTime >= forceAwaitInterval) {
+            console.log(iterations)
+            prevLogTime = now
+          }
+        }
+
         iterations += typeof value === 'number' ? value : 1
-        const time0 = forceAwaitInterval && Date.now()
+        const syncCallStartTime = now
         while (debug || nextVariant()) {
           try {
             const promiseOrIterations = test(variantArgs)
@@ -123,7 +132,7 @@ export function createTestVariants<TArgs extends object>(
               return promiseOrIterations.then(next).catch(onError)
             }
 
-            if (forceAwaitInterval && Date.now() - time0 >= forceAwaitInterval) {
+            if (syncCallStartTime && Date.now() - syncCallStartTime >= forceAwaitInterval) {
               return Promise.resolve(promiseOrIterations).then(next)
             }
 
