@@ -7,7 +7,7 @@ module.exports = function (config) {
   config.set({
     browserNoActivityTimeout  : 45 * 1000 + 1,
     browserSocketTimeout      : 35 * 1000 + 2,
-    browserDisconnectTimeout  : 5 * 1000 + 3,
+    browserDisconnectTimeout  : 20 * 1000 + 3,
     browserDisconnectTolerance: 2,
     // captureTimeout          : 60 * 1000 + 4,
     // processKillTimeout      : 17 * 1000 + 5,

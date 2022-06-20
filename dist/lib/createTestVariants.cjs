@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-shadow */
 function createTestVariants(test) {
     return function testVariantsArgs(args) {
-        return function testVariantsCall({ forceAwaitInterval, } = {}) {
+        return function testVariantsCall({ pauseInterval, pauseTime = 10, } = {}) {
             const argsKeys = Object.keys(args);
             const argsValues = Object.values(args);
             const argsLength = argsKeys.length;
@@ -63,9 +63,10 @@ function createTestVariants(test) {
             }
             let prevLogTime = Date.now();
             function next(value) {
-                const now = forceAwaitInterval && Date.now();
+                const now = pauseInterval && Date.now();
                 if (now) {
-                    if (now - prevLogTime >= forceAwaitInterval) {
+                    if (now - prevLogTime >= pauseInterval) {
+                        // the log is required to prevent the karma browserNoActivityTimeout
                         console.log(iterations);
                         prevLogTime = now;
                     }
@@ -80,8 +81,15 @@ function createTestVariants(test) {
                             && typeof promiseOrIterations.then === 'function') {
                             return promiseOrIterations.then(next).catch(onError);
                         }
-                        if (syncCallStartTime && Date.now() - syncCallStartTime >= forceAwaitInterval) {
-                            return Promise.resolve(promiseOrIterations).then(next);
+                        if (syncCallStartTime && Date.now() - syncCallStartTime >= pauseInterval) {
+                            const pausePromise = pauseTime
+                                ? new Promise(resolve => {
+                                    setTimeout(() => {
+                                        resolve(promiseOrIterations);
+                                    }, pauseTime);
+                                })
+                                : Promise.resolve(promiseOrIterations);
+                            return pausePromise.then(next);
                         }
                         iterations += typeof promiseOrIterations === 'number' ? promiseOrIterations : 1;
                     }
