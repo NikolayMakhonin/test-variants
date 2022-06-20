@@ -12,6 +12,8 @@ export declare type TestVariantsCallParams = {
     pauseTime?: number;
     /** console log current iterations, required to prevent the karma browserNoActivityTimeout */
     logInterval?: number;
+    /** console log iterations on test completed */
+    logCompleted?: boolean;
 };
 export declare function createTestVariants<TArgs extends object>(test: (args: TArgs) => Promise<number | void> | number | void): TestVariantsSetArgs<TArgs>;
 export {};

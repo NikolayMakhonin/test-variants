@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-shadow */
 function createTestVariants(test) {
     return function testVariantsArgs(args) {
-        return function testVariantsCall({ pauseInterval = 1000, pauseTime = 10, logInterval = 10000, } = {}) {
+        return function testVariantsCall({ pauseInterval = 1000, pauseTime = 10, logInterval = 10000, logCompleted = true, } = {}) {
             const argsKeys = Object.keys(args);
             const argsValues = Object.values(args);
             const argsLength = argsKeys.length;
@@ -59,6 +59,11 @@ function createTestVariants(test) {
                 }
                 throw err;
             }
+            function onCompleted() {
+                if (logCompleted) {
+                    console.log('variants: ' + iterations);
+                }
+            }
             let prevLogTime = Date.now();
             function next(value) {
                 const now = (logInterval || pauseInterval) && Date.now();
@@ -95,6 +100,7 @@ function createTestVariants(test) {
                         onError(err);
                     }
                 }
+                onCompleted();
                 return iterations;
             }
             return next(0);
