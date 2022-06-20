@@ -1,17 +1,12 @@
 import { calcPerformance } from 'rdtsc'
-import {createTestVariants, createTestVariantsSync} from './createTestVariants'
+import {createTestVariants} from './createTestVariants'
 
 describe('test > testVariants perf', function () {
   this.timeout(300000)
 
-  it('sync/async', function () {
+  it('sync', function () {
     let value = 0
-    const testVariantsAsync = createTestVariants(({a, b, c}: {a: number, b: string, c: boolean}) => {
-      if (a === 1 && b === '4' && c === false) {
-        value++
-      }
-    })
-    const testVariantsSync = createTestVariantsSync(({a, b, c}: {a: number, b: string, c: boolean}) => {
+    const testVariantsSync = createTestVariants(({a, b, c}: {a: number, b: string, c: boolean}) => {
       if (a === 1 && b === '4' && c === false) {
         value++
       }
@@ -31,12 +26,9 @@ describe('test > testVariants perf', function () {
       () => {
         testVariantsSync(args)
       },
-      () => {
-        testVariantsAsync(args)
-      },
     )
 
-    const count = testVariantsSync(args)
+    const count = testVariantsSync(args)() as number
 
     result.absoluteDiff = result.absoluteDiff.map(o => o / count)
 
