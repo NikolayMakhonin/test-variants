@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-shadow */
 function createTestVariants(test) {
     return function testVariantsArgs(args) {
-        return function testVariantsCall({ pauseInterval, pauseTime = 10, } = {}) {
+        return function testVariantsCall({ pauseInterval = 1000, pauseTime = 10, logInterval = 10000, } = {}) {
             const argsKeys = Object.keys(args);
             const argsValues = Object.values(args);
             const argsLength = argsKeys.length;
@@ -63,16 +63,16 @@ function createTestVariants(test) {
             }
             let prevLogTime = Date.now();
             function next(value) {
-                const now = pauseInterval && Date.now();
+                const now = (logInterval || pauseInterval) && Date.now();
                 if (now) {
-                    if (now - prevLogTime >= pauseInterval) {
+                    if (now - prevLogTime >= logInterval) {
                         // the log is required to prevent the karma browserNoActivityTimeout
                         console.log(iterations);
                         prevLogTime = now;
                     }
                 }
                 iterations += typeof value === 'number' ? value : 1;
-                const syncCallStartTime = now;
+                const syncCallStartTime = pauseInterval && now;
                 while (debug || nextVariant()) {
                     try {
                         const promiseOrIterations = test(variantArgs);

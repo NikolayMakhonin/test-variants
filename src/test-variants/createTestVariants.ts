@@ -33,6 +33,8 @@ export type TestVariantsCallParams = {
   pauseTime?: number,
   /** console log current iterations, required to prevent the karma browserNoActivityTimeout */
   logInterval?: number,
+  /** console log iterations on test completed */
+  logCompleted?: boolean,
 }
 
 export function createTestVariants<TArgs extends object>(
@@ -43,6 +45,7 @@ export function createTestVariants<TArgs extends object>(
       pauseInterval = 1000,
       pauseTime = 10,
       logInterval = 10000,
+      logCompleted = true,
     }: TestVariantsCallParams = {}) {
       const argsKeys = Object.keys(args)
       const argsValues: any[] = Object.values(args)
@@ -111,7 +114,9 @@ export function createTestVariants<TArgs extends object>(
       }
 
       function onCompleted() {
-        // console.log('variants: ' + iteration)
+        if (logCompleted) {
+          console.log('variants: ' + iterations)
+        }
       }
 
       let prevLogTime = Date.now()

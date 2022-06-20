@@ -7,9 +7,11 @@ declare type TestVariantsSetArgs<TArgs> = <TAdditionalArgs>(args: VariantsArgs<{
     [key in (keyof TAdditionalArgs | keyof TArgs)]: key extends keyof TArgs ? TArgs[key] : key extends keyof TAdditionalArgs ? TAdditionalArgs[key] : never;
 }>) => TestVariantsCall;
 export declare type TestVariantsCallParams = {
-    /** pause test and log iterations count, required to prevent the karma browserNoActivityTimeout */
+    /** pause test, required to prevent the karma browserDisconnectTimeout */
     pauseInterval?: number;
     pauseTime?: number;
+    /** console log current iterations, required to prevent the karma browserNoActivityTimeout */
+    logInterval?: number;
 };
 export declare function createTestVariants<TArgs extends object>(test: (args: TArgs) => Promise<number | void> | number | void): TestVariantsSetArgs<TArgs>;
 export {};
