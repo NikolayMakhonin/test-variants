@@ -99,6 +99,7 @@ export function createTestVariants<TArgs extends object>(
 
       function onError(err) {
         console.error(JSON.stringify(variantArgs, null, 2))
+        console.error(err)
 
         // rerun failed variant 5 times for debug
         const time0 = Date.now()
