@@ -2,8 +2,8 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-var createTestVariants = require('./createTestVariants.cjs');
+var testVariants_createTestVariants = require('./test-variants/createTestVariants.cjs');
 
 
 
-exports.createTestVariants = createTestVariants.createTestVariants;
+exports.createTestVariants = testVariants_createTestVariants.createTestVariants;

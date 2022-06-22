@@ -1,5 +1,5 @@
 import { calcPerformance } from 'rdtsc';
-import { c as createTestVariants } from '../createTestVariants.mjs';
+import { createTestVariants } from './createTestVariants.mjs';
 
 describe('test > testVariants perf', function () {
     this.timeout(300000);

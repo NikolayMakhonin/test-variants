@@ -1,1 +1,1 @@
-export { c as createTestVariants } from './createTestVariants.mjs';
+export { createTestVariants } from './test-variants/createTestVariants.mjs';
