@@ -198,7 +198,6 @@ const browserTestsConfig = {
       babelHelpers: 'runtime',
       exclude     : [
         '**/node_modules/rollup*/**',
-        '**/node_modules/tslib/**',
         '**/node_modules/@babel/**',
         '**/node_modules/core-js*/**',
       ],

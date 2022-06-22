@@ -28,7 +28,9 @@ type TestVariantsSetArgs<TArgs> = <TAdditionalArgs>(args: VariantsArgs<{
 }>) => TestVariantsCall
 
 export type TestVariantsCallParams = {
-  /** pause test, required to prevent the karma browserDisconnectTimeout */
+  /** this pause required for timely garbage collect of Promise reject */
+  pauseIterationsAsync?: number,
+  /** this pause required to prevent the karma browserDisconnectTimeout */
   pauseInterval?: number,
   pauseTime?: number,
   /** console log current iterations, required to prevent the karma browserNoActivityTimeout */
@@ -42,8 +44,9 @@ export function createTestVariants<TArgs extends object>(
 ): TestVariantsSetArgs<TArgs> {
   return function testVariantsArgs(args) {
     return function testVariantsCall({
+      pauseIterationsAsync = 1000,
       pauseInterval = 1000,
-      pauseTime = 10,
+      pauseTime = 100,
       logInterval = 10000,
       logCompleted = true,
     }: TestVariantsCallParams = {}) {
@@ -94,6 +97,7 @@ export function createTestVariants<TArgs extends object>(
       }
 
       let iterations = 0
+      let iterationsAsync = 0
       let debug = false
       let debugIteration = 0
 
@@ -121,20 +125,40 @@ export function createTestVariants<TArgs extends object>(
       }
 
       let prevLogTime = Date.now()
+      let prevPauseTime = prevLogTime
+      let prevPauseIterationsAsync = iterationsAsync
       function next(value: number) {
-        const now = (logInterval || pauseInterval) && Date.now()
-        if (now) {
-          if (now - prevLogTime >= logInterval) {
-            // the log is required to prevent the karma browserNoActivityTimeout
-            console.log(iterations)
-            prevLogTime = now
-          }
-        }
-
+        const newIterations = typeof value === 'number' ? value : 1
+        iterationsAsync += newIterations
         iterations += typeof value === 'number' ? value : 1
-        const syncCallStartTime = pauseInterval && now
         while (debug || nextVariant()) {
           try {
+            const now = (logInterval || pauseInterval) && Date.now()
+
+            if (logInterval && now - prevLogTime >= logInterval) {
+              // the log is required to prevent the karma browserNoActivityTimeout
+              console.log(iterations)
+              prevLogTime = now
+            }
+
+            if (
+              pauseIterationsAsync && iterationsAsync - prevPauseIterationsAsync >= pauseIterationsAsync
+              || pauseInterval && now - prevPauseTime >= pauseInterval
+            ) {
+              prevPauseTime = now
+              prevPauseIterationsAsync = iterationsAsync
+
+              const pausePromise = pauseTime
+                ? new Promise<number>(resolve => {
+                  setTimeout(() => {
+                    resolve(0)
+                  }, pauseTime)
+                })
+                : Promise.resolve(0)
+
+              return pausePromise.then(next)
+            }
+
             const promiseOrIterations = test(variantArgs)
 
             if (
@@ -143,18 +167,6 @@ export function createTestVariants<TArgs extends object>(
               && typeof promiseOrIterations.then === 'function'
             ) {
               return promiseOrIterations.catch(onError).then(next)
-            }
-
-            if (syncCallStartTime && Date.now() - syncCallStartTime >= pauseInterval) {
-              const pausePromise = pauseTime
-                ? new Promise(resolve => {
-                  setTimeout(() => {
-                    resolve(promiseOrIterations)
-                  }, pauseTime)
-                })
-                : Promise.resolve(promiseOrIterations)
-
-              return pausePromise.then(next)
             }
 
             iterations += typeof promiseOrIterations === 'number' ? promiseOrIterations : 1

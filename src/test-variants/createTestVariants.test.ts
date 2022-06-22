@@ -279,5 +279,48 @@ describe('test > testVariants', function () {
       ])
       assert.strictEqual(count, result.length)
     })
+
+    function awaitTime(time: number, awaitsPerTime: number) {
+      let i = 0
+      function next() {
+        if (i >= awaitsPerTime) {
+          return
+        }
+        i++
+        return Promise.resolve().then(next)
+      }
+      return next()
+    }
+
+    it('million of Promise reject', async function () {
+      this.timeout(600000)
+      await createTestVariants(async ({
+        a,
+        b,
+        c,
+        d,
+        e,
+        f,
+      }: {
+        a: number,
+        b: number,
+        c: number,
+        d: number,
+        e: number,
+        f: number,
+      }) => {
+        await new Promise((resolve, reject) => {
+          reject('err')
+        })
+          .catch(o => {})
+      })({
+        a: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        b: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        c: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        d: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        e: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        f: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+      })()
+    })
   })
 })
