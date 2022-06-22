@@ -47,7 +47,7 @@ function createTestVariants(test) {
             let debugIteration = 0;
             function onError(err) {
                 console.error(JSON.stringify(variantArgs, null, 2));
-                // console.error(err)
+                console.error(err); // required to show intelliJ idea assertion difference
                 // rerun failed variant 5 times for debug
                 const time0 = Date.now();
                 // eslint-disable-next-line no-debugger
