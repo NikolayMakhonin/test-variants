@@ -49,12 +49,13 @@ function createTestVariants(test) {
             let debugIteration = 0;
             function onError(err) {
                 console.error(JSON.stringify(variantArgs, null, 2));
-                console.error(err);
+                // console.error(err)
                 // rerun failed variant 5 times for debug
                 const time0 = Date.now();
                 // eslint-disable-next-line no-debugger
                 debugger;
                 if (Date.now() - time0 > 50 && debugIteration < 5) {
+                    console.log('DEBUG ITERATION: ' + debugIteration);
                     debug = true;
                     next(0);
                     debugIteration++;
@@ -84,7 +85,7 @@ function createTestVariants(test) {
                         if (typeof promiseOrIterations === 'object'
                             && promiseOrIterations
                             && typeof promiseOrIterations.then === 'function') {
-                            return promiseOrIterations.then(next).catch(onError);
+                            return promiseOrIterations.catch(onError).then(next);
                         }
                         if (syncCallStartTime && Date.now() - syncCallStartTime >= pauseInterval) {
                             const pausePromise = pauseTime
