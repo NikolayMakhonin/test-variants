@@ -99,7 +99,7 @@ export function createTestVariants<TArgs extends object>(
 
       function onError(err) {
         console.error(JSON.stringify(variantArgs, null, 2))
-        console.error(err) // required to show intelliJ idea assertion difference
+        // console.error(err) // required to show intelliJ idea assertion difference
 
         // rerun failed variant 5 times for debug
         const time0 = Date.now()
