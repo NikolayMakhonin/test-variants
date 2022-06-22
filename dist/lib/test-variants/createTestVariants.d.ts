@@ -7,7 +7,9 @@ declare type TestVariantsSetArgs<TArgs> = <TAdditionalArgs>(args: VariantsArgs<{
     [key in (keyof TAdditionalArgs | keyof TArgs)]: key extends keyof TArgs ? TArgs[key] : key extends keyof TAdditionalArgs ? TAdditionalArgs[key] : never;
 }>) => TestVariantsCall;
 export declare type TestVariantsCallParams = {
-    /** pause test, required to prevent the karma browserDisconnectTimeout */
+    /** this pause required for timely garbage collect of Promise reject */
+    pauseIterationsAsync?: number;
+    /** this pause required to prevent the karma browserDisconnectTimeout */
     pauseInterval?: number;
     pauseTime?: number;
     /** console log current iterations, required to prevent the karma browserNoActivityTimeout */

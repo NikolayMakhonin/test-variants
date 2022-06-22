@@ -44,9 +44,9 @@ export function createTestVariants<TArgs extends object>(
 ): TestVariantsSetArgs<TArgs> {
   return function testVariantsArgs(args) {
     return function testVariantsCall({
-      pauseIterationsAsync = 1000,
+      pauseIterationsAsync = 10000,
       pauseInterval = 1000,
-      pauseTime = 100,
+      pauseTime = 10,
       logInterval = 10000,
       logCompleted = true,
     }: TestVariantsCallParams = {}) {
@@ -166,7 +166,7 @@ export function createTestVariants<TArgs extends object>(
               && promiseOrIterations
               && typeof promiseOrIterations.then === 'function'
             ) {
-              return promiseOrIterations.catch(onError).then(next)
+              return promiseOrIterations.then(next, onError)
             }
 
             iterations += typeof promiseOrIterations === 'number' ? promiseOrIterations : 1
