@@ -46,7 +46,7 @@ export function createTestVariants<TArgs extends object>(
     return function testVariantsCall({
       pauseIterationsAsync = 10000,
       pauseInterval = 1000,
-      pauseTime = 10,
+      pauseTime = 50,
       logInterval = 10000,
       logCompleted = true,
     }: TestVariantsCallParams = {}) {
