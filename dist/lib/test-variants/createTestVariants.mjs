@@ -1,7 +1,9 @@
+import { garbageCollect } from '../garbage-collect/garbageCollect.mjs';
+
 /* eslint-disable @typescript-eslint/no-shadow */
 function createTestVariants(test) {
     return function testVariantsArgs(args) {
-        return function testVariantsCall({ pauseIterationsAsync = 10000, pauseInterval = 1000, pauseTime = 10, logInterval = 10000, logCompleted = true, } = {}) {
+        return function testVariantsCall({ GC_Iterations = 1000000, GC_IterationsAsync = 10000, GC_Interval = 1000, logInterval = 5000, logCompleted = true, } = {}) {
             const argsKeys = Object.keys(args);
             const argsValues = Object.values(args);
             const argsLength = argsKeys.length;
@@ -67,32 +69,29 @@ function createTestVariants(test) {
                 }
             }
             let prevLogTime = Date.now();
-            let prevPauseTime = prevLogTime;
-            let prevPauseIterationsAsync = iterationsAsync;
+            let prevGC_Time = prevLogTime;
+            let prevGC_Iterations = iterations;
+            let prevGC_IterationsAsync = iterationsAsync;
             function next(value) {
                 const newIterations = typeof value === 'number' ? value : 1;
                 iterationsAsync += newIterations;
                 iterations += typeof value === 'number' ? value : 1;
                 while (debug || nextVariant()) {
                     try {
-                        const now = (logInterval || pauseInterval) && Date.now();
+                        const now = (logInterval || GC_Interval) && Date.now();
                         if (logInterval && now - prevLogTime >= logInterval) {
                             // the log is required to prevent the karma browserNoActivityTimeout
                             console.log(iterations);
                             prevLogTime = now;
                         }
-                        if (pauseIterationsAsync && iterationsAsync - prevPauseIterationsAsync >= pauseIterationsAsync
-                            || pauseInterval && now - prevPauseTime >= pauseInterval) {
-                            prevPauseTime = now;
-                            prevPauseIterationsAsync = iterationsAsync;
-                            const pausePromise = pauseTime
-                                ? new Promise(resolve => {
-                                    setTimeout(() => {
-                                        resolve(0);
-                                    }, pauseTime);
-                                })
-                                : Promise.resolve(0);
-                            return pausePromise.then(next);
+                        if (GC_Iterations && iterations - prevGC_Iterations >= GC_Iterations
+                            || GC_IterationsAsync && iterationsAsync - prevGC_IterationsAsync >= GC_IterationsAsync
+                            || GC_Interval && now - prevGC_Time >= GC_Interval) {
+                            prevGC_Iterations = iterations;
+                            prevGC_IterationsAsync = iterationsAsync;
+                            prevGC_Time = now;
+                            console.log(iterations);
+                            return garbageCollect(2).then(next);
                         }
                         const promiseOrIterations = test(variantArgs);
                         if (typeof promiseOrIterations === 'object'
@@ -107,7 +106,7 @@ function createTestVariants(test) {
                     }
                 }
                 onCompleted();
-                return iterations;
+                return garbageCollect(2).then(o => iterations);
             }
             return next(0);
         };

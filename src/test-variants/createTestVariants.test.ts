@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-shadow */
 import {createTestVariants} from './createTestVariants'
 import {delay} from '../helpers/test/delay'
+import {PromiseFast} from "src/promise-fast/PromiseFast";
 
 describe('test > testVariants', function () {
   describe('sync', function () {
@@ -295,6 +296,16 @@ describe('test > testVariants', function () {
     let millionRejectTime = 0
     it('million of Promise reject', async function () {
       this.timeout(600000)
+
+      console.log('wait 5 sec')
+      await new Promise((resolve) => {
+        setTimeout(resolve, 5000)
+      })
+      console.log('start')
+      await new Promise((resolve) => {
+        setTimeout(resolve, 1000)
+      })
+
       await createTestVariants(async ({
         a,
         b,
@@ -310,7 +321,7 @@ describe('test > testVariants', function () {
         e: number,
         f: number,
       }) => {
-        await new Promise((resolve, reject) => {
+        await new PromiseFast((resolve, reject) => {
           reject('err')
         })
           .catch(o => {})

@@ -1,5 +1,6 @@
 import { calcPerformance } from 'rdtsc';
 import { createTestVariants } from './createTestVariants.mjs';
+import '../garbage-collect/garbageCollect.mjs';
 
 describe('test > testVariants perf', function () {
     this.timeout(300000);
