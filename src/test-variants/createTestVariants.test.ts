@@ -329,7 +329,7 @@ describe('test > testVariants', function () {
     it('after million of Promise reject', function () {
       const now = Date.now()
       assert.ok(millionRejectTime > 0)
-      assert.ok(now - millionRejectTime < 120, (now - millionRejectTime) + '')
+      assert.ok(now - millionRejectTime < 200, (now - millionRejectTime) + '')
       console.log('millionRejectTime: ' + (now - millionRejectTime))
     })
   })
