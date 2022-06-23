@@ -153,7 +153,7 @@ export function createTestVariants<TArgs extends object>(
               prevGC_Iterations = iterations
               prevGC_IterationsAsync = iterationsAsync
               prevGC_Time = now
-              return garbageCollect(2).then(next)
+              return garbageCollect(10).then(next)
             }
 
             const promiseOrIterations = test(variantArgs)
@@ -173,7 +173,7 @@ export function createTestVariants<TArgs extends object>(
           }
         }
         onCompleted()
-        return garbageCollect(2).then(o => iterations)
+        return garbageCollect(10).then(o => iterations)
       }
 
       return next(0)
