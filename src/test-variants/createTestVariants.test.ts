@@ -329,8 +329,8 @@ describe('test-variants > million of Promise reject', function () {
       d: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
       e: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
       f: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-      // g: [0],
-      g: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+      g: [0],
+      // g: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
     })()
 
     console.log('try delay')
