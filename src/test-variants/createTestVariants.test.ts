@@ -294,7 +294,7 @@ describe('test > testVariants', function () {
 
     let millionRejectTime = 0
     it('million of Promise reject', async function () {
-      this.timeout(300000)
+      this.timeout(600000)
       await createTestVariants(async ({
         a,
         b,
