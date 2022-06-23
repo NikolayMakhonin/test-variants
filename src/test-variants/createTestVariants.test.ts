@@ -294,7 +294,7 @@ describe('test > testVariants', function () {
 
     let millionRejectTime = 0
     it('million of Promise reject', async function () {
-      this.timeout(90000)
+      this.timeout(300000)
       await createTestVariants(async ({
         a,
         b,
@@ -320,7 +320,7 @@ describe('test > testVariants', function () {
         c: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
         d: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
         e: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-        f: [0, 1, 2], // , 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        f: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
       })()
 
       millionRejectTime = Date.now()
@@ -329,7 +329,7 @@ describe('test > testVariants', function () {
     it('after million of Promise reject', function () {
       const now = Date.now()
       assert.ok(millionRejectTime > 0)
-      assert.ok(now - millionRejectTime < 200, (now - millionRejectTime) + '')
+      assert.ok(now - millionRejectTime < 500, (now - millionRejectTime) + '')
       console.log('millionRejectTime: ' + (now - millionRejectTime))
     })
   })
