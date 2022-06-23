@@ -7,7 +7,7 @@ export function garbageCollect(iterations: number): Promise<0> {
   const promise = new Promise<number>(resolve => {
     setTimeout(() => {
       resolve(iterations)
-    }, 0)
+    }, 50)
   })
   return iterations <= 0
     ? promise as Promise<0>
