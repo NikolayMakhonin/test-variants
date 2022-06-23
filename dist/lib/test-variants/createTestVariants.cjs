@@ -52,6 +52,12 @@ function createTestVariants(test) {
             let iterationsAsync = 0;
             let debug = false;
             let debugIteration = 0;
+            let resultResolve;
+            let resultReject;
+            const resultPromise = new Promise((resolve, reject) => {
+                resultResolve = resolve;
+                resultReject = reject;
+            });
             function onError(err) {
                 console.error(JSON.stringify(variantArgs, null, 2));
                 console.error(err);
@@ -65,7 +71,7 @@ function createTestVariants(test) {
                     next(0);
                     debugIteration++;
                 }
-                throw err;
+                resultReject(err);
             }
             function onCompleted() {
                 if (logCompleted) {
@@ -80,8 +86,8 @@ function createTestVariants(test) {
                 const newIterations = typeof value === 'number' ? value : 1;
                 iterationsAsync += newIterations;
                 iterations += typeof value === 'number' ? value : 1;
-                while (debug || nextVariant()) {
-                    try {
+                try {
+                    while (debug || nextVariant()) {
                         const now = (logInterval || GC_Interval) && Date.now();
                         if (logInterval && now - prevLogTime >= logInterval) {
                             // the log is required to prevent the karma browserNoActivityTimeout
@@ -94,25 +100,31 @@ function createTestVariants(test) {
                             prevGC_Iterations = iterations;
                             prevGC_IterationsAsync = iterationsAsync;
                             prevGC_Time = now;
-                            console.log(iterations);
-                            return garbageCollect_garbageCollect.garbageCollect(2).then(next);
+                            void garbageCollect_garbageCollect.garbageCollect(1).then(next);
+                            return;
                         }
                         const promiseOrIterations = test(variantArgs);
                         if (typeof promiseOrIterations === 'object'
                             && promiseOrIterations
                             && typeof promiseOrIterations.then === 'function') {
-                            return promiseOrIterations.then(next, onError);
+                            void promiseOrIterations.then(next, onError);
+                            return;
                         }
                         iterations += typeof promiseOrIterations === 'number' ? promiseOrIterations : 1;
                     }
-                    catch (err) {
-                        onError(err);
-                    }
+                }
+                catch (err) {
+                    onError(err);
+                    return;
                 }
                 onCompleted();
-                return garbageCollect_garbageCollect.garbageCollect(2).then(o => iterations);
+                void garbageCollect_garbageCollect.garbageCollect(1)
+                    .then(() => {
+                    resultResolve(iterations);
+                });
             }
-            return next(0);
+            next(0);
+            return resultPromise;
         };
     };
 }

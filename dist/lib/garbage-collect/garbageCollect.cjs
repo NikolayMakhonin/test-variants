@@ -8,14 +8,22 @@ function garbageCollect(iterations) {
         throw new Error(`Iterations = ${iterations}`);
     }
     iterations--;
+    const time0 = Date.now();
     const promise = new Promise(resolve => {
         setTimeout(() => {
             resolve(iterations);
-        }, 100);
+        }, 1);
     });
     return iterations <= 0
         ? promise
-        : promise.then(garbageCollect);
+        : promise.then(o => {
+            const gcTime = Date.now() - time0;
+            if (gcTime > 50) {
+                console.log('GC time: ' + gcTime);
+                o++;
+            }
+            return garbageCollect(o);
+        });
 }
 
 exports.garbageCollect = garbageCollect;

@@ -1,32 +1,36 @@
 !function(n){"use strict";function e(n){
 if(null==n||n<=0)throw new Error("Iterations = ".concat(n))
-;n--;var t=new Promise((function(e){
-setTimeout((function(){e(n)}),100)}))
-;return n<=0?t:t.then(e)}
-n.createTestVariants=function(n){
+;n--;var t=Date.now(),o=new Promise((function(e){
+setTimeout((function(){e(n)}),1)}))
+;return n<=0?o:o.then((function(n){
+var o=Date.now()-t
+;return o>50&&(console.log("GC time: "+o),n++),e(n)
+}))}n.createTestVariants=function(n){
 return function(t){return function(o){
-var r=void 0===o?{}:o,i=r.GC_Iterations,u=void 0===i?1e6:i,f=r.GC_IterationsAsync,a=void 0===f?1e4:f,c=r.GC_Interval,l=void 0===c?1e3:c,v=r.logInterval,s=void 0===v?5e3:v,h=r.logCompleted,y=void 0===h||h,g=Object.keys(t),d=Object.values(t),b=g.length,p={}
-;function w(n){var e=d[n]
-;return"function"==typeof e&&(e=e(p)),e}
-for(var I=[],m=[],D=0;D<b;D++)I[D]=-1,m[D]=[]
-;function O(){for(var n=b-1;n>=0;n--){var e=I[n]+1
-;if(e<m[n].length){
-for(I[n]=e,p[g[n]]=m[n][e],n++;n<b;n++){var t=w(n)
-;if(0===t.length)break;I[n]=0,m[n]=t,p[g[n]]=t[0]}
-if(n>=b)return!0}}return!1}m[0]=w(0)
-;var _=0,j=0,C=!1,G=0;function T(n){
-console.error(JSON.stringify(p,null,2)),console.error(n)
+var r=void 0===o?{}:o,i=r.GC_Iterations,u=void 0===i?1e6:i,a=r.GC_IterationsAsync,f=void 0===a?1e4:a,c=r.GC_Interval,v=void 0===c?1e3:c,l=r.logInterval,s=void 0===l?5e3:l,d=r.logCompleted,y=void 0===d||d,g=Object.keys(t),h=Object.values(t),w=g.length,b={}
+;function m(n){var e=h[n]
+;return"function"==typeof e&&(e=e(b)),e}
+for(var p=[],D=[],I=0;I<w;I++)p[I]=-1,D[I]=[]
+;function C(){for(var n=w-1;n>=0;n--){var e=p[n]+1
+;if(e<D[n].length){
+for(p[n]=e,b[g[n]]=D[n][e],n++;n<w;n++){var t=m(n)
+;if(0===t.length)break;p[n]=0,D[n]=t,b[g[n]]=t[0]}
+if(n>=w)return!0}}return!1}D[0]=m(0)
+;var G,O,_=0,j=0,T=!1,E=0,P=new Promise((function(n,e){
+G=n,O=e}));function k(n){
+console.error(JSON.stringify(b,null,2)),console.error(n)
 ;var e=Date.now()
-;throw Date.now()-e>50&&G<5&&(console.log("DEBUG ITERATION: "+G),
-C=!0,P(0),G++),n}var E=Date.now(),k=E,A=_,N=j
-;function P(t){
-for(j+="number"==typeof t?t:1,_+="number"==typeof t?t:1;C||O();)try{
-var o=(s||l)&&Date.now()
-;if(s&&o-E>=s&&(console.log(_),E=o),u&&_-A>=u||a&&j-N>=a||l&&o-k>=l)return A=_,
-N=j,k=o,console.log(_),e(2).then(P);var r=n(p)
-;if("object"==typeof r&&r&&"function"==typeof r.then)return r.then(P,T)
-;_+="number"==typeof r?r:1}catch(n){T(n)}
-return y&&console.log("variants: "+_),e(2).then((function(n){
-return _}))}return P(0)}}
+;Date.now()-e>50&&E<5&&(console.log("DEBUG ITERATION: "+E),T=!0,
+M(0),E++),O(n)}var A=Date.now(),N=A,B=_,J=j
+;function M(t){
+j+="number"==typeof t?t:1,_+="number"==typeof t?t:1
+;try{for(;T||C();){var o=(s||v)&&Date.now()
+;if(s&&o-A>=s&&(console.log(_),A=o),u&&_-B>=u||f&&j-J>=f||v&&o-N>=v)return B=_,
+J=j,N=o,void e(1).then(M);var r=n(b)
+;if("object"==typeof r&&r&&"function"==typeof r.then)return void r.then(M,k)
+;_+="number"==typeof r?r:1}}catch(n){
+return void k(n)}
+y&&console.log("variants: "+_),e(1).then((function(){
+G(_)}))}return M(0),P}}
 },Object.defineProperty(n,"__esModule",{value:!0})
 }({});

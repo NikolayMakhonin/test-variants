@@ -25,7 +25,7 @@ module.exports = function (config) {
             : []
       )
       : [
-        'LocalChromium49',
+        'LocalChromium39',
         'ChromeLatest',
         'FirefoxHeadless',
       ],
