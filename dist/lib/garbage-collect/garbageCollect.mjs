@@ -4,7 +4,7 @@ function garbageCollect(iterations) {
         throw new Error(`Iterations = ${iterations}`);
     }
     iterations--;
-    const time0 = Date.now();
+    // const time0 = Date.now()
     const promise = new Promise(resolve => {
         setTimeout(() => {
             resolve(iterations);
@@ -12,14 +12,15 @@ function garbageCollect(iterations) {
     });
     return iterations <= 0
         ? promise
-        : promise.then(o => {
-            const gcTime = Date.now() - time0;
-            if (gcTime > 50) {
-                console.log('GC time: ' + gcTime);
-                o++;
-            }
-            return garbageCollect(o);
-        });
+        : promise.then(garbageCollect);
+    // : promise.then(o => {
+    //   const gcTime = Date.now() - time0
+    //   if (gcTime > 50) {
+    //     console.log('GC time: ' + gcTime)
+    //     o++
+    //   }
+    //   return garbageCollect(o)
+    // })
 }
 
 export { garbageCollect };

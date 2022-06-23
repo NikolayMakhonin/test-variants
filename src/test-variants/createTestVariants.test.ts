@@ -319,6 +319,9 @@ describe('test-variants > million of Promise reject', function () {
         },
       })
         .then(o => {}, o => {})
+
+      // await Promise.reject('err')
+      //   .then(o => {}, o => {})
     })({
       a: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
       b: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
@@ -327,7 +330,11 @@ describe('test-variants > million of Promise reject', function () {
       e: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
       f: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
       g: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-    })()
+    })({
+      GC_IterationsAsync: 0,
+      GC_Interval       : 0,
+      GC_Iterations     : 0,
+    })
 
     console.log('try delay')
     for (let i = 0; i < 100; i++) {

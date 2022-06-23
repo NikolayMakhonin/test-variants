@@ -1,5 +1,6 @@
 import { calcPerformance } from 'rdtsc';
 import { createTestVariants } from './createTestVariants.mjs';
+import 'tslib';
 import '../garbage-collect/garbageCollect.mjs';
 
 describe('test > testVariants perf', function () {

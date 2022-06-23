@@ -2,6 +2,7 @@
 
 var rdtsc = require('rdtsc');
 var testVariants_createTestVariants = require('./createTestVariants.cjs');
+require('tslib');
 require('../garbage-collect/garbageCollect.cjs');
 
 describe('test > testVariants perf', function () {

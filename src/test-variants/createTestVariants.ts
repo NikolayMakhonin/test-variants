@@ -104,14 +104,7 @@ export function createTestVariants<TArgs extends object>(
       let debug = false
       let debugIteration = 0
 
-      let resultResolve
-      let resultReject
-      const resultPromise = new Promise<number>((resolve, reject) => {
-        resultResolve = resolve
-        resultReject = reject
-      })
-
-      function onError(err) {
+      async function onError(err) {
         console.error(JSON.stringify(variantArgs, null, 2))
         console.error(err)
 
@@ -122,11 +115,11 @@ export function createTestVariants<TArgs extends object>(
         if (Date.now() - time0 > 50 && debugIteration < 5) {
           console.log('DEBUG ITERATION: ' + debugIteration)
           debug = true
-          next(0)
+          await next()
           debugIteration++
         }
 
-        resultReject(err)
+        throw err
       }
 
       function onCompleted() {
@@ -139,10 +132,7 @@ export function createTestVariants<TArgs extends object>(
       let prevGC_Time = prevLogTime
       let prevGC_Iterations = iterations
       let prevGC_IterationsAsync = iterationsAsync
-      function next(value: number): void {
-        const newIterations = typeof value === 'number' ? value : 1
-        iterationsAsync += newIterations
-        iterations += typeof value === 'number' ? value : 1
+      async function next(): Promise<number> {
         try {
           while (debug || nextVariant()) {
             const now = (logInterval || GC_Interval) && Date.now()
@@ -161,8 +151,8 @@ export function createTestVariants<TArgs extends object>(
               prevGC_Iterations = iterations
               prevGC_IterationsAsync = iterationsAsync
               prevGC_Time = now
-              void garbageCollect(1).then(next)
-              return
+              await garbageCollect(1)
+              continue
             }
 
             const promiseOrIterations = test(variantArgs)
@@ -172,28 +162,27 @@ export function createTestVariants<TArgs extends object>(
               && promiseOrIterations
               && typeof promiseOrIterations.then === 'function'
             ) {
-              void promiseOrIterations.then(next, onError)
-              return
+              const value = await promiseOrIterations
+              const newIterations = typeof value === 'number' ? value : 1
+              iterationsAsync += newIterations
+              iterations += newIterations
+              continue
             }
 
             iterations += typeof promiseOrIterations === 'number' ? promiseOrIterations : 1
           }
         }
         catch (err) {
-          onError(err)
-          return
+          await onError(err)
         }
 
         onCompleted()
-        void garbageCollect(1)
-          .then(() => {
-            resultResolve(iterations)
-          })
+        await garbageCollect(1)
+
+        return iterations
       }
 
-      next(0)
-
-      return resultPromise
+      return next()
     }
   }
 }
