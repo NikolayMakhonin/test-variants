@@ -323,6 +323,15 @@ describe('test > testVariants', function () {
         f: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
       })()
 
+      console.log('try delay')
+      for (let i = 0; i < 100; i++) {
+        let time0 = Date.now()
+        await new Promise(resolve => {
+          setTimeout(resolve, 0)
+        })
+        console.log('delay real time: ' + (Date.now() - time0))
+      }
+
       millionRejectTime = Date.now()
     })
 

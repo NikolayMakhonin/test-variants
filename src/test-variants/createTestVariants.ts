@@ -10,6 +10,8 @@
 
 // type VariantArgValues<TArgs, T> = T[] | ((args: TArgs) => T[])
 
+import {garbageCollect} from 'src/garbage-collect/garbageCollect'
+
 type VariantsArgs<TArgs> = {
   [key in keyof TArgs]: TArgs[key][] | ((args: TArgs) => TArgs[key][])
 }
@@ -28,11 +30,12 @@ type TestVariantsSetArgs<TArgs> = <TAdditionalArgs>(args: VariantsArgs<{
 }>) => TestVariantsCall
 
 export type TestVariantsCallParams = {
-  /** this pause required for timely garbage collect of Promise reject */
-  pauseIterationsAsync?: number,
-  /** this pause required to prevent the karma browserDisconnectTimeout */
-  pauseInterval?: number,
-  pauseTime?: number,
+  /** Wait for garbage collection after iterations */
+  GC_Iterations?: number,
+  /** Same as GC_Iterations but only for async test variants, required for 10000 and more of Promise rejections */
+  GC_IterationsAsync?: number,
+  /** Wait for garbage collection after time interval, required to prevent the karma browserDisconnectTimeout */
+  GC_Interval?: number,
   /** console log current iterations, required to prevent the karma browserNoActivityTimeout */
   logInterval?: number,
   /** console log iterations on test completed */
@@ -44,9 +47,9 @@ export function createTestVariants<TArgs extends object>(
 ): TestVariantsSetArgs<TArgs> {
   return function testVariantsArgs(args) {
     return function testVariantsCall({
-      pauseIterationsAsync = 10000,
-      pauseInterval = 1000,
-      pauseTime = 50,
+      GC_Iterations = 1000000,
+      GC_IterationsAsync = 10000,
+      GC_Interval = 1000,
       logInterval = 10000,
       logCompleted = true,
     }: TestVariantsCallParams = {}) {
@@ -125,15 +128,16 @@ export function createTestVariants<TArgs extends object>(
       }
 
       let prevLogTime = Date.now()
-      let prevPauseTime = prevLogTime
-      let prevPauseIterationsAsync = iterationsAsync
+      let prevGC_Time = prevLogTime
+      let prevGC_Iterations = iterations
+      let prevGC_IterationsAsync = iterationsAsync
       function next(value: number) {
         const newIterations = typeof value === 'number' ? value : 1
         iterationsAsync += newIterations
         iterations += typeof value === 'number' ? value : 1
         while (debug || nextVariant()) {
           try {
-            const now = (logInterval || pauseInterval) && Date.now()
+            const now = (logInterval || GC_Interval) && Date.now()
 
             if (logInterval && now - prevLogTime >= logInterval) {
               // the log is required to prevent the karma browserNoActivityTimeout
@@ -142,21 +146,14 @@ export function createTestVariants<TArgs extends object>(
             }
 
             if (
-              pauseIterationsAsync && iterationsAsync - prevPauseIterationsAsync >= pauseIterationsAsync
-              || pauseInterval && now - prevPauseTime >= pauseInterval
+              GC_Iterations && iterations - prevGC_Iterations >= GC_Iterations
+              || GC_IterationsAsync && iterationsAsync - prevGC_IterationsAsync >= GC_IterationsAsync
+              || GC_Interval && now - prevGC_Time >= GC_Interval
             ) {
-              prevPauseTime = now
-              prevPauseIterationsAsync = iterationsAsync
-
-              const pausePromise = pauseTime
-                ? new Promise<number>(resolve => {
-                  setTimeout(() => {
-                    resolve(0)
-                  }, pauseTime)
-                })
-                : Promise.resolve(0)
-
-              return pausePromise.then(next)
+              prevGC_Iterations = iterations
+              prevGC_IterationsAsync = iterationsAsync
+              prevGC_Time = now
+              return garbageCollect(2).then(next)
             }
 
             const promiseOrIterations = test(variantArgs)
@@ -176,7 +173,7 @@ export function createTestVariants<TArgs extends object>(
           }
         }
         onCompleted()
-        return iterations
+        return garbageCollect(2).then(o => iterations)
       }
 
       return next(0)
