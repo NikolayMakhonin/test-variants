@@ -11,6 +11,7 @@ import polyfills from 'rollup-plugin-node-polyfills'
 import inject from '@rollup/plugin-inject'
 import babel from '@rollup/plugin-babel'
 import istanbul from 'rollup-plugin-istanbul'
+import tsTransformPaths from '@zerollup/ts-transform-paths'
 import nycrc from './nyc.config.mjs'
 import { terser } from 'rollup-plugin-terser'
 import path from 'path'
@@ -88,11 +89,24 @@ const nodeConfig = ({
       transformMixedEsModules: true,
     }),
     typescript({
-      sourceMap: dev,
+      sourceMap     : dev,
+      declarationDir: outputDir,
+      declaration   : true,
+      transformers  : {
+        afterDeclarations: [
+          {
+            type   : 'program',
+            factory: (program) => {
+              return tsTransformPaths(program).afterDeclarations
+            },
+          },
+        ],
+      },
     }),
   ],
   onwarn  : onwarnRollup,
-  external: Object.keys(pkg.dependencies)
+  external: []
+    .concat(Object.keys(pkg.dependencies))
     .concat(Object.keys(pkg.devDependencies))
     .concat(require('module').builtinModules || Object.keys(process.binding('natives'))),
 })
