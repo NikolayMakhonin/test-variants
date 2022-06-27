@@ -11,6 +11,7 @@
 // type VariantArgValues<TArgs, T> = T[] | ((args: TArgs) => T[])
 
 import {garbageCollect} from 'src/garbage-collect/garbageCollect'
+import {IAbortSignalFast} from '@flemist/abort-controller-fast'
 
 type VariantsArgs<TArgs> = {
   [key in keyof TArgs]: TArgs[key][] | ((args: TArgs) => TArgs[key][])
@@ -45,6 +46,7 @@ export type TestVariantsCallParams<TArgs> = {
     variant: TArgs,
     error: any,
   }) => void
+  abortSignal?: IAbortSignalFast,
 }
 
 export function createTestVariants<TArgs extends object>(
@@ -58,6 +60,7 @@ export function createTestVariants<TArgs extends object>(
       logInterval = 5000,
       logCompleted = true,
       onError: onErrorCallback = null,
+      abortSignal,
     }: TestVariantsCallParams<TArgs> = {}) {
       const argsKeys = Object.keys(args)
       const argsValues: any[] = Object.values(args)
@@ -152,7 +155,7 @@ export function createTestVariants<TArgs extends object>(
       let prevGC_IterationsAsync = iterationsAsync
       async function next(): Promise<number> {
         try {
-          while (debug || nextVariant()) {
+          while (!abortSignal?.aborted && (debug || nextVariant())) {
             const now = (logInterval || GC_Interval) && Date.now()
 
             if (logInterval && now - prevLogTime >= logInterval) {
@@ -192,6 +195,10 @@ export function createTestVariants<TArgs extends object>(
         }
         catch (err) {
           await onError(err)
+        }
+
+        if (abortSignal?.aborted) {
+          throw abortSignal.reason
         }
 
         onCompleted()

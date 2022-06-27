@@ -8,7 +8,7 @@ var garbageCollect_garbageCollect = require('../garbage-collect/garbageCollect.c
 /* eslint-disable @typescript-eslint/no-shadow */
 function createTestVariants(test) {
     return function testVariantsArgs(args) {
-        return function testVariantsCall({ GC_Iterations = 1000000, GC_IterationsAsync = 10000, GC_Interval = 1000, logInterval = 5000, logCompleted = true, } = {}) {
+        return function testVariantsCall({ GC_Iterations = 1000000, GC_IterationsAsync = 10000, GC_Interval = 1000, logInterval = 5000, logCompleted = true, onError: onErrorCallback = null, } = {}) {
             const argsKeys = Object.keys(args);
             const argsValues = Object.values(args);
             const argsLength = argsKeys.length;
@@ -53,10 +53,10 @@ function createTestVariants(test) {
             let iterationsAsync = 0;
             let debug = false;
             let debugIteration = 0;
-            function onError(err) {
+            function onError(error) {
                 return tslib.__awaiter(this, void 0, void 0, function* () {
-                    console.error(JSON.stringify(variantArgs, null, 2));
-                    console.error(err);
+                    console.error(`error variant: ${iterations}\r\n${JSON.stringify(variantArgs, null, 2)}`);
+                    console.error(error);
                     // rerun failed variant 5 times for debug
                     const time0 = Date.now();
                     // eslint-disable-next-line no-debugger
@@ -67,7 +67,14 @@ function createTestVariants(test) {
                         yield next();
                         debugIteration++;
                     }
-                    throw err;
+                    if (onErrorCallback) {
+                        onErrorCallback({
+                            iteration: iterations,
+                            variant: variantArgs,
+                            error,
+                        });
+                    }
+                    throw error;
                 });
             }
             function onCompleted() {

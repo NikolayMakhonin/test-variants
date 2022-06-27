@@ -7,6 +7,7 @@ specifiers:
   '@babel/plugin-transform-runtime': 7.18.5
   '@babel/preset-env': 7.18.2
   '@babel/runtime-corejs3': 7.18.3
+  '@flemist/abort-controller-fast': ^0.0.5
   '@flemist/copy-glob-flat': 0.0.5
   '@flemist/karma-custom-launcher': 0.0.0
   '@flemist/test-utils': 0.0.7
@@ -52,6 +53,7 @@ specifiers:
   typescript: ^4.7.4
 
 dependencies:
+  '@flemist/abort-controller-fast': 0.0.5
   tslib: 2.4.0
 
 devDependencies:
@@ -1297,6 +1299,12 @@ packages:
     transitivePeerDependencies:
       - supports-color
     dev: true
+
+  /@flemist/abort-controller-fast/0.0.5:
+    resolution: {integrity: sha512-ewpqfmNx+V5dqTzVBxi7syhhsFRk5ktNOd0d85tKyGkqwzoMyJSYGBPmycYhlUDSsIN/3Nb2EaE0tPOtfw6PNQ==}
+    dependencies:
+      tslib: 2.4.0
+    dev: false
 
   /@flemist/copy-glob-flat/0.0.5:
     resolution: {integrity: sha512-nw2x3zS78uRv7jlR709oXiMXhtTlTS2+WJiy3aTabcayv50CNHMKXevv9WR7YjUJzS7743EdPJl5wAKjIq9Fdg==}
