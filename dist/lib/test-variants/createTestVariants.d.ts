@@ -1,3 +1,4 @@
+import { IAbortSignalFast } from '@flemist/abort-controller-fast';
 declare type VariantsArgs<TArgs> = {
     [key in keyof TArgs]: TArgs[key][] | ((args: TArgs) => TArgs[key][]);
 };
@@ -22,6 +23,7 @@ export declare type TestVariantsCallParams<TArgs> = {
         variant: TArgs;
         error: any;
     }) => void;
+    abortSignal?: IAbortSignalFast;
 };
 export declare function createTestVariants<TArgs extends object>(test: (args: TArgs) => Promise<number | void> | number | void): TestVariantsSetArgs<TArgs>;
 export {};

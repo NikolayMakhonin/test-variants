@@ -8,7 +8,7 @@ var garbageCollect_garbageCollect = require('../garbage-collect/garbageCollect.c
 /* eslint-disable @typescript-eslint/no-shadow */
 function createTestVariants(test) {
     return function testVariantsArgs(args) {
-        return function testVariantsCall({ GC_Iterations = 1000000, GC_IterationsAsync = 10000, GC_Interval = 1000, logInterval = 5000, logCompleted = true, onError: onErrorCallback = null, } = {}) {
+        return function testVariantsCall({ GC_Iterations = 1000000, GC_IterationsAsync = 10000, GC_Interval = 1000, logInterval = 5000, logCompleted = true, onError: onErrorCallback = null, abortSignal, } = {}) {
             const argsKeys = Object.keys(args);
             const argsValues = Object.values(args);
             const argsLength = argsKeys.length;
@@ -89,7 +89,7 @@ function createTestVariants(test) {
             function next() {
                 return tslib.__awaiter(this, void 0, void 0, function* () {
                     try {
-                        while (debug || nextVariant()) {
+                        while (!(abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) && (debug || nextVariant())) {
                             const now = (logInterval || GC_Interval) && Date.now();
                             if (logInterval && now - prevLogTime >= logInterval) {
                                 // the log is required to prevent the karma browserNoActivityTimeout
@@ -120,6 +120,9 @@ function createTestVariants(test) {
                     }
                     catch (err) {
                         yield onError(err);
+                    }
+                    if (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) {
+                        throw abortSignal.reason;
                     }
                     onCompleted();
                     yield garbageCollect_garbageCollect.garbageCollect(1);
