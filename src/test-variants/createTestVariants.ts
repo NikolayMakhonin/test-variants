@@ -21,15 +21,15 @@ type VariantsArgs<TArgs> = {
 
 type PromiseOrValue<T> = Promise<T> | T
 
-type TestVariantsCall = (callParams?: TestVariantsCallParams) => PromiseOrValue<number>
+type TestVariantsCall<TArgs> = (callParams?: TestVariantsCallParams<TArgs>) => PromiseOrValue<number>
 
 type TestVariantsSetArgs<TArgs> = <TAdditionalArgs>(args: VariantsArgs<{
   [key in (keyof TAdditionalArgs | keyof TArgs)]: key extends keyof TArgs ? TArgs[key]
     : key extends keyof TAdditionalArgs ? TAdditionalArgs[key]
       : never
-}>) => TestVariantsCall
+}>) => TestVariantsCall<TArgs>
 
-export type TestVariantsCallParams = {
+export type TestVariantsCallParams<TArgs> = {
   /** Wait for garbage collection after iterations */
   GC_Iterations?: number,
   /** Same as GC_Iterations but only for async test variants, required for 10000 and more of Promise rejections */
@@ -40,6 +40,11 @@ export type TestVariantsCallParams = {
   logInterval?: number,
   /** console log iterations on test completed */
   logCompleted?: boolean,
+  onError?: (event: {
+    iteration: number,
+    variant: TArgs,
+    error: any,
+  }) => void
 }
 
 export function createTestVariants<TArgs extends object>(
@@ -52,7 +57,8 @@ export function createTestVariants<TArgs extends object>(
       GC_Interval = 1000,
       logInterval = 5000,
       logCompleted = true,
-    }: TestVariantsCallParams = {}) {
+      onError: onErrorCallback = null,
+    }: TestVariantsCallParams<TArgs> = {}) {
       const argsKeys = Object.keys(args)
       const argsValues: any[] = Object.values(args)
       const argsLength = argsKeys.length
@@ -104,9 +110,13 @@ export function createTestVariants<TArgs extends object>(
       let debug = false
       let debugIteration = 0
 
-      async function onError(err) {
-        console.error(JSON.stringify(variantArgs, null, 2))
-        console.error(err)
+      async function onError(error) {
+        console.error(`error variant: ${
+          iterations
+        }\r\n${
+          JSON.stringify(variantArgs, null, 2)
+        }`)
+        console.error(error)
 
         // rerun failed variant 5 times for debug
         const time0 = Date.now()
@@ -119,7 +129,15 @@ export function createTestVariants<TArgs extends object>(
           debugIteration++
         }
 
-        throw err
+        if (onErrorCallback) {
+          onErrorCallback({
+            iteration: iterations,
+            variant  : variantArgs,
+            error,
+          })
+        }
+
+        throw error
       }
 
       function onCompleted() {
