@@ -10,7 +10,7 @@ specifiers:
   '@flemist/abort-controller-fast': ^0.0.5
   '@flemist/copy-glob-flat': 0.0.5
   '@flemist/karma-custom-launcher': 0.0.0
-  '@flemist/test-utils': 0.0.7
+  '@flemist/test-utils': 0.0.9
   '@rollup/plugin-alias': 3.1.9
   '@rollup/plugin-babel': 5.3.1
   '@rollup/plugin-commonjs': '=21.1.0'
@@ -20,6 +20,7 @@ specifiers:
   '@rollup/plugin-node-resolve': 13.3.0
   '@rollup/plugin-replace': 4.0.0
   '@rollup/plugin-typescript': 8.3.3
+  '@rollup/pluginutils': 4.2.1
   '@types/assert': 1.5.6
   '@types/fs-extra': 9.0.13
   '@types/mocha': 9.1.1
@@ -27,7 +28,7 @@ specifiers:
   '@zerollup/ts-transform-paths': 1.7.18
   cpy-cli: '=3.1.1'
   eslint: 8.18.0
-  eslint-config-pro: 3.0.14
+  eslint-config-pro: 3.0.16
   fs-extra: 10.1.0
   globby: '=11.1.0'
   karma: 6.4.0
@@ -39,7 +40,7 @@ specifiers:
   mocha: 9.2.2
   nodemon: 2.0.16
   nyc: 15.1.0
-  rdtsc: 2.0.0
+  rdtsc: 3.0.3
   rimraf: 3.0.2
   rollup: 2.75.7
   rollup-plugin-delete: 2.0.0
@@ -65,7 +66,7 @@ devDependencies:
   '@babel/runtime-corejs3': 7.18.3
   '@flemist/copy-glob-flat': 0.0.5
   '@flemist/karma-custom-launcher': 0.0.0
-  '@flemist/test-utils': 0.0.7
+  '@flemist/test-utils': 0.0.9
   '@rollup/plugin-alias': 3.1.9_rollup@2.75.7
   '@rollup/plugin-babel': 5.3.1_za5spbk65gc2bmrclluhieacz4
   '@rollup/plugin-commonjs': 21.1.0_rollup@2.75.7
@@ -75,6 +76,7 @@ devDependencies:
   '@rollup/plugin-node-resolve': 13.3.0_rollup@2.75.7
   '@rollup/plugin-replace': 4.0.0_rollup@2.75.7
   '@rollup/plugin-typescript': 8.3.3_g4qkabtmybowem44p7ts7jnbqm
+  '@rollup/pluginutils': 4.2.1
   '@types/assert': 1.5.6
   '@types/fs-extra': 9.0.13
   '@types/mocha': 9.1.1
@@ -82,7 +84,7 @@ devDependencies:
   '@zerollup/ts-transform-paths': 1.7.18_typescript@4.7.4
   cpy-cli: 3.1.1
   eslint: 8.18.0
-  eslint-config-pro: 3.0.14_b5e7v2qnwxfo6hmiq56u52mz3e
+  eslint-config-pro: 3.0.16_b5e7v2qnwxfo6hmiq56u52mz3e
   fs-extra: 10.1.0
   globby: 11.1.0
   karma: 6.4.0
@@ -94,7 +96,7 @@ devDependencies:
   mocha: 9.2.2
   nodemon: 2.0.16
   nyc: 15.1.0
-  rdtsc: 2.0.0
+  rdtsc: 3.0.3
   rimraf: 3.0.2
   rollup: 2.75.7
   rollup-plugin-delete: 2.0.0
@@ -1320,10 +1322,26 @@ packages:
       tslib: 2.4.0
     dev: true
 
-  /@flemist/test-utils/0.0.7:
-    resolution: {integrity: sha512-HJxyDzk0JzTmroizBpnyUfFxTS+Zklwta2jyVbSljiykH8xgNF/M6Y8WXLUrF8c6bw2dhvD0ZzGdivR3yU2Ihg==}
+  /@flemist/pairing-heap/0.0.1:
+    resolution: {integrity: sha512-bsXb0bYvrhkibbWAURawIvcR09l5sgRsnFAAwGXr1F1TPZqBL9KMzB0QTlwmokKkd3ci5GqsUUWE1BzK80l6Rg==}
     engines: {node: '>=10.4.0', pnpm: ^7.1.6}
     dependencies:
+      tslib: 2.4.0
+    dev: true
+
+  /@flemist/test-utils/0.0.9:
+    resolution: {integrity: sha512-G0WGevCHCyp1BYipmhvnIJMdq6VGVqTZw69teVIhnC9CyA1jXhKXeHdTo8XZDjDJ5MsE5HKYzo50/tKlay/tVA==}
+    engines: {node: '>=10.4.0', pnpm: ^7.1.6}
+    dependencies:
+      '@flemist/time-controller': 0.0.1
+      tslib: 2.4.0
+    dev: true
+
+  /@flemist/time-controller/0.0.1:
+    resolution: {integrity: sha512-z2rddW0+5+fPc+rf3Irq1w1SCzxjYGmv6BrG98nuOXcByK0v+oIsAfslFQudUqJHxZ59fZ6WbzAlgRsLoFDYIw==}
+    engines: {node: '>=10.4.0', pnpm: ^7.1.6}
+    dependencies:
+      '@flemist/pairing-heap': 0.0.1
       tslib: 2.4.0
     dev: true
 
@@ -2899,8 +2917,8 @@ packages:
     engines: {node: '>=10'}
     dev: true
 
-  /eslint-config-pro/3.0.14_b5e7v2qnwxfo6hmiq56u52mz3e:
-    resolution: {integrity: sha512-kLY4/+5EkzxXbkA9jn7OWw4TgErEcql8zdd5EzHvdhJVUav7+VloR5sdpA8LcAEkM2rDrYm9MJO60Dwa4K9dcw==}
+  /eslint-config-pro/3.0.16_b5e7v2qnwxfo6hmiq56u52mz3e:
+    resolution: {integrity: sha512-kMV643XtFGsA7D4fHM0LHx6gigOOyFZGcr/dqxVxa6S1araegi1E/h5d4zauGP2Na6fVn/9XSb/2pIZ0vON4zw==}
     engines: {node: '>=10.4.0', pnpm: ^7.1.6}
     peerDependencies:
       eslint: '>=7.4.0'
@@ -5246,10 +5264,12 @@ packages:
       strip-json-comments: 2.0.1
     dev: true
 
-  /rdtsc/2.0.0:
-    resolution: {integrity: sha512-Uol+smiNk1M9zWYZnC0EOAGrogW9IldsKbl1aLS1C5tOOVScLgdozldL5BGsf+wTjtNYOdzeNRiv/WBU2jN0Bw==}
-    engines: {node: '>= 12.4.0'}
+  /rdtsc/3.0.3:
+    resolution: {integrity: sha512-q3aPiS+toAcB5HYykDk6gcl3aZIZ21sJ37qZ+Sa5NRiGOod/9QnP0EyBT25uZV7C0L4xPtstzZ3KkbZjg8yNHw==}
+    engines: {node: '>=12.4.0', pnpm: ^7.1.6}
     requiresBuild: true
+    dependencies:
+      tslib: 2.4.0
     dev: true
 
   /read-pkg-up/7.0.1:
