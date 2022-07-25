@@ -1,12 +1,9 @@
-# copy of .gitignore
-/dist/**/test/**
-/dist/**/*.test.*
-/dist/**/*.stress.*
+# project template
+/dist/
+/.idea/
+/.github/
+/docs/
 /tmp/
 /node_modules/
 
-# additional rules
-/.idea/
-/.github/
-/dist/
-/docs/
+# additional
