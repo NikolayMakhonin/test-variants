@@ -9,8 +9,7 @@ import inject from '@rollup/plugin-inject'
 import polyfills from 'rollup-plugin-node-polyfills'
 import istanbul from 'rollup-plugin-istanbul'
 import nycrc from './nyc.config.mjs'
-// TODO: replace with @rollup/plugin-typescript after this PR: https://github.com/rollup/plugins/pull/1206
-import typescript from '@flemist/rollup-plugin-typescript'
+import typescript from '@rollup/plugin-typescript'
 import resolve from '@rollup/plugin-node-resolve'
 
 // region helpers
@@ -50,7 +49,7 @@ const onwarnRollup = (warning, onwarn) => {
 }
 
 /** @type { import('vite').ESBuildOptions } */
-export const esbuild = {
+export const esbuildForBrowser = {
   // docs: https://esbuild.github.io/api/#target
   target: ['es6', 'chrome51', 'safari11'],
   format: 'esm',
@@ -124,7 +123,8 @@ export const nodeConfig = ({
   sourcemap,
 }) => {
   return {
-    build: {
+    esbuild: false,
+    build  : {
       emptyOutDir    : false,
       outDir         : outputDir,
       minify         : false,
@@ -133,7 +133,8 @@ export const nodeConfig = ({
       },
       rollupOptions: {
         input,
-        output: outputs.map(output => ({
+        preserveEntrySignatures: 'exports-only',
+        output                 : outputs.map(output => ({
           format        : output.format,
           exports       : 'named',
           entryFileNames: '[name].' + output.extension,
@@ -144,10 +145,9 @@ export const nodeConfig = ({
           multiInput.default({relative}),
           resolve(),
           typescript({
-            sourceMap          : false,
-            declarationDir     : outputDir,
-            declaration        : true,
-            emitDeclarationOnly: true,
+            sourceMap     : sourcemap,
+            declarationDir: outputDir,
+            declaration   : true,
           }),
         ],
         onwarn  : onwarnRollup,
@@ -157,13 +157,9 @@ export const nodeConfig = ({
         ]),
       },
     },
-    esbuild,
     resolve: {
       alias,
     },
-    plugins: [
-      plugins.babel(),
-    ],
   }
 }
 
@@ -178,7 +174,7 @@ export const nodeConfig = ({
  *   outputFile: string,
  *   formats: import('vite').LibraryFormats[],
  *   sourcemap: import('vite').UserConfig['build']['sourcemap'],
- *   babel: boolean,
+ *   useBabel: boolean,
  *   minify: import('vite').UserConfig['build']['minify'],
  * }) => import('vite').UserConfig} */
 export const browserConfig = ({
@@ -192,7 +188,8 @@ export const browserConfig = ({
   minify,
 }) => {
   return {
-    build: {
+    esbuild: esbuildForBrowser,
+    build  : {
       minify,
       sourcemap,
       emptyOutDir: false,
@@ -210,7 +207,6 @@ export const browserConfig = ({
         onwarn: onwarnRollup,
       },
     },
-    esbuild,
     resolve: {
       alias,
     },
@@ -241,7 +237,8 @@ export const browserTestConfig = ({
   minify,
 }) => {
   return {
-    build: {
+    esbuild: esbuildForBrowser,
+    build  : {
       minify,
       sourcemap,
       emptyOutDir  : false,
@@ -267,7 +264,6 @@ export const browserTestConfig = ({
         ],
       },
     },
-    esbuild,
     resolve: {
       alias,
     },

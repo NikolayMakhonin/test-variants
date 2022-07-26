@@ -13,9 +13,11 @@
     "dist/**/*"
   ],
   "compilerOptions": {
-    "target": "es6",
+    "target": "ES2019",
     "module": "es6",
 
+    "removeComments": false,
+    "noLib": false,
     "isolatedModules": true,
     "useDefineForClassFields": true,
     "importsNotUsedAsValues": "error",
