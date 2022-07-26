@@ -13,6 +13,8 @@ import typescript from '@rollup/plugin-typescript'
 import resolve from '@rollup/plugin-node-resolve'
 import tsTransformPaths from '@zerollup/ts-transform-paths'
 import commonjs from '@rollup/plugin-commonjs'
+import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill'
+import { NodeModulesPolyfillPlugin } from '@esbuild-plugins/node-modules-polyfill'
 
 // region helpers
 
@@ -190,8 +192,26 @@ export const vitePlugins = {
     name: 'vite-plugin-node-polyfills',
     config(config, config_env) {
       return {
-        alias: {
-          ...nodePolyfillsAliases(opts),
+        resolve: {
+          alias: {
+            ...nodePolyfillsAliases(opts),
+          },
+        },
+        optimizeDeps: {
+          esbuildOptions: {
+            // Node.js global to browser globalThis
+            define: {
+              global: 'globalThis',
+            },
+            // Enable esbuild polyfill plugins
+            plugins: [
+              NodeGlobalsPolyfillPlugin({
+                process: true,
+                buffer : true,
+              }),
+              NodeModulesPolyfillPlugin(),
+            ],
+          },
         },
         build: {
           rollupOptions: {
@@ -379,16 +399,16 @@ export const browserTestConfig = ({
             global : path.resolve('./node_modules/rollup-plugin-node-polyfills/polyfills/global.js'),
             exclude: ['**/node_modules/rollup-plugin-node-polyfills/polyfills/global.js'],
           }),
-          // polyfills(),
+          polyfills(),
           rollupPlugins.typescript({
             sourceMap      : !!sourcemap,
             compilerOptions: {
               target: 'es5',
             },
           }),
-          // istanbul({
-          //   ...nycrc,
-          // }),
+          istanbul({
+            ...nycrc,
+          }),
           // rollupPlugins.babel(),
         ],
       },
@@ -398,7 +418,7 @@ export const browserTestConfig = ({
     },
     plugins: [
       vitePlugins.nodePolyfills(),
-      // vitePlugins.babel(),
+      vitePlugins.babel(),
     ],
   }
 }
