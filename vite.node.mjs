@@ -4,8 +4,14 @@ const config = nodeConfig({
   input    : ['src/**/*.ts'],
   outputDir: 'dist/lib',
   relative : 'src',
-  format   : 'es',
-  extension: 'mjs',
+  outputs  : [{
+    format   : 'cjs',
+    extension: 'cjs',
+  }, {
+    format   : 'es',
+    extension: 'mjs',
+  }],
+  sourcemap: false,
 })
 
 export default config

@@ -7,6 +7,7 @@ const config = browserConfig({
   outputFile: 'browser',
   formats   : ['iife', 'umd'],
   sourcemap : false,
+  useBabel  : false,
   minify    : 'esbuild',
 })
 

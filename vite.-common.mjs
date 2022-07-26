@@ -9,6 +9,9 @@ import inject from '@rollup/plugin-inject'
 import polyfills from 'rollup-plugin-node-polyfills'
 import istanbul from 'rollup-plugin-istanbul'
 import nycrc from './nyc.config.mjs'
+// TODO: replace with @rollup/plugin-typescript after this PR: https://github.com/rollup/plugins/pull/1206
+import typescript from '@flemist/rollup-plugin-typescript'
+import resolve from '@rollup/plugin-node-resolve'
 
 // region helpers
 
@@ -107,16 +110,17 @@ export const plugins = {
  *   input: import('rollup').InputOption,
  *   outputDir: string,
  *   relative: string,
- *   format: import('rollup').ModuleFormat,
- *   extension: string,
+ *   outputs: {
+ *     format: import('rollup').ModuleFormat,
+ *     extension: string,
+ *   }[],
  *   sourcemap: import('rollup').OutputOptions['sourcemap'],
  * }) => import('vite').UserConfig} */
 export const nodeConfig = ({
   input,
   outputDir,
   relative,
-  format,
-  extension,
+  outputs,
   sourcemap,
 }) => {
   return {
@@ -129,15 +133,22 @@ export const nodeConfig = ({
       },
       rollupOptions: {
         input,
-        output: {
-          format        : format,
+        output: outputs.map(output => ({
+          format        : output.format,
           exports       : 'named',
-          entryFileNames: '[name].' + extension,
-          chunkFileNames: '[name].' + extension,
+          entryFileNames: '[name].' + output.extension,
+          chunkFileNames: '[name].' + output.extension,
           sourcemap,
-        },
+        })),
         plugins: [
-          multiInput({relative}),
+          multiInput.default({relative}),
+          resolve(),
+          typescript({
+            sourceMap          : false,
+            declarationDir     : outputDir,
+            declaration        : true,
+            emitDeclarationOnly: true,
+          }),
         ],
         onwarn  : onwarnRollup,
         external: createFilter([
@@ -167,6 +178,7 @@ export const nodeConfig = ({
  *   outputFile: string,
  *   formats: import('vite').LibraryFormats[],
  *   sourcemap: import('vite').UserConfig['build']['sourcemap'],
+ *   babel: boolean,
  *   minify: import('vite').UserConfig['build']['minify'],
  * }) => import('vite').UserConfig} */
 export const browserConfig = ({
@@ -176,6 +188,7 @@ export const browserConfig = ({
   outputFile,
   formats,
   sourcemap,
+  useBabel,
   minify,
 }) => {
   return {
@@ -202,7 +215,7 @@ export const browserConfig = ({
       alias,
     },
     plugins: [
-      plugins.babel(),
+      useBabel && plugins.babel(),
     ],
   }
 }
