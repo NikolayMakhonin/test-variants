@@ -12,6 +12,7 @@ import nycrc from './nyc.config.mjs'
 import typescript from '@rollup/plugin-typescript'
 import resolve from '@rollup/plugin-node-resolve'
 import tsTransformPaths from '@zerollup/ts-transform-paths'
+import commonjs from "@rollup/plugin-commonjs";
 
 // region helpers
 
@@ -105,7 +106,7 @@ export const plugins = {
             plugins: [
               babel.default({
                 configFile  : path.resolve(dirname, '.babelrc.cjs'), // enable babel for node_modules
-                extensions  : ['.ts', '.js', '.cjs', '.mjs', '.svelte', '.html'],
+                extensions  : ['', '.ts', '.js', '.cjs', '.mjs', '.svelte', '.html'],
                 babelHelpers: 'runtime',
                 exclude     : [
                   // '**/node_modules/rollup*/**',
@@ -214,7 +215,7 @@ export const browserConfig = ({
   minify,
 }) => {
   return {
-    esbuild: esbuildForBrowser,
+    esbuild: false,
     build  : {
       minify,
       sourcemap,
@@ -229,6 +230,14 @@ export const browserConfig = ({
       rollupOptions: {
         plugins: [
           del({ targets: path.join(outputDir, outputFile) }),
+          typescript({
+            sourceMap      : !!sourcemap,
+            declaration    : false,
+            transformers   : typeScriptDeclarationTransformers,
+            compilerOptions: {
+              target: 'es5',
+            },
+          }),
         ],
         onwarn: onwarnRollup,
       },
@@ -263,7 +272,7 @@ export const browserTestConfig = ({
   minify,
 }) => {
   return {
-    esbuild: esbuildForBrowser,
+    esbuild: false,
     build  : {
       minify,
       sourcemap,
@@ -280,10 +289,26 @@ export const browserTestConfig = ({
           multiEntry({
             entryFileName: outputFile,
           }),
+          resolve({
+            browser       : true,
+            preferBuiltins: false,
+          }),
+          commonjs({
+            transformMixedEsModules: true,
+          }),
           inject({
-            global: path.resolve('./node_modules/rollup-plugin-node-polyfills/polyfills/global.js'),
+            global : path.resolve('./node_modules/rollup-plugin-node-polyfills/polyfills/global.js'),
+            exclude: ['**/node_modules/rollup-plugin-node-polyfills/polyfills/global.js'],
           }),
           polyfills(),
+          typescript({
+            sourceMap      : !!sourcemap,
+            declaration    : false,
+            transformers   : typeScriptDeclarationTransformers,
+            compilerOptions: {
+              target: 'es5',
+            },
+          }),
           istanbul({
             ...nycrc,
           }),
