@@ -11,6 +11,7 @@ import istanbul from 'rollup-plugin-istanbul'
 import nycrc from './nyc.config.mjs'
 import typescript from '@rollup/plugin-typescript'
 import resolve from '@rollup/plugin-node-resolve'
+import tsTransformPaths from '@zerollup/ts-transform-paths'
 
 // region helpers
 
@@ -71,6 +72,26 @@ export const terser = {
 export const alias = {
   src: path.resolve(dirname, './src'),
   '~': path.resolve(dirname),
+}
+
+/** @type { import('@rollup/plugin-typescript').CustomTransformerFactories } */
+export const typeScriptDeclarationTransformers = {
+  before: [
+    {
+      type   : 'program',
+      factory: (program) => {
+        return tsTransformPaths(program).before
+      },
+    },
+  ],
+  afterDeclarations: [
+    {
+      type   : 'program',
+      factory: (program) => {
+        return tsTransformPaths(program).afterDeclarations
+      },
+    },
+  ],
 }
 
 export const plugins = {
@@ -148,12 +169,17 @@ export const nodeConfig = ({
             sourceMap     : sourcemap,
             declarationDir: outputDir,
             declaration   : true,
+            transformers  : typeScriptDeclarationTransformers,
           }),
         ],
         onwarn  : onwarnRollup,
+        // external: (source) => {
+        //   console.log('external: ' + source)
+        //   return false
+        // },
         external: createFilter([
           'src/**/*.{js,cjs,mjs}',
-          '**/node_modules/**',
+          /^(?!(src|~)([\\/]|$))[^\\/.:]+[^:]+$/, // all modules except aliases
         ]),
       },
     },
