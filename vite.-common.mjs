@@ -242,7 +242,7 @@ export const browserConfig = ({
         plugins: [
           del({ targets: path.join(outputDir, outputFile) }),
           rollupPlugins.typescript({
-            sourceMap: !!sourcemap,
+            sourceMap      : !!sourcemap,
             compilerOptions: {
               target: 'es5',
             },
