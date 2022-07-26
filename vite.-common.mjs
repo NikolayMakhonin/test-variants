@@ -95,6 +95,58 @@ export const typeScriptDeclarationTransformers = {
   ],
 }
 
+/** @type {(opts?: { fs: boolean, crypto: boolean }) => { [key: string]: string }} */
+function nodePolyfillsAliases(opts = {}) {
+  // from: https://github.com/ionic-team/rollup-plugin-node-polyfills/blob/master/src/modules.ts
+  const _ = 'rollup-plugin-node-polyfills/polyfills/'
+  const empty = _ + 'empty.js'
+  return {
+    process            : _ + 'process-es6',
+    buffer             : _ + 'buffer-es6',
+    util               : _ + 'util',
+    sys                : _ + 'util',
+    events             : _ + 'events',
+    stream             : _ + 'stream',
+    path               : _ + 'path',
+    querystring        : _ + 'qs',
+    punycode           : _ + 'punycode',
+    url                : _ + 'url',
+    string_decoder     : _ + 'string-decoder',
+    http               : _ + 'http',
+    https              : _ + 'http',
+    os                 : _ + 'os',
+    assert             : _ + 'assert',
+    constants          : _ + 'constants',
+    _stream_duplex     : _ + 'readable-stream/duplex',
+    _stream_passthrough: _ + 'readable-stream/passthrough',
+    _stream_readable   : _ + 'readable-stream/readable',
+    _stream_writable   : _ + 'readable-stream/writable',
+    _stream_transform  : _ + 'readable-stream/transform',
+    timers             : _ + 'timers',
+    console            : _ + 'console',
+    vm                 : _ + 'vm',
+    zlib               : _ + 'zlib',
+    tty                : _ + 'tty',
+    domain             : _ + 'domain',
+    // not shimmed
+    dns                : empty,
+    dgram              : empty,
+    child_process      : empty,
+    cluster            : empty,
+    module             : empty,
+    net                : empty,
+    readline           : empty,
+    repl               : empty,
+    tls                : empty,
+    fs                 : opts.fs
+      ? _ + 'browserify-fs'
+      : empty,
+    crypto: opts.crypto
+      ? _ + 'crypto-browserify'
+      : empty,
+  }
+}
+
 export const rollupPlugins = {
   /** @type {(opts?: import('@rollup/plugin-babel').RollupBabelInputPluginOptions) => import('rollup').Plugin} */
   babel: (opts = {}) => babel.default({
@@ -127,6 +179,24 @@ export const vitePlugins = {
           rollupOptions: {
             plugins: [
               rollupPlugins.babel(),
+            ],
+          },
+        },
+      }
+    },
+  }),
+  /** @type {(opts?: import('rollup-plugin-node-polyfills').NodePolyfillsOptions) => import('vite').Plugin} */
+  nodePolyfills: (opts = {}) => ({
+    name: 'vite-plugin-node-polyfills',
+    config(config, config_env) {
+      return {
+        alias: {
+          ...nodePolyfillsAliases(opts),
+        },
+        build: {
+          rollupOptions: {
+            plugins: [
+              polyfills(opts),
             ],
           },
         },
@@ -309,16 +379,17 @@ export const browserTestConfig = ({
             global : path.resolve('./node_modules/rollup-plugin-node-polyfills/polyfills/global.js'),
             exclude: ['**/node_modules/rollup-plugin-node-polyfills/polyfills/global.js'],
           }),
-          polyfills(),
+          // polyfills(),
           rollupPlugins.typescript({
             sourceMap      : !!sourcemap,
             compilerOptions: {
               target: 'es5',
             },
           }),
-          istanbul({
-            ...nycrc,
-          }),
+          // istanbul({
+          //   ...nycrc,
+          // }),
+          // rollupPlugins.babel(),
         ],
       },
     },
@@ -326,7 +397,8 @@ export const browserTestConfig = ({
       alias,
     },
     plugins: [
-      vitePlugins.babel(),
+      vitePlugins.nodePolyfills(),
+      // vitePlugins.babel(),
     ],
   }
 }
