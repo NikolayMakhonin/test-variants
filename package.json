@@ -40,6 +40,10 @@
     "lint:wizard": "eslint-nibble --cache --multi ./**/*.{js,cjs,mjs,ts,tsx}",
     "build:js": "rimraf dist/lib && cpy \"**/assets/**\" \"**/*.{js,cjs,mjs}\" \"../dist/lib/\" --parents --cwd=src && rollup -c",
     "build": "rimraf dist && pnpm run build:js",
+    "build:cjs": "vite build -c vite.mjs.mjs",
+    "build:mjs": "vite build -c vite.mjs.mjs",
+    "build:browser": "vite build -c vite.browser.mjs",
+    "build:test": "vite build -c vite.test.mjs",
     "coverage:merge": "rimraf tmp/coverage/{all,merge} && cp-flat \"tmp/coverage/*/json/**/*.json\" \"tmp/coverage/merge\" && nyc report -r lcov --report-dir tmp/coverage/all/lcov --temp-dir \"tmp/coverage/merge/\"",
     "coverage:check": "pnpm run coverage:merge && nyc check-coverage --report-dir tmp/coverage/all/lcov --lines 50 --functions 50 --branches 50 --statements 50",
     "test:mocha": "mocha ./src/**/*.test.*",
@@ -95,7 +99,8 @@
     "rollup-plugin-terser": "7.0.2",
     "ts-node": "=10.8.0",
     "tsconfig-paths": "4.0.0",
-    "typescript": "^4.7.4"
+    "typescript": "^4.7.4",
+    "vite": "^3.0.2"
   },
   "dependencies": {
     "@flemist/abort-controller-fast": "^0.0.5",

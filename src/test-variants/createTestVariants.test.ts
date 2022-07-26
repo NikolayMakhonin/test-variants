@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-shadow */
 import {createTestVariants} from './createTestVariants'
-import {delay} from '../helpers/test/delay'
+import {delay} from 'src/helpers/test/delay'
 
 describe('test-variants > createTestVariants', function () {
   describe('sync', function () {

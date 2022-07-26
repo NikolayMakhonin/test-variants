@@ -15,7 +15,15 @@
   "compilerOptions": {
     "target": "es6",
     "module": "es6",
-    "isolatedModules": false,
+
+    "isolatedModules": true,
+    "useDefineForClassFields": true,
+    "importsNotUsedAsValues": "error",
+    "preserveValueImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "sourceMap": true,
+
     "declaration": false,
     "emitDeclarationOnly": true,
     "esModuleInterop": true,

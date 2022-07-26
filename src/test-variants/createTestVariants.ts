@@ -11,7 +11,7 @@
 // type VariantArgValues<TArgs, T> = T[] | ((args: TArgs) => T[])
 
 import {garbageCollect} from 'src/garbage-collect/garbageCollect'
-import {IAbortSignalFast} from '@flemist/abort-controller-fast'
+import type {IAbortSignalFast} from '@flemist/abort-controller-fast'
 
 type VariantsArgs<TArgs> = {
   [key in keyof TArgs]: TArgs[key][] | ((args: TArgs) => TArgs[key][])

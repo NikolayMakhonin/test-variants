@@ -1,3 +1,3 @@
 export {
   createTestVariants,
-} from './test-variants/createTestVariants'
+} from 'src/test-variants/createTestVariants'
