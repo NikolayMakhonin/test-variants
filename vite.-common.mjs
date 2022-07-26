@@ -12,7 +12,7 @@ import nycrc from './nyc.config.mjs'
 import typescript from '@rollup/plugin-typescript'
 import resolve from '@rollup/plugin-node-resolve'
 import tsTransformPaths from '@zerollup/ts-transform-paths'
-import commonjs from "@rollup/plugin-commonjs";
+import commonjs from '@rollup/plugin-commonjs'
 
 // region helpers
 
@@ -95,8 +95,30 @@ export const typeScriptDeclarationTransformers = {
   ],
 }
 
-export const plugins = {
-  /** @type {() => import('vite').PluginOption} */
+export const rollupPlugins = {
+  /** @type {(opts?: import('@rollup/plugin-babel').RollupBabelInputPluginOptions) => import('rollup').Plugin} */
+  babel: (opts = {}) => babel.default({
+    configFile  : path.resolve(dirname, '.babelrc.cjs'), // enable babel for node_modules
+    extensions  : ['', '.ts', '.js', '.cjs', '.mjs', '.svelte', '.html'],
+    babelHelpers: 'runtime',
+    exclude     : [
+      // '**/node_modules/rollup*/**',
+      '**/node_modules/@babel/**',
+      '**/node_modules/core-js*/**',
+      '**/.svelte-kit/runtime/server/**',
+    ],
+    ...opts,
+  }),
+  /** @type {(opts?: import('@rollup/plugin-typescript').RollupTypescriptPluginOptions) => import('rollup').Plugin} */
+  typescript: (opts = {}) => typescript({
+    declaration : false,
+    transformers: typeScriptDeclarationTransformers,
+    ...opts,
+  }),
+}
+
+export const vitePlugins = {
+  /** @type {() => import('vite').Plugin} */
   babel: () => ({
     name: 'vite-plugin-babel',
     config(config, config_env) {
@@ -104,17 +126,7 @@ export const plugins = {
         build: {
           rollupOptions: {
             plugins: [
-              babel.default({
-                configFile  : path.resolve(dirname, '.babelrc.cjs'), // enable babel for node_modules
-                extensions  : ['', '.ts', '.js', '.cjs', '.mjs', '.svelte', '.html'],
-                babelHelpers: 'runtime',
-                exclude     : [
-                  // '**/node_modules/rollup*/**',
-                  '**/node_modules/@babel/**',
-                  '**/node_modules/core-js*/**',
-                  '**/.svelte-kit/runtime/server/**',
-                ],
-              }),
+              rollupPlugins.babel(),
             ],
           },
         },
@@ -166,11 +178,10 @@ export const nodeConfig = ({
         plugins: [
           multiInput.default({relative}),
           resolve(),
-          typescript({
-            sourceMap     : sourcemap,
+          rollupPlugins.typescript({
+            sourceMap     : !!sourcemap,
             declarationDir: outputDir,
             declaration   : true,
-            transformers  : typeScriptDeclarationTransformers,
           }),
         ],
         onwarn  : onwarnRollup,
@@ -230,10 +241,8 @@ export const browserConfig = ({
       rollupOptions: {
         plugins: [
           del({ targets: path.join(outputDir, outputFile) }),
-          typescript({
-            sourceMap      : !!sourcemap,
-            declaration    : false,
-            transformers   : typeScriptDeclarationTransformers,
+          rollupPlugins.typescript({
+            sourceMap: !!sourcemap,
             compilerOptions: {
               target: 'es5',
             },
@@ -246,7 +255,7 @@ export const browserConfig = ({
       alias,
     },
     plugins: [
-      useBabel && plugins.babel(),
+      useBabel && vitePlugins.babel(),
     ],
   }
 }
@@ -301,10 +310,8 @@ export const browserTestConfig = ({
             exclude: ['**/node_modules/rollup-plugin-node-polyfills/polyfills/global.js'],
           }),
           polyfills(),
-          typescript({
+          rollupPlugins.typescript({
             sourceMap      : !!sourcemap,
-            declaration    : false,
-            transformers   : typeScriptDeclarationTransformers,
             compilerOptions: {
               target: 'es5',
             },
@@ -319,7 +326,7 @@ export const browserTestConfig = ({
       alias,
     },
     plugins: [
-      plugins.babel(),
+      vitePlugins.babel(),
     ],
   }
 }
