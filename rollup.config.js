@@ -182,18 +182,19 @@ const browserTestsConfig = {
   input: [
     'node_modules/@flemist/test-utils/dist/lib/register/show-useragent.mjs',
     'node_modules/@flemist/test-utils/dist/lib/register/register.mjs',
-    'src/**/*.test.ts',
+    'src/test.test.ts',
+    // 'src/**/*.test.ts',
   ],
   output: {
     dir      : 'dist/bundle',
     format   : 'iife',
     exports  : 'named',
-    sourcemap: 'inline',
+    sourcemap: false,
   },
   plugins: [
-    del({ targets: 'dist/bundle/browser.test.js' }),
+    del({ targets: 'dist/bundle/browser.test.old.js' }),
     multiEntry({
-      entryFileName: 'browser.test.js',
+      entryFileName: 'browser.test.old.js',
     }),
     alias(aliasOptions),
     json(),
@@ -235,24 +236,24 @@ const browserTestsConfig = {
 }
 
 export default [
-  nodeConfig({
-    input    : ['src/**/*.ts'],
-    outputDir: 'dist/lib',
-    relative : 'src',
-    format   : 'es',
-    extension: 'mjs',
-  }),
-  nodeConfig({
-    input    : ['src/**/*.ts'],
-    outputDir: 'dist/lib',
-    relative : 'src',
-    format   : 'cjs',
-    extension: 'cjs',
-  }),
-  browserConfig({
-    input     : ['src/index.ts'],
-    outputDir : 'dist/bundle',
-    outputFile: 'browser.js',
-  }),
+  // nodeConfig({
+  //   input    : ['src/**/*.ts'],
+  //   outputDir: 'dist/lib',
+  //   relative : 'src',
+  //   format   : 'es',
+  //   extension: 'mjs',
+  // }),
+  // nodeConfig({
+  //   input    : ['src/**/*.ts'],
+  //   outputDir: 'dist/lib',
+  //   relative : 'src',
+  //   format   : 'cjs',
+  //   extension: 'cjs',
+  // }),
+  // browserConfig({
+  //   input     : ['src/index.ts'],
+  //   outputDir : 'dist/bundle',
+  //   outputFile: 'browser.js',
+  // }),
   browserTestsConfig,
 ]

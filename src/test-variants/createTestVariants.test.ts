@@ -282,7 +282,7 @@ describe('test-variants > createTestVariants', function () {
   })
 })
 
-describe('test-variants > million of Promise reject', function () {
+xdescribe('test-variants > million of Promise reject', function () {
   let millionRejectTime = 0
   it('million of Promise reject', async function () {
     this.timeout(1800000)

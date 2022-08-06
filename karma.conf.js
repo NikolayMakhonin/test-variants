@@ -25,9 +25,9 @@ module.exports = function (config) {
             : []
       )
       : [
-        'LocalChromium39',
         'ChromeLatest',
         'FirefoxHeadless',
+        'LocalChromium39',
       ],
     files     : ['dist/bundle/browser.test.js'],
     frameworks: ['mocha'],
