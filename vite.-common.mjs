@@ -1,4 +1,4 @@
-import babel from '@rollup/plugin-babel'
+import babel, {getBabelOutputPlugin} from '@rollup/plugin-babel'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import multiInput from 'rollup-plugin-multi-input'
@@ -162,7 +162,7 @@ export const rollupPlugins = {
   }),
 
   /** @type {(opts?: import('@rollup/plugin-babel').RollupBabelOutputPluginOptions) => import('rollup').Plugin} */
-  babelOutput: (opts = {}) => babel.getBabelOutputPlugin({
+  babelOutput: (opts = {}) => getBabelOutputPlugin({
     babelrc        : false,
     allowAllFormats: true,
     plugins        : [
