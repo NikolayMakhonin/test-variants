@@ -1,4 +1,4 @@
-import { IAbortSignalFast } from '@flemist/abort-controller-fast';
+import type { IAbortSignalFast } from '@flemist/abort-controller-fast';
 declare type VariantsArgs<TArgs> = {
     [key in keyof TArgs]: TArgs[key][] | ((args: TArgs) => TArgs[key][]);
 };

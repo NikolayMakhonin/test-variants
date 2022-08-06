@@ -1,4 +1,3 @@
-import { __awaiter } from 'tslib';
 import { garbageCollect } from '../garbage-collect/garbageCollect.mjs';
 
 /* eslint-disable @typescript-eslint/no-shadow */
@@ -49,29 +48,27 @@ function createTestVariants(test) {
             let iterationsAsync = 0;
             let debug = false;
             let debugIteration = 0;
-            function onError(error) {
-                return __awaiter(this, void 0, void 0, function* () {
-                    console.error(`error variant: ${iterations}\r\n${JSON.stringify(variantArgs, null, 2)}`);
-                    console.error(error);
-                    // rerun failed variant 5 times for debug
-                    const time0 = Date.now();
-                    // eslint-disable-next-line no-debugger
-                    debugger;
-                    if (Date.now() - time0 > 50 && debugIteration < 5) {
-                        console.log('DEBUG ITERATION: ' + debugIteration);
-                        debug = true;
-                        yield next();
-                        debugIteration++;
-                    }
-                    if (onErrorCallback) {
-                        onErrorCallback({
-                            iteration: iterations,
-                            variant: variantArgs,
-                            error,
-                        });
-                    }
-                    throw error;
-                });
+            async function onError(error) {
+                console.error(`error variant: ${iterations}\r\n${JSON.stringify(variantArgs, null, 2)}`);
+                console.error(error);
+                // rerun failed variant 5 times for debug
+                const time0 = Date.now();
+                // eslint-disable-next-line no-debugger
+                debugger;
+                if (Date.now() - time0 > 50 && debugIteration < 5) {
+                    console.log('DEBUG ITERATION: ' + debugIteration);
+                    debug = true;
+                    await next();
+                    debugIteration++;
+                }
+                if (onErrorCallback) {
+                    onErrorCallback({
+                        iteration: iterations,
+                        variant: variantArgs,
+                        error,
+                    });
+                }
+                throw error;
             }
             function onCompleted() {
                 if (logCompleted) {
@@ -82,48 +79,46 @@ function createTestVariants(test) {
             let prevGC_Time = prevLogTime;
             let prevGC_Iterations = iterations;
             let prevGC_IterationsAsync = iterationsAsync;
-            function next() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    try {
-                        while (!(abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) && (debug || nextVariant())) {
-                            const now = (logInterval || GC_Interval) && Date.now();
-                            if (logInterval && now - prevLogTime >= logInterval) {
-                                // the log is required to prevent the karma browserNoActivityTimeout
-                                console.log(iterations);
-                                prevLogTime = now;
-                            }
-                            if (GC_Iterations && iterations - prevGC_Iterations >= GC_Iterations
-                                || GC_IterationsAsync && iterationsAsync - prevGC_IterationsAsync >= GC_IterationsAsync
-                                || GC_Interval && now - prevGC_Time >= GC_Interval) {
-                                prevGC_Iterations = iterations;
-                                prevGC_IterationsAsync = iterationsAsync;
-                                prevGC_Time = now;
-                                yield garbageCollect(1);
-                                continue;
-                            }
-                            const promiseOrIterations = test(variantArgs);
-                            if (typeof promiseOrIterations === 'object'
-                                && promiseOrIterations
-                                && typeof promiseOrIterations.then === 'function') {
-                                const value = yield promiseOrIterations;
-                                const newIterations = typeof value === 'number' ? value : 1;
-                                iterationsAsync += newIterations;
-                                iterations += newIterations;
-                                continue;
-                            }
-                            iterations += typeof promiseOrIterations === 'number' ? promiseOrIterations : 1;
+            async function next() {
+                try {
+                    while (!(abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) && (debug || nextVariant())) {
+                        const now = (logInterval || GC_Interval) && Date.now();
+                        if (logInterval && now - prevLogTime >= logInterval) {
+                            // the log is required to prevent the karma browserNoActivityTimeout
+                            console.log(iterations);
+                            prevLogTime = now;
                         }
+                        if (GC_Iterations && iterations - prevGC_Iterations >= GC_Iterations
+                            || GC_IterationsAsync && iterationsAsync - prevGC_IterationsAsync >= GC_IterationsAsync
+                            || GC_Interval && now - prevGC_Time >= GC_Interval) {
+                            prevGC_Iterations = iterations;
+                            prevGC_IterationsAsync = iterationsAsync;
+                            prevGC_Time = now;
+                            await garbageCollect(1);
+                            continue;
+                        }
+                        const promiseOrIterations = test(variantArgs);
+                        if (typeof promiseOrIterations === 'object'
+                            && promiseOrIterations
+                            && typeof promiseOrIterations.then === 'function') {
+                            const value = await promiseOrIterations;
+                            const newIterations = typeof value === 'number' ? value : 1;
+                            iterationsAsync += newIterations;
+                            iterations += newIterations;
+                            continue;
+                        }
+                        iterations += typeof promiseOrIterations === 'number' ? promiseOrIterations : 1;
                     }
-                    catch (err) {
-                        yield onError(err);
-                    }
-                    if (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) {
-                        throw abortSignal.reason;
-                    }
-                    onCompleted();
-                    yield garbageCollect(1);
-                    return iterations;
-                });
+                }
+                catch (err) {
+                    await onError(err);
+                }
+                if (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) {
+                    throw abortSignal.reason;
+                }
+                onCompleted();
+                await garbageCollect(1);
+                return iterations;
             }
             return next();
         };

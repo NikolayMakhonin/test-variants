@@ -1,8 +1,7 @@
 'use strict';
 
-var rdtsc = require('rdtsc');
-var testVariants_createTestVariants = require('./createTestVariants.cjs');
-require('tslib');
+const rdtsc = require('rdtsc');
+const testVariants_createTestVariants = require('./createTestVariants.cjs');
 require('../garbage-collect/garbageCollect.cjs');
 
 describe('test > testVariants perf', function () {

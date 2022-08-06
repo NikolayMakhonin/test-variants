@@ -1,9 +1,8 @@
 'use strict';
 
-Object.defineProperty(exports, '__esModule', { value: true });
+Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toStringTag]: { value: 'Module' } });
 
-var testVariants_createTestVariants = require('./test-variants/createTestVariants.cjs');
-require('tslib');
+const testVariants_createTestVariants = require('./test-variants/createTestVariants.cjs');
 require('./garbage-collect/garbageCollect.cjs');
 
 
