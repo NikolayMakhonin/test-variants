@@ -6,18 +6,12 @@ import multiEntry from '@rollup/plugin-multi-entry'
 import {createFilter} from '@rollup/pluginutils'
 import del from 'rollup-plugin-delete'
 import inject from '@rollup/plugin-inject'
-import polyfills from 'rollup-plugin-node-polyfills'
 import istanbul from 'rollup-plugin-istanbul'
-// import nycrc from './nyc.config.mjs'
+import nycrc from './nyc.config.mjs'
 import typescript from '@rollup/plugin-typescript'
 import resolve from '@rollup/plugin-node-resolve'
 import tsTransformPaths from '@zerollup/ts-transform-paths'
-import commonjs from '@rollup/plugin-commonjs'
-import replace from '@rollup/plugin-replace'
 import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill'
-import { NodeModulesPolyfillPlugin } from '@esbuild-plugins/node-modules-polyfill'
-import esBuildBabel from 'esbuild-plugin-babel'
-import legacy from '@vitejs/plugin-legacy'
 
 // region helpers
 
@@ -55,12 +49,12 @@ const onwarnRollup = (warning, onwarn) => {
   return false
 }
 
-/** @type { import('vite').ESBuildOptions } */
-export const esbuildForBrowser = {
-  // docs: https://esbuild.github.io/api/#target
-  target: ['es6', 'chrome51', 'safari11'],
-  format: 'esm',
-}
+// /** @type { import('vite').ESBuildOptions } */
+// export const esbuildForBrowser = {
+//   // docs: https://esbuild.github.io/api/#target
+//   target: ['es6', 'chrome51', 'safari11'],
+//   format: 'esm',
+// }
 
 /** @type { import('vite').Terser.MinifyOptions } */
 export const terser = {
@@ -166,10 +160,10 @@ export const rollupPlugins = {
     ],
     ...opts,
   }),
+
+  /** @type {(opts?: import('@rollup/plugin-babel').RollupBabelOutputPluginOptions) => import('rollup').Plugin} */
   babelOutput: (opts = {}) => babel.getBabelOutputPlugin({
-    // configFile     : path.resolve(dirname, '.babelrc-output.cjs'), // enable babel for node_modules
-    // babelHelpers   : 'runtime',
-    babelrc: false,
+    babelrc        : false,
     allowAllFormats: true,
     plugins        : [
       [
@@ -181,39 +175,12 @@ export const rollupPlugins = {
     ],
     ...opts,
   }),
+
   /** @type {(opts?: import('@rollup/plugin-typescript').RollupTypescriptPluginOptions) => import('rollup').Plugin} */
   typescript: (opts = {}) => typescript({
     declaration : false,
     transformers: typeScriptDeclarationTransformers,
     ...opts,
-  }),
-}
-
-export const esBuildPlugins = {
-  babel: (opts = {}) => esBuildBabel({
-    filter   : /.*/,
-    namespace: '',
-    config   : {
-      presets: [
-        ['@babel/preset-env', {
-          loose      : true, // simple set property instead readonly defineProperty; +support named export for rollup-plugin-commonjs
-          corejs     : 3, // for support flatMap etc...
-          useBuiltIns: 'usage',
-          targets    : {
-            ie: '11',
-          },
-        }],
-      ],
-      plugins: [
-        '@babel/plugin-syntax-dynamic-import',
-        ['@babel/plugin-transform-runtime', {
-          corejs      : 3, // for support flatMap etc...
-          useESModules: true,
-        }],
-        // preset/env no loose:
-        ['@babel/plugin-transform-classes', {loose: false}],
-      ],
-    },
   }),
 }
 
@@ -239,6 +206,7 @@ export const vitePlugins = {
       }
     },
   }),
+
   /** @type {(opts?: import('rollup-plugin-node-polyfills').NodePolyfillsOptions) => import('vite').Plugin} */
   nodePolyfills: (opts = {}) => ({
     name: 'vite-plugin-node-polyfills',
@@ -262,14 +230,15 @@ export const vitePlugins = {
             ],
           },
         },
-        build: {
-          rollupOptions: {
-            plugins: [
-              // polyfills(opts),
-            ],
-          },
-        },
       }
+    },
+  }),
+
+  printConfig: () => ({
+    name   : 'vite-plugin-print-config',
+    enforce: 'post',
+    configResolved(config, config_env) {
+      console.log(config)
     },
   }),
 }
@@ -420,12 +389,7 @@ export const browserTestConfig = ({
   minify,
 }) => {
   return {
-    esbuild: false, // esbuildForBrowser,
-    // optimizeDeps: {
-    //   esbuildOptions: {
-    //
-    //   },
-    // },
+    esbuild: false,
     build  : {
       minify,
       sourcemap,
@@ -442,52 +406,29 @@ export const browserTestConfig = ({
           multiEntry({
             entryFileName: outputFile,
           }),
-          // replace({
-          //   '__PURE__': '__NO_PURE__',
-          // }),
-          // resolve({
-          //   browser       : true,
-          //   preferBuiltins: false,
-          // }),
-          // commonjs({
-          //   transformMixedEsModules: true,
-          // }),
           inject({
             global : path.resolve('./node_modules/rollup-plugin-node-polyfills/polyfills/global.js'),
             exclude: ['**/node_modules/rollup-plugin-node-polyfills/polyfills/global.js'],
           }),
-          // polyfills(),
           rollupPlugins.typescript({
             sourceMap      : !!sourcemap,
             compilerOptions: {
               target: 'es5',
             },
           }),
-          // istanbul({
-          //   ...nycrc,
-          // }),
-          // rollupPlugins.babel(),
+          istanbul({
+            ...nycrc,
+          }),
         ],
       },
     },
     resolve: {
       alias,
-      // ...nodePolyfillsAliases(),
     },
     plugins: [
       vitePlugins.nodePolyfills(),
-      // legacy({
-      //   polyfills      : true,
-      //   modernPolyfills: true,
-      // }),
       vitePlugins.babel(),
-      {
-        name   : 'vite-plugin-print-config',
-        enforce: 'post',
-        configResolved(config, config_env) {
-          console.log(config)
-        },
-      },
+      // vitePlugins.printConfig(),
     ],
   }
 }
