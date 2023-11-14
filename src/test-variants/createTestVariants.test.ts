@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-shadow */
 import {createTestVariants} from './createTestVariants'
-import {delay} from '../helpers/test/delay'
+import {delay} from '@flemist/async-utils'
 
 describe('test-variants > createTestVariants', function () {
   describe('sync', function () {
@@ -276,6 +276,45 @@ describe('test-variants > createTestVariants', function () {
         [1, '4', true],
         [2, '2', false],
         [2, '2', true],
+      ])
+      assert.strictEqual(count, result.length)
+    })
+  })
+
+  describe('async with sync parallel', async function () {
+    it('base', async function () {
+      const countParallel = 2
+      let countInProcess = 0
+      const result = []
+      const count = await createTestVariants(async ({a, b, c}: {
+        a: number,
+        b: string,
+        c: boolean
+      }) => {
+        countInProcess++
+        assert.ok(countInProcess <= countParallel)
+        if (c) {
+          await delay(100)
+        }
+        result.push([a, b, c])
+        countInProcess--
+      })({
+        a: [1, 2],
+        b: ['3', '4'],
+        c: [true, false],
+      })({
+        parallel: countParallel,
+      })
+
+      assert.deepStrictEqual(result, [
+        [1, '3', true],
+        [1, '3', false],
+        [1, '4', true],
+        [1, '4', false],
+        [2, '3', true],
+        [2, '3', false],
+        [2, '4', true],
+        [2, '4', false],
       ])
       assert.strictEqual(count, result.length)
     })

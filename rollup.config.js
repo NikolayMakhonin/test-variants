@@ -180,8 +180,8 @@ const browserConfig = ({name, input, outputDir, outputFile}) => ({
 const browserTestsConfig = {
   cache: true,
   input: [
-    'node_modules/@flemist/test-utils/dist/lib/register/show-useragent.mjs',
-    'node_modules/@flemist/test-utils/dist/lib/register/register.mjs',
+    'node_modules/@flemist/test-utils/dist/lib/browser/register/show-useragent.mjs',
+    'node_modules/@flemist/test-utils/dist/lib/browser/register/register.mjs',
     'src/**/*.test.ts',
   ],
   output: {

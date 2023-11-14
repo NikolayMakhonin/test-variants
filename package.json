@@ -58,7 +58,7 @@
     "@babel/runtime-corejs3": "7.18.3",
     "@flemist/copy-glob-flat": "0.0.5",
     "@flemist/karma-custom-launcher": "0.0.0",
-    "@flemist/test-utils": "1.0.1",
+    "@flemist/test-utils": "1.0.2",
     "@rollup/plugin-alias": "3.1.9",
     "@rollup/plugin-babel": "5.3.1",
     "@rollup/plugin-commonjs": "=21.1.0",
@@ -99,6 +99,8 @@
   },
   "dependencies": {
     "@flemist/abort-controller-fast": "^1.0.0",
+    "@flemist/async-utils": "^1.0.0",
+    "@flemist/time-limits": "^1.0.1",
     "tslib": "^2.4.0"
   }
 }
