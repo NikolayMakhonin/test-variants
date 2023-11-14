@@ -2,6 +2,9 @@ import { calcPerformance } from 'rdtsc';
 import { createTestVariants } from './createTestVariants.mjs';
 import 'tslib';
 import '../garbage-collect/garbageCollect.mjs';
+import '@flemist/abort-controller-fast';
+import '@flemist/time-limits';
+import '@flemist/async-utils';
 
 describe('test > testVariants perf', function () {
     this.timeout(300000);

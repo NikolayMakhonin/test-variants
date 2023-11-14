@@ -4,6 +4,9 @@ var rdtsc = require('rdtsc');
 var testVariants_createTestVariants = require('./createTestVariants.cjs');
 require('tslib');
 require('../garbage-collect/garbageCollect.cjs');
+require('@flemist/abort-controller-fast');
+require('@flemist/time-limits');
+require('@flemist/async-utils');
 
 describe('test > testVariants perf', function () {
     this.timeout(300000);

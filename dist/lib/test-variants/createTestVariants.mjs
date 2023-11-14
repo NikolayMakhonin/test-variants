@@ -1,10 +1,21 @@
 import { __awaiter } from 'tslib';
 import { garbageCollect } from '../garbage-collect/garbageCollect.mjs';
+import { AbortControllerFast } from '@flemist/abort-controller-fast';
+import { Pool } from '@flemist/time-limits';
+import { combineAbortSignals } from '@flemist/async-utils';
 
 /* eslint-disable @typescript-eslint/no-shadow */
+function isPromiseLike(value) {
+    return typeof value === 'object'
+        && value
+        && typeof value.then === 'function';
+}
 function createTestVariants(test) {
     return function testVariantsArgs(args) {
-        return function testVariantsCall({ GC_Iterations = 1000000, GC_IterationsAsync = 10000, GC_Interval = 1000, logInterval = 5000, logCompleted = true, onError: onErrorCallback = null, abortSignal, } = {}) {
+        return function testVariantsCall({ GC_Iterations = 1000000, GC_IterationsAsync = 10000, GC_Interval = 1000, logInterval = 5000, logCompleted = true, onError: onErrorCallback = null, abortSignal: abortSignalExternal = null, parallel, } = {}) {
+            const abortControllerParallel = new AbortControllerFast();
+            const abortSignalParallel = combineAbortSignals(abortSignalExternal, abortControllerParallel.signal);
+            const abortSignalAll = abortSignalParallel;
             const argsKeys = Object.keys(args);
             const argsValues = Object.values(args);
             const argsLength = argsKeys.length;
@@ -49,8 +60,9 @@ function createTestVariants(test) {
             let iterationsAsync = 0;
             let debug = false;
             let debugIteration = 0;
-            function onError(error) {
+            function onError(error, iterations, variantArgs) {
                 return __awaiter(this, void 0, void 0, function* () {
+                    abortControllerParallel.abort(error);
                     console.error(`error variant: ${iterations}\r\n${JSON.stringify(variantArgs, null, 2)}`);
                     console.error(error);
                     // rerun failed variant 5 times for debug
@@ -82,43 +94,78 @@ function createTestVariants(test) {
             let prevGC_Time = prevLogTime;
             let prevGC_Iterations = iterations;
             let prevGC_IterationsAsync = iterationsAsync;
-            function next() {
+            const pool = parallel == null || parallel <= 1
+                ? null
+                : new Pool(parallel);
+            function runTest(_iterations, variantArgs, abortSignal) {
                 return __awaiter(this, void 0, void 0, function* () {
                     try {
-                        while (!(abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) && (debug || nextVariant())) {
-                            const now = (logInterval || GC_Interval) && Date.now();
-                            if (logInterval && now - prevLogTime >= logInterval) {
-                                // the log is required to prevent the karma browserNoActivityTimeout
-                                console.log(iterations);
-                                prevLogTime = now;
-                            }
-                            if (GC_Iterations && iterations - prevGC_Iterations >= GC_Iterations
-                                || GC_IterationsAsync && iterationsAsync - prevGC_IterationsAsync >= GC_IterationsAsync
-                                || GC_Interval && now - prevGC_Time >= GC_Interval) {
-                                prevGC_Iterations = iterations;
-                                prevGC_IterationsAsync = iterationsAsync;
-                                prevGC_Time = now;
-                                yield garbageCollect(1);
-                                continue;
-                            }
-                            const promiseOrIterations = test(variantArgs);
-                            if (typeof promiseOrIterations === 'object'
-                                && promiseOrIterations
-                                && typeof promiseOrIterations.then === 'function') {
-                                const value = yield promiseOrIterations;
-                                const newIterations = typeof value === 'number' ? value : 1;
-                                iterationsAsync += newIterations;
-                                iterations += newIterations;
-                                continue;
-                            }
-                            iterations += typeof promiseOrIterations === 'number' ? promiseOrIterations : 1;
+                        const promiseOrIterations = test(variantArgs, abortSignal);
+                        if (isPromiseLike(promiseOrIterations)) {
+                            const value = yield promiseOrIterations;
+                            const newIterations = typeof value === 'number' ? value : 1;
+                            iterationsAsync += newIterations;
+                            iterations += newIterations;
+                            return;
                         }
+                        iterations += typeof promiseOrIterations === 'number' ? promiseOrIterations : 1;
                     }
                     catch (err) {
-                        yield onError(err);
+                        yield onError(err, _iterations, variantArgs);
                     }
-                    if (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) {
-                        throw abortSignal.reason;
+                });
+            }
+            function next() {
+                return __awaiter(this, void 0, void 0, function* () {
+                    while (!(abortSignalExternal === null || abortSignalExternal === void 0 ? void 0 : abortSignalExternal.aborted) && (debug || nextVariant())) {
+                        const _iterations = iterations;
+                        const _variantArgs = !pool
+                            ? variantArgs
+                            : Object.assign({}, variantArgs);
+                        const now = (logInterval || GC_Interval) && Date.now();
+                        if (logInterval && now - prevLogTime >= logInterval) {
+                            // the log is required to prevent the karma browserNoActivityTimeout
+                            console.log(iterations);
+                            prevLogTime = now;
+                        }
+                        if (GC_Iterations && iterations - prevGC_Iterations >= GC_Iterations
+                            || GC_IterationsAsync && iterationsAsync - prevGC_IterationsAsync >= GC_IterationsAsync
+                            || GC_Interval && now - prevGC_Time >= GC_Interval) {
+                            prevGC_Iterations = iterations;
+                            prevGC_IterationsAsync = iterationsAsync;
+                            prevGC_Time = now;
+                            yield garbageCollect(1);
+                            continue;
+                        }
+                        if (abortSignalExternal === null || abortSignalExternal === void 0 ? void 0 : abortSignalExternal.aborted) {
+                            continue;
+                        }
+                        if (!pool || abortSignalParallel.aborted) {
+                            yield runTest(_iterations, _variantArgs, abortSignalExternal);
+                        }
+                        else {
+                            if (!pool.hold(1)) {
+                                yield pool.holdWait(1);
+                            }
+                            void (() => __awaiter(this, void 0, void 0, function* () {
+                                try {
+                                    if (abortSignalParallel === null || abortSignalParallel === void 0 ? void 0 : abortSignalParallel.aborted) {
+                                        return;
+                                    }
+                                    yield runTest(_iterations, _variantArgs, abortSignalParallel);
+                                }
+                                finally {
+                                    void pool.release(1);
+                                }
+                            }))();
+                        }
+                    }
+                    if (pool) {
+                        yield pool.holdWait(parallel);
+                        void pool.release(parallel);
+                    }
+                    if (abortSignalAll === null || abortSignalAll === void 0 ? void 0 : abortSignalAll.aborted) {
+                        throw abortSignalAll.reason;
                     }
                     onCompleted();
                     yield garbageCollect(1);
