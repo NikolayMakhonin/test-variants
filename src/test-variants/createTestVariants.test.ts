@@ -283,23 +283,30 @@ describe('test-variants > createTestVariants', function () {
 
   describe('async with sync parallel', async function () {
     it('base', async function () {
-      const countParallel = 2
+      const countParallel = 3
       let countInProcess = 0
       const result = []
       const count = await createTestVariants(async ({a, b, c}: {
         a: number,
         b: string,
         c: boolean
-      }) => {
+      }, abortSignal) => {
         countInProcess++
+        console.log(`${a} ${b} ${c} ${countInProcess} START`)
         assert.ok(countInProcess <= countParallel)
         if (c) {
-          await delay(100)
+          await delay(100, abortSignal)
         }
         result.push([a, b, c])
+
+        // if (a === 2 && b === '4' && c === true) {
+        //   throw new Error('TEST')
+        // }
+
         countInProcess--
+        console.log(`${a} ${b} ${c} ${countInProcess} END`)
       })({
-        a: [1, 2],
+        a: [1, 2, 3],
         b: ['3', '4'],
         c: [true, false],
       })({
@@ -307,14 +314,18 @@ describe('test-variants > createTestVariants', function () {
       })
 
       assert.deepStrictEqual(result, [
-        [1, '3', true],
-        [1, '3', false],
-        [1, '4', true],
-        [1, '4', false],
-        [2, '3', true],
-        [2, '3', false],
-        [2, '4', true],
-        [2, '4', false],
+        [1, '3', false], // 1
+        [1, '4', false], // 3
+        [1, '3', true], // 0
+        [2, '3', false], // 5
+        [1, '4', true], // 2
+        [2, '4', false], // 7
+        [2, '3', true], // 4
+        [3, '3', false], // 8
+        [2, '4', true], // 6
+        [3, '4', false], // 10
+        [3, '3', true], // 9
+        [3, '4', true], // 11
       ])
       assert.strictEqual(count, result.length)
     })
