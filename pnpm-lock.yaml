@@ -38,8 +38,8 @@ devDependencies:
     specifier: 0.0.0
     version: 0.0.0
   '@flemist/test-utils':
-    specifier: 1.0.0
-    version: 1.0.0(expect@29.7.0)
+    specifier: 1.0.1
+    version: 1.0.1(expect@29.7.0)
   '@rollup/plugin-alias':
     specifier: 3.1.9
     version: 3.1.9(rollup@2.75.7)
@@ -1381,8 +1381,8 @@ packages:
       tslib: 2.4.0
     dev: true
 
-  /@flemist/test-utils@1.0.0(expect@29.7.0):
-    resolution: {integrity: sha512-K0XxXdh4oyUzEkSGkQP7EScjWFHiya8g5kZlZjwYtLxNKU0rGXr7VH1o6uVmLptOjDPUcbL3L/XqeAEuPXVNSg==}
+  /@flemist/test-utils@1.0.1(expect@29.7.0):
+    resolution: {integrity: sha512-n/Se/6tE2pTp4SvTCCTm38qHNqt69DqvFf3nr2iCGLVLNK+g/kOhoRNXJYbE/76mBuQ/41HPcYelnP835JRW6g==}
     engines: {node: '>=10.4.0', pnpm: '>=7.1.6'}
     peerDependencies:
       expect: '>=24'
