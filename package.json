@@ -1,13 +1,13 @@
 {
   "name": "@flemist/test-variants",
-  "version": "0.0.16",
+  "version": "1.0.0",
   "description": "Runs a test function with all possible combinations of its parameters.",
   "main": "dist/lib/index.cjs",
   "module": "dist/lib/index.mjs",
   "types": "dist/lib/index.d.ts",
   "engines": {
     "node": ">=10.4.0",
-    "pnpm": "^7.1.6"
+    "pnpm": ">=7.1.6"
   },
   "repository": {
     "type": "git",
@@ -58,7 +58,7 @@
     "@babel/runtime-corejs3": "7.18.3",
     "@flemist/copy-glob-flat": "0.0.5",
     "@flemist/karma-custom-launcher": "0.0.0",
-    "@flemist/test-utils": "0.0.9",
+    "@flemist/test-utils": "1.0.0",
     "@rollup/plugin-alias": "3.1.9",
     "@rollup/plugin-babel": "5.3.1",
     "@rollup/plugin-commonjs": "=21.1.0",
@@ -67,7 +67,7 @@
     "@rollup/plugin-multi-entry": "4.1.0",
     "@rollup/plugin-node-resolve": "13.3.0",
     "@rollup/plugin-replace": "4.0.0",
-    "@rollup/plugin-typescript": "8.3.3",
+    "@rollup/plugin-typescript": "11.1.5",
     "@rollup/pluginutils": "4.2.1",
     "@types/assert": "1.5.6",
     "@types/mocha": "9.1.1",
@@ -95,10 +95,10 @@
     "rollup-plugin-terser": "7.0.2",
     "ts-node": "=10.8.0",
     "tsconfig-paths": "4.0.0",
-    "typescript": "^4.7.4"
+    "typescript": "=4.7.4"
   },
   "dependencies": {
-    "@flemist/abort-controller-fast": "^0.0.5",
+    "@flemist/abort-controller-fast": "^1.0.0",
     "tslib": "^2.4.0"
   }
 }

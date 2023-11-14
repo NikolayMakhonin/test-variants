@@ -47,6 +47,7 @@ export type TestVariantsCallParams<TArgs> = {
     error: any,
   }) => void
   abortSignal?: IAbortSignalFast,
+  parallel?: number,
 }
 
 export function createTestVariants<TArgs extends object>(

@@ -2,7 +2,7 @@
   "ts-node": {
     "compilerOptions": {
       "module": "CommonJS"
-    },
+    }
   },
   "include": [
     "@types/**/*",

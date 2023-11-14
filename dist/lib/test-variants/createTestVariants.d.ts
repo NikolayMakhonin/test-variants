@@ -24,6 +24,7 @@ export declare type TestVariantsCallParams<TArgs> = {
         error: any;
     }) => void;
     abortSignal?: IAbortSignalFast;
+    parallel?: number;
 };
 export declare function createTestVariants<TArgs extends object>(test: (args: TArgs) => Promise<number | void> | number | void): TestVariantsSetArgs<TArgs>;
 export {};
