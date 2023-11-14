@@ -119,8 +119,8 @@ devDependencies:
     specifier: 15.1.0
     version: 15.1.0
   rdtsc:
-    specifier: 3.0.3
-    version: 3.0.3
+    specifier: 3.0.4
+    version: 3.0.4
   rimraf:
     specifier: 3.0.2
     version: 3.0.2
@@ -5186,9 +5186,9 @@ packages:
       unpipe: 1.0.0
     dev: true
 
-  /rdtsc@3.0.3:
-    resolution: {integrity: sha512-q3aPiS+toAcB5HYykDk6gcl3aZIZ21sJ37qZ+Sa5NRiGOod/9QnP0EyBT25uZV7C0L4xPtstzZ3KkbZjg8yNHw==}
-    engines: {node: '>=12.4.0', pnpm: ^7.1.6}
+  /rdtsc@3.0.4:
+    resolution: {integrity: sha512-fy4Ko37OT0P7B0Lt1Kli+ZLYtZlwuwBdyOPmbWOGoVB+zkzZg6BnVlRFmhsS4Fg3d8UVKjLewfNc0SOJ5H58gQ==}
+    engines: {node: '>=12.4.0'}
     requiresBuild: true
     dependencies:
       tslib: 2.4.0

@@ -85,7 +85,7 @@
     "karma-safari-launcher": "1.0.0",
     "mocha": "9.2.2",
     "nyc": "15.1.0",
-    "rdtsc": "3.0.3",
+    "rdtsc": "3.0.4",
     "rimraf": "3.0.2",
     "rollup": "2.75.7",
     "rollup-plugin-delete": "2.0.0",
