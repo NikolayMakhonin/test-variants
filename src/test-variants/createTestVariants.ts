@@ -18,7 +18,7 @@ import {
 import {IPool, Pool} from '@flemist/time-limits'
 import {combineAbortSignals} from '@flemist/async-utils'
 
-type VariantsArgs<TArgs> = {
+export type VariantsArgs<TArgs> = {
   [key in keyof TArgs]: TArgs[key][] | ((args: TArgs) => TArgs[key][])
 }
 
@@ -27,9 +27,9 @@ type VariantsArgs<TArgs> = {
 
 type PromiseOrValue<T> = Promise<T> | T
 
-type TestVariantsCall<TArgs> = (callParams?: TestVariantsCallParams<TArgs>) => PromiseOrValue<number>
+export type TestVariantsCall<TArgs> = (callParams?: TestVariantsCallParams<TArgs>) => PromiseOrValue<number>
 
-type TestVariantsSetArgs<TArgs> = <TAdditionalArgs>(args: VariantsArgs<{
+export type TestVariantsSetArgs<TArgs> = <TAdditionalArgs>(args: VariantsArgs<{
   [key in (keyof TAdditionalArgs | keyof TArgs)]: key extends keyof TArgs ? TArgs[key]
     : key extends keyof TAdditionalArgs ? TAdditionalArgs[key]
       : never

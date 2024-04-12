@@ -16,7 +16,7 @@ function isPromiseLike(value) {
 }
 function createTestVariants(test) {
     return function testVariantsArgs(args) {
-        return function testVariantsCall({ GC_Iterations = 1000000, GC_IterationsAsync = 10000, GC_Interval = 1000, logInterval = 5000, logCompleted = true, onError: onErrorCallback = null, abortSignal: abortSignalExternal = null, parallel, } = {}) {
+        return function testVariantsCall({ GC_Iterations = 1000000, GC_IterationsAsync = 10000, GC_Interval = 1000, logInterval = 5000, logCompleted = true, onError: onErrorCallback = null, abortSignal: abortSignalExternal = null, parallel: _parallel, } = {}) {
             const abortControllerParallel = new abortControllerFast.AbortControllerFast();
             const abortSignalParallel = asyncUtils.combineAbortSignals(abortSignalExternal, abortControllerParallel.signal);
             const abortSignalAll = abortSignalParallel;
@@ -98,7 +98,12 @@ function createTestVariants(test) {
             let prevGC_Time = prevLogTime;
             let prevGC_Iterations = iterations;
             let prevGC_IterationsAsync = iterationsAsync;
-            const pool = parallel == null || parallel <= 1
+            const parallel = _parallel === true
+                ? Math.pow(2, 31)
+                : !_parallel || _parallel <= 0
+                    ? 1
+                    : _parallel;
+            const pool = parallel <= 1
                 ? null
                 : new timeLimits.Pool(parallel);
             function runTest(_iterations, variantArgs, abortSignal) {

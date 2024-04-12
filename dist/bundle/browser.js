@@ -263,47 +263,47 @@ n?(e||(e=new c,n.subscribe(r)),i.subscribe(r)):n=i
 }(j,P.signal),k=S,z=Object.keys(i),E=Object.values(i),A=z.length,O={}
 ;function F(t){var e=E[t]
 ;return"function"==typeof e&&(e=e(O)),e}
-for(var I=[],R=[],C=0;C<A;C++)I[C]=-1,R[C]=[]
-;R[0]=F(0);var D=0,M=0,G=!1,$=0;function q(t,e,s){
+for(var I=[],R=[],M=0;M<A;M++)I[M]=-1,R[M]=[]
+;R[0]=F(0);var C=0,D=0,G=!1,$=0;function q(t,e,s){
 return n(this,void 0,void 0,(function(){var n
 ;return r(this,(function(r){switch(r.label){
 case 0:
 return P.abort(t),console.error("error variant: ".concat(e,"\r\n").concat(JSON.stringify(s,null,2))),
 console.error(t),
 n=Date.now(),Date.now()-n>50&&$<5?(console.log("DEBUG ITERATION: "+$),
-G=!0,[4,K()]):[3,2];case 1:r.sent(),$++,r.label=2
+G=!0,[4,V()]):[3,2];case 1:r.sent(),$++,r.label=2
 ;case 2:throw g&&g({iteration:e,variant:s,error:t
 }),t}}))}))}
-var N=Date.now(),U=N,W=D,Q=M,B=null==x||x<=1?null:new T(x)
-;function J(e,s,i){
+var N=Date.now(),U=N,W=C,Q=D,B=!0===x?Math.pow(2,31):!x||x<=0?1:x,J=B<=1?null:new T(B)
+;function K(e,s,i){
 return n(this,void 0,void 0,(function(){var n,o,l
 ;return r(this,(function(r){switch(r.label){
 case 0:return r.trys.push([0,3,,5]),function(t){
 return"object"==typeof t&&t&&"function"==typeof t.then
 }(n=t(s,i))?[4,n]:[3,2];case 1:
-return o=r.sent(),M+=l="number"==typeof o?o:1,D+=l,
-[2];case 2:return D+="number"==typeof n?n:1,[3,5]
+return o=r.sent(),D+=l="number"==typeof o?o:1,C+=l,
+[2];case 2:return C+="number"==typeof n?n:1,[3,5]
 ;case 3:return[4,q(r.sent(),e,s)];case 4:
 return r.sent(),[3,5];case 5:return[2]}}))}))}
-function K(){
+function V(){
 return n(this,void 0,void 0,(function(){
 var t,i=this;return r(this,(function(o){
 switch(o.label){case 0:t=function(){var t,o,l
 ;return r(this,(function(c){switch(c.label){
 case 0:
-return t=D,o=B?e({},O):O,l=(b||_)&&Date.now(),b&&l-N>=b&&(console.log(D),
-N=l),a&&D-W>=a||f&&M-Q>=f||_&&l-U>=_?(W=D,
-Q=M,U=l,[4,s(1)]):[3,2];case 1:
+return t=C,o=J?e({},O):O,l=(b||_)&&Date.now(),b&&l-N>=b&&(console.log(C),
+N=l),a&&C-W>=a||f&&D-Q>=f||_&&l-U>=_?(W=C,
+Q=D,U=l,[4,s(1)]):[3,2];case 1:
 return c.sent(),[2,"continue"];case 2:
-return(null==j?void 0:j.aborted)?[2,"continue"]:B&&!S.aborted?[3,4]:[4,J(t,o,j)]
+return(null==j?void 0:j.aborted)?[2,"continue"]:J&&!S.aborted?[3,4]:[4,K(t,o,j)]
 ;case 3:return c.sent(),[3,7];case 4:
-return B.hold(1)?[3,6]:[4,B.holdWait(1)];case 5:
+return J.hold(1)?[3,6]:[4,J.holdWait(1)];case 5:
 c.sent(),c.label=6;case 6:
 n(i,void 0,void 0,(function(){
 return r(this,(function(e){switch(e.label){case 0:
-return e.trys.push([0,,2,3]),(null==S?void 0:S.aborted)?[2]:[4,J(t,o,S)]
+return e.trys.push([0,,2,3]),(null==S?void 0:S.aborted)?[2]:[4,K(t,o,S)]
 ;case 1:return e.sent(),[3,3];case 2:
-return B.release(1),[7];case 3:return[2]}}))
+return J.release(1),[7];case 3:return[2]}}))
 })),c.label=7;case 7:return[2]}}))},o.label=1
 ;case 1:
 return(null==j?void 0:j.aborted)||!G&&!function(){
@@ -313,10 +313,10 @@ for(I[t]=e,O[z[t]]=R[t][e],t++;t<A;t++){var n=F(t)
 ;if(0===n.length)break;I[t]=0,R[t]=n,O[z[t]]=n[0]}
 if(t>=A)return!0}}return!1}()?[3,3]:[5,t()]
 ;case 2:return o.sent(),[3,1];case 3:
-return B?[4,B.holdWait(x)]:[3,5];case 4:
-o.sent(),B.release(x),o.label=5;case 5:
+return J?[4,J.holdWait(B)]:[3,5];case 4:
+o.sent(),J.release(B),o.label=5;case 5:
 if(null==k?void 0:k.aborted)throw k.reason
-;return y&&console.log("variants: "+D),[4,s(1)]
-;case 6:return o.sent(),[2,D]}}))}))}return K()}}
+;return y&&console.log("variants: "+C),[4,s(1)]
+;case 6:return o.sent(),[2,C]}}))}))}return V()}}
 },Object.defineProperty(t,"__esModule",{value:!0})
 }({});
