@@ -52,7 +52,7 @@ export type TestVariantsCallParams<TArgs> = {
     error: any,
   }) => void
   abortSignal?: IAbortSignalFast,
-  parallel?: number,
+  parallel?: null | number | boolean,
 }
 
 function isPromiseLike<T>(value: PromiseOrValue<T>): value is Promise<T> {
@@ -73,7 +73,7 @@ export function createTestVariants<TArgs extends object>(
       logCompleted = true,
       onError: onErrorCallback = null,
       abortSignal: abortSignalExternal = null,
-      parallel,
+      parallel: _parallel,
     }: TestVariantsCallParams<TArgs> = {}) {
       const abortControllerParallel = new AbortControllerFast()
       const abortSignalParallel = combineAbortSignals(abortSignalExternal, abortControllerParallel.signal)
@@ -177,7 +177,13 @@ export function createTestVariants<TArgs extends object>(
       let prevGC_Iterations = iterations
       let prevGC_IterationsAsync = iterationsAsync
 
-      const pool: IPool = parallel == null || parallel <= 1
+      const parallel = _parallel === true
+        ? 2 ** 31
+        : !_parallel || _parallel <= 0
+          ? 1
+          : _parallel
+
+      const pool: IPool = parallel <= 1
         ? null
         : new Pool(parallel)
 
