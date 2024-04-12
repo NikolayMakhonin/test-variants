@@ -1,10 +1,10 @@
 import { IAbortSignalFast } from '@flemist/abort-controller-fast';
-declare type VariantsArgs<TArgs> = {
+export declare type VariantsArgs<TArgs> = {
     [key in keyof TArgs]: TArgs[key][] | ((args: TArgs) => TArgs[key][]);
 };
 declare type PromiseOrValue<T> = Promise<T> | T;
-declare type TestVariantsCall<TArgs> = (callParams?: TestVariantsCallParams<TArgs>) => PromiseOrValue<number>;
-declare type TestVariantsSetArgs<TArgs> = <TAdditionalArgs>(args: VariantsArgs<{
+export declare type TestVariantsCall<TArgs> = (callParams?: TestVariantsCallParams<TArgs>) => PromiseOrValue<number>;
+export declare type TestVariantsSetArgs<TArgs> = <TAdditionalArgs>(args: VariantsArgs<{
     [key in (keyof TAdditionalArgs | keyof TArgs)]: key extends keyof TArgs ? TArgs[key] : key extends keyof TAdditionalArgs ? TAdditionalArgs[key] : never;
 }>) => TestVariantsCall<TArgs>;
 export declare type TestVariantsCallParams<TArgs> = {
