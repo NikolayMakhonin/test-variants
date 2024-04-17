@@ -140,7 +140,17 @@ export function createTestVariants<TArgs extends object>(
         console.error(`error variant: ${
           iterations
         }\r\n${
-          JSON.stringify(variantArgs, null, 2)
+          JSON.stringify(variantArgs, (_, value) => {
+            if (value
+              && typeof value === 'object'
+              && !Array.isArray(value)
+              && value.constructor !== Object
+            ) {
+              return value + ''
+            }
+            
+            return value
+          }, 2)
         }`)
         console.error(error)
 
