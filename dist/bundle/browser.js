@@ -221,9 +221,9 @@ e=n.item,t.delete(n)}
 if(e.abortSignal&&e.abortSignal.aborted)e.reject(e.abortSignal.reason);else try{
 let t=e.func&&e.func(e.abortSignal)
 ;t&&"function"==typeof t.then&&(t=yield t),e.resolve(t)
-}catch(t){e.reject(t)}}}))}}const E=function(){
+}catch(t){e.reject(t)}}}))}}const A=function(){
 const t=new z;return function(e,n){
-return t.run(void 0,e,n)}}();class T{
+return t.run(void 0,e,n)}}();class E{
 constructor(t){
 if(this._maxSize=0,this._size=0,this._tickPromise=new x,!t)throw new Error("maxSize should be > 0")
 ;this._maxSize=t,
@@ -248,7 +248,7 @@ e.then((function(t){r&&r(),n(t)
 })).catch(i),t&&(r=t.subscribe(i))})):e
 }(t,this._tickPromise.promise)}holdWait(t,e,r,s){
 if(t>this.maxSize)throw new Error(`holdCount (${t} > maxSize (${this.maxSize}))`)
-;return s||(s=E),
+;return s||(s=A),
 this._priorityQueue.run((r=>n(this,void 0,void 0,(function*(){
 for(;t>this._size;)yield this.tick(r),yield s(e,r)
 ;if(!this.hold(t))throw new Error("Unexpected behavior")
@@ -260,21 +260,22 @@ for(let s=0;s<t.length;s++){const i=t[s];if(i){
 if(i.aborted){r.call(i);break}
 n?(e||(e=new c,n.subscribe(r)),i.subscribe(r)):n=i
 }}return e?e.signal:n||(new c).signal
-}(j,P.signal),k=S,z=Object.keys(i),E=Object.values(i),A=z.length,O={}
-;function F(t){var e=E[t]
+}(j,P.signal),k=S,z=Object.keys(i),A=Object.values(i),T=z.length,O={}
+;function F(t){var e=A[t]
 ;return"function"==typeof e&&(e=e(O)),e}
-for(var I=[],R=[],M=0;M<A;M++)I[M]=-1,R[M]=[]
+for(var I=[],R=[],M=0;M<T;M++)I[M]=-1,R[M]=[]
 ;R[0]=F(0);var C=0,D=0,G=!1,$=0;function q(t,e,s){
 return n(this,void 0,void 0,(function(){var n
 ;return r(this,(function(r){switch(r.label){
 case 0:
-return P.abort(t),console.error("error variant: ".concat(e,"\r\n").concat(JSON.stringify(s,null,2))),
-console.error(t),
-n=Date.now(),Date.now()-n>50&&$<5?(console.log("DEBUG ITERATION: "+$),
+return P.abort(t),console.error("error variant: ".concat(e,"\r\n").concat(JSON.stringify(s,(function(t,e){
+return e&&"object"==typeof e&&!Array.isArray(e)&&e.constructor!==Object?e+"":e
+}),2))),
+console.error(t),n=Date.now(),Date.now()-n>50&&$<5?(console.log("DEBUG ITERATION: "+$),
 G=!0,[4,V()]):[3,2];case 1:r.sent(),$++,r.label=2
 ;case 2:throw g&&g({iteration:e,variant:s,error:t
 }),t}}))}))}
-var N=Date.now(),U=N,W=C,Q=D,B=!0===x?Math.pow(2,31):!x||x<=0?1:x,J=B<=1?null:new T(B)
+var N=Date.now(),U=N,W=C,Q=D,B=!0===x?Math.pow(2,31):!x||x<=0?1:x,J=B<=1?null:new E(B)
 ;function K(e,s,i){
 return n(this,void 0,void 0,(function(){var n,o,l
 ;return r(this,(function(r){switch(r.label){
@@ -307,11 +308,11 @@ return J.release(1),[7];case 3:return[2]}}))
 })),c.label=7;case 7:return[2]}}))},o.label=1
 ;case 1:
 return(null==j?void 0:j.aborted)||!G&&!function(){
-for(var t=A-1;t>=0;t--){var e=I[t]+1
+for(var t=T-1;t>=0;t--){var e=I[t]+1
 ;if(e<R[t].length){
-for(I[t]=e,O[z[t]]=R[t][e],t++;t<A;t++){var n=F(t)
+for(I[t]=e,O[z[t]]=R[t][e],t++;t<T;t++){var n=F(t)
 ;if(0===n.length)break;I[t]=0,R[t]=n,O[z[t]]=n[0]}
-if(t>=A)return!0}}return!1}()?[3,3]:[5,t()]
+if(t>=T)return!0}}return!1}()?[3,3]:[5,t()]
 ;case 2:return o.sent(),[3,1];case 3:
 return J?[4,J.holdWait(B)]:[3,5];case 4:
 o.sent(),J.release(B),o.label=5;case 5:

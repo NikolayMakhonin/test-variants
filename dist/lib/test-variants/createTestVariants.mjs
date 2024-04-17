@@ -63,7 +63,15 @@ function createTestVariants(test) {
             function onError(error, iterations, variantArgs) {
                 return __awaiter(this, void 0, void 0, function* () {
                     abortControllerParallel.abort(error);
-                    console.error(`error variant: ${iterations}\r\n${JSON.stringify(variantArgs, null, 2)}`);
+                    console.error(`error variant: ${iterations}\r\n${JSON.stringify(variantArgs, (_, value) => {
+                        if (value
+                            && typeof value === 'object'
+                            && !Array.isArray(value)
+                            && value.constructor !== Object) {
+                            return value + '';
+                        }
+                        return value;
+                    }, 2)}`);
                     console.error(error);
                     // rerun failed variant 5 times for debug
                     const time0 = Date.now();
