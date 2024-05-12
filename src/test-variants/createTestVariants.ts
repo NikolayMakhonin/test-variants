@@ -130,29 +130,36 @@ export function createTestVariants<TArgs extends object>(
       let debug = false
       let debugIteration = 0
 
+      let isNewError: boolean = true
+
       async function onError(
         error: any,
         iterations: number,
         variantArgs: TArgs,
       ) {
-        abortControllerParallel.abort(error)
+        const _isNewError = isNewError
+        isNewError = false
 
-        console.error(`error variant: ${
-          iterations
-        }\r\n${
-          JSON.stringify(variantArgs, (_, value) => {
-            if (value
-              && typeof value === 'object'
-              && !Array.isArray(value)
-              && value.constructor !== Object
-            ) {
-              return value + ''
-            }
-            
-            return value
-          }, 2)
-        }`)
-        console.error(error)
+        if (_isNewError) {
+          abortControllerParallel.abort(error)
+
+          console.error(`error variant: ${
+            iterations
+          }\r\n${
+            JSON.stringify(variantArgs, (_, value) => {
+              if (value
+                && typeof value === 'object'
+                && !Array.isArray(value)
+                && value.constructor !== Object
+              ) {
+                return value + ''
+              }
+
+              return value
+            }, 2)
+          }`)
+          console.error(error)
+        }
 
         // rerun failed variant 5 times for debug
         const time0 = Date.now()
@@ -165,15 +172,17 @@ export function createTestVariants<TArgs extends object>(
           debugIteration++
         }
 
-        if (onErrorCallback) {
-          onErrorCallback({
-            iteration: iterations,
-            variant  : variantArgs,
-            error,
-          })
-        }
+        if (_isNewError) {
+          if (onErrorCallback) {
+            onErrorCallback({
+              iteration: iterations,
+              variant  : variantArgs,
+              error,
+            })
+          }
 
-        throw error
+          throw error
+        }
       }
 
       function onCompleted() {
