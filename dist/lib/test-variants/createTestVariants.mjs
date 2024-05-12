@@ -60,19 +60,24 @@ function createTestVariants(test) {
             let iterationsAsync = 0;
             let debug = false;
             let debugIteration = 0;
+            let isNewError = true;
             function onError(error, iterations, variantArgs) {
                 return __awaiter(this, void 0, void 0, function* () {
-                    abortControllerParallel.abort(error);
-                    console.error(`error variant: ${iterations}\r\n${JSON.stringify(variantArgs, (_, value) => {
-                        if (value
-                            && typeof value === 'object'
-                            && !Array.isArray(value)
-                            && value.constructor !== Object) {
-                            return value + '';
-                        }
-                        return value;
-                    }, 2)}`);
-                    console.error(error);
+                    const _isNewError = isNewError;
+                    isNewError = false;
+                    if (_isNewError) {
+                        abortControllerParallel.abort(error);
+                        console.error(`error variant: ${iterations}\r\n${JSON.stringify(variantArgs, (_, value) => {
+                            if (value
+                                && typeof value === 'object'
+                                && !Array.isArray(value)
+                                && value.constructor !== Object) {
+                                return value + '';
+                            }
+                            return value;
+                        }, 2)}`);
+                        console.error(error);
+                    }
                     // rerun failed variant 5 times for debug
                     const time0 = Date.now();
                     // eslint-disable-next-line no-debugger
@@ -83,14 +88,16 @@ function createTestVariants(test) {
                         yield next();
                         debugIteration++;
                     }
-                    if (onErrorCallback) {
-                        onErrorCallback({
-                            iteration: iterations,
-                            variant: variantArgs,
-                            error,
-                        });
+                    if (_isNewError) {
+                        if (onErrorCallback) {
+                            onErrorCallback({
+                                iteration: iterations,
+                                variant: variantArgs,
+                                error,
+                            });
+                        }
+                        throw error;
                     }
-                    throw error;
                 });
             }
             function onCompleted() {
