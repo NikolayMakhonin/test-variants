@@ -279,6 +279,24 @@ describe('test-variants > createTestVariants', function () {
       ])
       assert.strictEqual(count, result.length)
     })
+
+    it('long', async function () {
+      this.timeout(5 * 60 * 1000)
+
+      const result = []
+      const count = await createTestVariants(async ({a}: { a: number }) => {
+        await delay(3000)
+        result.push([a])
+      })({
+        a: [1, 2],
+      })()
+
+      assert.strictEqual(count, 2)
+      assert.deepStrictEqual(result, [
+        [1],
+        [2],
+      ])
+    })
   })
 
   describe('async with sync parallel', async function () {

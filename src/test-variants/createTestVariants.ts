@@ -253,7 +253,6 @@ export function createTestVariants<TArgs extends object>(
             prevGC_IterationsAsync = iterationsAsync
             prevGC_Time = now
             await garbageCollect(1)
-            continue
           }
 
           if (abortSignalExternal?.aborted) {

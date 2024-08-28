@@ -159,7 +159,6 @@ function createTestVariants(test) {
                             prevGC_IterationsAsync = iterationsAsync;
                             prevGC_Time = now;
                             yield garbageCollect_garbageCollect.garbageCollect(1);
-                            continue;
                         }
                         if (abortSignalExternal === null || abortSignalExternal === void 0 ? void 0 : abortSignalExternal.aborted) {
                             continue;

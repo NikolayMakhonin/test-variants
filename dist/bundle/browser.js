@@ -295,8 +295,8 @@ switch(o.label){case 0:t=function(){var t,o,l
 case 0:
 return t=C,o=K?e({},O):O,l=(b||_)&&Date.now(),b&&l-U>=b&&(console.log(C),
 U=l),a&&C-Q>=a||f&&D-B>=f||_&&l-W>=_?(Q=C,
-B=D,W=l,[4,s(1)]):[3,2];case 1:
-return c.sent(),[2,"continue"];case 2:
+B=D,W=l,[4,s(1)]):[3,2];case 1:c.sent(),c.label=2
+;case 2:
 return(null==j?void 0:j.aborted)?[2,"continue"]:K&&!S.aborted?[3,4]:[4,V(t,o,j)]
 ;case 3:return c.sent(),[3,7];case 4:
 return K.hold(1)?[3,6]:[4,K.holdWait(1)];case 5:
