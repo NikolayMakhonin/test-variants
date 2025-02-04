@@ -280,6 +280,39 @@ describe('test-variants > createTestVariants', function () {
       assert.strictEqual(count, result.length)
     })
 
+    it('complex', async function () {
+      this.timeout(5 * 60 * 1000)
+
+      const result = []
+      const count = await createTestVariants(async (args: {
+        op: number
+        a0: boolean
+        a1: boolean
+        a2: boolean
+        a3: boolean
+        a4: boolean
+        a5: boolean
+        b: number
+        c: number
+      }) => {
+        await delay(100)
+        result.push(args)
+      })({
+        op : [1, 2, 3, 4, 5],
+        a0: ({ op }) => [op === 0],
+        a1: ({ op }) => [op === 1],
+        a2: ({ op }) => [op === 2],
+        a3: ({ op }) => [op === 3],
+        a4: ({ op }) => [op === 4],
+        a5: ({ op }) => [op === 5],
+        b: [1, 2, 3],
+        c : [1, 2, 3, 4, 5],
+      })()
+
+      assert.strictEqual(count, 75)
+      // assert.deepStrictEqual(result, arr.map(a => [a]))
+    })
+
     it('long', async function () {
       this.timeout(5 * 60 * 1000)
 
