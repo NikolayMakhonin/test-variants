@@ -13,9 +13,9 @@
 import {garbageCollect} from 'src/garbage-collect/garbageCollect'
 import {
   AbortControllerFast,
-  IAbortSignalFast,
+  type IAbortSignalFast,
 } from '@flemist/abort-controller-fast'
-import {IPool, Pool} from '@flemist/time-limits'
+import {type IPool, Pool} from '@flemist/time-limits'
 import {combineAbortSignals} from '@flemist/async-utils'
 
 export type VariantsArgs<TArgs> = {
@@ -35,6 +35,12 @@ export type TestVariantsSetArgs<TArgs> = <TAdditionalArgs>(args: VariantsArgs<{
       : never
 }>) => TestVariantsCall<TArgs>
 
+export type ErrorEvent<TArgs> = {
+  iteration: number,
+  variant: TArgs,
+  error: any,
+}
+
 export type TestVariantsCallParams<TArgs> = {
   /** Wait for garbage collection after iterations */
   GC_Iterations?: number,
@@ -46,11 +52,7 @@ export type TestVariantsCallParams<TArgs> = {
   logInterval?: number,
   /** console log iterations on test completed */
   logCompleted?: boolean,
-  onError?: (event: {
-    iteration: number,
-    variant: TArgs,
-    error: any,
-  }) => void
+  onError?: (event: ErrorEvent<TArgs>) => void
   abortSignal?: IAbortSignalFast,
   parallel?: null | number | boolean,
 }
@@ -61,24 +63,11 @@ function isPromiseLike<T>(value: PromiseOrValue<T>): value is Promise<T> {
     && typeof (value as any).then === 'function'
 }
 
-export function createTestVariants<TArgs extends object>(
-  test: (args: TArgs, abortSignal: IAbortSignalFast) => Promise<number|void> | number | void,
-): TestVariantsSetArgs<TArgs> {
-  return function testVariantsArgs(args) {
-    return function testVariantsCall({
-      GC_Iterations = 1000000,
-      GC_IterationsAsync = 10000,
-      GC_Interval = 1000,
-      logInterval = 5000,
-      logCompleted = true,
-      onError: onErrorCallback = null,
-      abortSignal: abortSignalExternal = null,
-      parallel: _parallel,
-    }: TestVariantsCallParams<TArgs> = {}) {
-      const abortControllerParallel = new AbortControllerFast()
-      const abortSignalParallel = combineAbortSignals(abortSignalExternal, abortControllerParallel.signal)
-      const abortSignalAll = abortSignalParallel
-
+export function testVariantsIterable<TArgs extends object>(
+  args: VariantsArgs<TArgs>,
+): Iterable<TArgs> {
+  return {
+    [Symbol.iterator]() {
       const argsKeys = Object.keys(args)
       const argsValues: any[] = Object.values(args)
       const argsLength = argsKeys.length
@@ -125,22 +114,68 @@ export function createTestVariants<TArgs extends object>(
         return false
       }
 
+      return {
+        next() {
+          if (nextVariant()) {
+            return {done: false, value: variantArgs}
+          }
+
+          return {done: true, value: null}
+        },
+      }
+    },
+  }
+}
+
+export function createTestVariants<TArgs extends object>(
+  test: (args: TArgs, abortSignal: IAbortSignalFast) => Promise<number|void> | number | void,
+): TestVariantsSetArgs<TArgs> {
+  return function testVariantsArgs(args) {
+    return function testVariantsCall({
+      GC_Iterations = 1000000,
+      GC_IterationsAsync = 10000,
+      GC_Interval = 1000,
+      logInterval = 5000,
+      logCompleted = true,
+      onError: onErrorCallback = null,
+      abortSignal: abortSignalExternal = null,
+      parallel: _parallel,
+    }: TestVariantsCallParams<TArgs> = {}) {
+      const abortControllerParallel = new AbortControllerFast()
+      const abortSignalParallel = combineAbortSignals(abortSignalExternal, abortControllerParallel.signal)
+      const abortSignalAll = abortSignalParallel
+
+      let variantArgs: TArgs = {} as any
+      const variantsIterator = testVariantsIterable(args)[Symbol.iterator]()
+
+      function nextVariant() {
+        const result = variantsIterator.next()
+        if (!result.done) {
+          variantArgs = result.value
+          return true
+        }
+        return false
+      }
+
       let iterations = 0
       let iterationsAsync = 0
       let debug = false
       let debugIteration = 0
 
-      let isNewError: boolean = true
+      let errorEvent: ErrorEvent<TArgs> | null = null
 
-      async function onError(
+      function onError(
         error: any,
         iterations: number,
         variantArgs: TArgs,
       ) {
-        const _isNewError = isNewError
-        isNewError = false
+        if (!errorEvent) {
+          errorEvent = {
+            iteration: iterations,
+            variant  : variantArgs,
+            error,
+          }
 
-        if (_isNewError) {
           abortControllerParallel.abort(error)
 
           console.error(`error variant: ${
@@ -168,20 +203,46 @@ export function createTestVariants<TArgs extends object>(
         if (Date.now() - time0 > 50 && debugIteration < 5) {
           console.log('DEBUG ITERATION: ' + debugIteration)
           debug = true
-          await next()
           debugIteration++
+          return null
         }
 
-        if (_isNewError) {
-          if (onErrorCallback) {
-            onErrorCallback({
-              iteration: iterations,
-              variant  : variantArgs,
-              error,
+        if (onErrorCallback) {
+          onErrorCallback(errorEvent)
+        }
+
+        throw errorEvent.error
+      }
+
+      function runTest(
+        _iterations: number,
+        variantArgs: TArgs,
+        abortSignal: IAbortSignalFast,
+      ): PromiseOrValue<{ iterationsAsync: number, iterationsSync: number } | null> {
+        try {
+          const promiseOrIterations = test(variantArgs, abortSignal)
+
+          if (isPromiseLike(promiseOrIterations)) {
+            return promiseOrIterations.then(value => {
+              const newIterations = typeof value === 'number' ? value : 1
+              return {
+                iterationsAsync: newIterations,
+                iterationsSync : 0,
+              }
+            }, err => {
+              return onError(err, _iterations, variantArgs)
             })
           }
 
-          throw error
+          const newIterations = typeof promiseOrIterations === 'number' ? promiseOrIterations : 1
+
+          return {
+            iterationsAsync: 0,
+            iterationsSync : newIterations,
+          }
+        }
+        catch (err) {
+          return onError(err, _iterations, variantArgs)
         }
       }
 
@@ -195,7 +256,6 @@ export function createTestVariants<TArgs extends object>(
       let prevGC_Time = prevLogTime
       let prevGC_Iterations = iterations
       let prevGC_IterationsAsync = iterationsAsync
-
       const parallel = _parallel === true
         ? 2 ** 31
         : !_parallel || _parallel <= 0
@@ -206,28 +266,6 @@ export function createTestVariants<TArgs extends object>(
         ? null
         : new Pool(parallel)
 
-      async function runTest(
-        _iterations: number,
-        variantArgs: TArgs,
-        abortSignal: IAbortSignalFast,
-      ) {
-        try {
-          const promiseOrIterations = test(variantArgs, abortSignal)
-
-          if (isPromiseLike(promiseOrIterations)) {
-            const value = await promiseOrIterations
-            const newIterations = typeof value === 'number' ? value : 1
-            iterationsAsync += newIterations
-            iterations += newIterations
-            return
-          }
-
-          iterations += typeof promiseOrIterations === 'number' ? promiseOrIterations : 1
-        }
-        catch (err) {
-          await onError(err, _iterations, variantArgs)
-        }
-      }
 
       async function next(): Promise<number> {
         while (!abortSignalExternal?.aborted && (debug || nextVariant())) {
@@ -260,26 +298,47 @@ export function createTestVariants<TArgs extends object>(
           }
 
           if (!pool || abortSignalParallel.aborted) {
-            await runTest(
+            let promiseOrIterations = runTest(
               _iterations,
               _variantArgs,
-              abortSignalExternal,
+              abortSignalParallel,
             )
+            if (!promiseOrIterations) {
+              debug = true
+              continue
+            }
+            if (isPromiseLike(promiseOrIterations)) {
+              promiseOrIterations = await promiseOrIterations
+            }
+            const {iterationsAsync: _iterationsAsync, iterationsSync: _iterationsSync} = promiseOrIterations
+            iterationsAsync += _iterationsAsync
+            iterations += _iterationsSync + _iterationsAsync
           }
           else {
             if (!pool.hold(1)) {
               await pool.holdWait(1)
             }
+            // eslint-disable-next-line @typescript-eslint/no-loop-func
             void (async () => {
               try {
                 if (abortSignalParallel?.aborted) {
                   return
                 }
-                await runTest(
+                let promiseOrIterations = runTest(
                   _iterations,
                   _variantArgs,
                   abortSignalParallel,
                 )
+                if (!promiseOrIterations) {
+                  debug = true
+                  return
+                }
+                if (isPromiseLike(promiseOrIterations)) {
+                  promiseOrIterations = await promiseOrIterations
+                }
+                const {iterationsAsync: _iterationsAsync, iterationsSync: _iterationsSync} = promiseOrIterations
+                iterationsAsync += _iterationsAsync
+                iterations += _iterationsSync + _iterationsAsync
               }
               finally {
                 void pool.release(1)
