@@ -1,4 +1,4 @@
-import { calcPerformance } from 'rdtsc'
+import { calcPerformance } from 'rdtsc/node'
 import {createTestVariants} from './createTestVariants'
 
 describe('test > testVariants perf', function () {
@@ -18,17 +18,21 @@ describe('test > testVariants perf', function () {
       c: [true, false],
     }
 
-    const result = calcPerformance(
-      10000,
-      () => {
+    // const _testVariantsSync = testVariantsSync(args)
 
-      },
-      () => {
-        testVariantsSync(args)
-      },
-    )
+    const result = calcPerformance({
+      time : 1000,
+      funcs: [
+        () => {
 
-    const count = testVariantsSync(args)() as number
+        },
+        () => {
+          testVariantsSync(args).run()
+        },
+      ],
+    })
+
+    const count = testVariantsSync(args).run() as number
 
     result.absoluteDiff = result.absoluteDiff.map(o => o / count)
 

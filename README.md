@@ -46,7 +46,7 @@ const count = await testVariants({
     a: [1, 2],
     b: ['3', '4'],
     c: [true, false],
-})() // no extra parameters
+}).run() // no extra parameters
 ```
 
 ## Calculable variants
@@ -60,7 +60,7 @@ const count = await testVariants({
     a: [1, 2],
     b: ({a}) => [ a + 1, a + 2 ], // you can use 'a', but you can't use 'c' because it will initialize after 'b' 
     c: ({a, b}) => [ a, b, a + b ],
-})()
+}).run()
 ```
 
 # License

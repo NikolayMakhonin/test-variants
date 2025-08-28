@@ -27,32 +27,40 @@ export type VariantsArgs<TArgs> = {
 
 type PromiseOrValue<T> = Promise<T> | T
 
-export type TestVariantsCall<TArgs> = (callParams?: TestVariantsCallParams<TArgs>) => PromiseOrValue<number>
+export type TestVariantsCall<TArgs> = (callParams?: null | TestVariantsCallParams<TArgs>) => PromiseOrValue<number>
 
 export type TestVariantsSetArgs<TArgs> = <TAdditionalArgs>(args: VariantsArgs<{
   [key in (keyof TAdditionalArgs | keyof TArgs)]: key extends keyof TArgs ? TArgs[key]
     : key extends keyof TAdditionalArgs ? TAdditionalArgs[key]
       : never
-}>) => TestVariantsCall<TArgs>
+}>) => {
+  variants: TArgs[]
+  run: TestVariantsCall<TArgs>
+}
 
 export type TestVariantsCallParams<TArgs> = {
   /** Wait for garbage collection after iterations */
-  GC_Iterations?: number,
+  GC_Iterations?: null | number,
   /** Same as GC_Iterations but only for async test variants, required for 10000 and more of Promise rejections */
-  GC_IterationsAsync?: number,
+  GC_IterationsAsync?: null | number,
   /** Wait for garbage collection after time interval, required to prevent the karma browserDisconnectTimeout */
-  GC_Interval?: number,
+  GC_Interval?: null | number,
   /** console log current iterations, required to prevent the karma browserNoActivityTimeout */
-  logInterval?: number,
+  logInterval?: null | number,
   /** console log iterations on test completed */
-  logCompleted?: boolean,
-  onError?: (event: {
-    iteration: number,
+  logCompleted?: null | boolean,
+  onError?: null | ((event: {
+    index: number,
     variant: TArgs,
     error: any,
-  }) => void
-  abortSignal?: IAbortSignalFast,
+  }) => void)
+  abortSignal?: null | IAbortSignalFast,
   parallel?: null | number | boolean,
+  /**
+   * [inclusive min, inclusive max]
+   */
+  indexRange?: null | [number | null | undefined, number | null | undefined],
+  backward?: null | boolean,
 }
 
 function isPromiseLike<T>(value: PromiseOrValue<T>): value is Promise<T> {
@@ -65,64 +73,90 @@ export function createTestVariants<TArgs extends object>(
   test: (args: TArgs, abortSignal: IAbortSignalFast) => Promise<number|void> | number | void,
 ): TestVariantsSetArgs<TArgs> {
   return function testVariantsArgs(args) {
-    return function testVariantsCall({
-      GC_Iterations = 1000000,
-      GC_IterationsAsync = 10000,
-      GC_Interval = 1000,
-      logInterval = 5000,
-      logCompleted = true,
-      onError: onErrorCallback = null,
-      abortSignal: abortSignalExternal = null,
-      parallel: _parallel,
-    }: TestVariantsCallParams<TArgs> = {}) {
+    const argsKeys = Object.keys(args)
+    const argsValues: any[] = Object.values(args)
+    const argsLength = argsKeys.length
+
+    const variantArgs: TArgs = {} as any
+
+    function getArgValues(nArg: number) {
+      let argValues = argsValues[nArg]
+      if (typeof argValues === 'function') {
+        argValues = argValues(variantArgs)
+      }
+      return argValues
+    }
+
+    const indexes: number[] = []
+    const values: any[][] = []
+    for (let nArg = 0; nArg < argsLength; nArg++) {
+      indexes[nArg] = -1
+      values[nArg] = []
+    }
+    values[0] = getArgValues(0)
+
+    function nextVariant() {
+      for (let nArg = argsLength - 1; nArg >= 0; nArg--) {
+        const index = indexes[nArg] + 1
+        if (index < values[nArg].length) {
+          indexes[nArg] = index
+          variantArgs[argsKeys[nArg]] = values[nArg][index]
+          for (nArg++; nArg < argsLength; nArg++) {
+            const argValues = getArgValues(nArg)
+            if (argValues.length === 0) {
+              break
+            }
+            indexes[nArg] = 0
+            values[nArg] = argValues
+            variantArgs[argsKeys[nArg]] = argValues[0]
+          }
+          if (nArg >= argsLength) {
+            return true
+          }
+        }
+      }
+
+      return false
+    }
+
+    const variants: any[] = []
+    while (nextVariant()) {
+      variants.push({...variantArgs})
+    }
+
+    function testVariantsCall(options: TestVariantsCallParams<TArgs> = {}) {
+      const GC_Iterations = options.GC_Iterations ?? 1000000
+      const GC_IterationsAsync = options.GC_IterationsAsync ?? 10000
+      const GC_Interval = options.GC_Interval ?? 1000
+      const logInterval = options.logInterval ?? 5000
+      const logCompleted = options.logCompleted ?? true
+      const onErrorCallback = options.onError ?? null
+      const abortSignalExternal = options.abortSignal ?? null
+      const _parallel = options.parallel ?? null
+      const backward = options.backward ?? false
+
       const abortControllerParallel = new AbortControllerFast()
       const abortSignalParallel = combineAbortSignals(abortSignalExternal, abortControllerParallel.signal)
       const abortSignalAll = abortSignalParallel
 
-      const argsKeys = Object.keys(args)
-      const argsValues: any[] = Object.values(args)
-      const argsLength = argsKeys.length
+      let variantArgs: TArgs = {} as any
 
-      const variantArgs: TArgs = {} as any
+      // Parse indexRange option
+      const variantIndexMin = options.indexRange?.[0] ?? 0
+      const variantIndexMax = options.indexRange?.[1] ?? variants.length - 1
 
-      function getArgValues(nArg: number) {
-        let argValues = argsValues[nArg]
-        if (typeof argValues === 'function') {
-          argValues = argValues(variantArgs)
-        }
-        return argValues
-      }
-
-      const indexes: number[] = []
-      const values: any[][] = []
-      for (let nArg = 0; nArg < argsLength; nArg++) {
-        indexes[nArg] = -1
-        values[nArg] = []
-      }
-      values[0] = getArgValues(0)
-
+      let variantIndex = variantIndexMin - 1
       function nextVariant() {
-        for (let nArg = argsLength - 1; nArg >= 0; nArg--) {
-          const index = indexes[nArg] + 1
-          if (index < values[nArg].length) {
-            indexes[nArg] = index
-            variantArgs[argsKeys[nArg]] = values[nArg][index]
-            for (nArg++; nArg < argsLength; nArg++) {
-              const argValues = getArgValues(nArg)
-              if (argValues.length === 0) {
-                break
-              }
-              indexes[nArg] = 0
-              values[nArg] = argValues
-              variantArgs[argsKeys[nArg]] = argValues[0]
-            }
-            if (nArg >= argsLength) {
-              return true
-            }
-          }
+        variantIndex++
+        if (variantIndex > variantIndexMax) {
+          return false
         }
-
-        return false
+        variantArgs = variants[
+          backward
+            ? variantIndexMax - variantIndex + variantIndexMin
+            : variantIndex
+        ]
+        return true
       }
 
       let iterations = 0
@@ -134,7 +168,7 @@ export function createTestVariants<TArgs extends object>(
 
       async function onError(
         error: any,
-        iterations: number,
+        variantIndex: number,
         variantArgs: TArgs,
       ) {
         const _isNewError = isNewError
@@ -144,7 +178,7 @@ export function createTestVariants<TArgs extends object>(
           abortControllerParallel.abort(error)
 
           console.error(`error variant: ${
-            iterations
+            variantIndex
           }\r\n${
             JSON.stringify(variantArgs, (_, value) => {
               if (value
@@ -175,8 +209,8 @@ export function createTestVariants<TArgs extends object>(
         if (_isNewError) {
           if (onErrorCallback) {
             onErrorCallback({
-              iteration: iterations,
-              variant  : variantArgs,
+              index  : variantIndex,
+              variant: variantArgs,
               error,
             })
           }
@@ -207,7 +241,7 @@ export function createTestVariants<TArgs extends object>(
         : new Pool(parallel)
 
       async function runTest(
-        _iterations: number,
+        variantIndex: number,
         variantArgs: TArgs,
         abortSignal: IAbortSignalFast,
       ) {
@@ -225,13 +259,13 @@ export function createTestVariants<TArgs extends object>(
           iterations += typeof promiseOrIterations === 'number' ? promiseOrIterations : 1
         }
         catch (err) {
-          await onError(err, _iterations, variantArgs)
+          await onError(err, variantIndex, variantArgs)
         }
       }
 
       async function next(): Promise<number> {
         while (!abortSignalExternal?.aborted && (debug || nextVariant())) {
-          const _iterations = iterations
+          const _variantIndex = variantIndex
           const _variantArgs = !pool
             ? variantArgs
             : {...variantArgs}
@@ -261,7 +295,7 @@ export function createTestVariants<TArgs extends object>(
 
           if (!pool || abortSignalParallel.aborted) {
             await runTest(
-              _iterations,
+              _variantIndex,
               _variantArgs,
               abortSignalExternal,
             )
@@ -276,7 +310,7 @@ export function createTestVariants<TArgs extends object>(
                   return
                 }
                 await runTest(
-                  _iterations,
+                  _variantIndex,
                   _variantArgs,
                   abortSignalParallel,
                 )
@@ -304,6 +338,11 @@ export function createTestVariants<TArgs extends object>(
       }
 
       return next()
+    }
+    
+    return {
+      variants,
+      run: testVariantsCall,
     }
   }
 }
