@@ -18,15 +18,17 @@ describe('test > testVariants perf', function () {
       c: [true, false],
     }
 
-    const result = calcPerformance(
-      10000,
-      () => {
+    const result = calcPerformance({
+      time : 10000,
+      funcs: [
+        () => {
 
-      },
-      () => {
-        testVariantsSync(args)
-      },
-    )
+        },
+        () => {
+          testVariantsSync(args)()
+        },
+      ],
+    })
 
     const count = testVariantsSync(args)() as number
 
