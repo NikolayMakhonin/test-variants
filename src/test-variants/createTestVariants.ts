@@ -22,6 +22,12 @@ export type VariantsArgs<TArgs> = {
   [key in keyof TArgs]: TArgs[key][] | ((args: TArgs) => TArgs[key][])
 }
 
+export type VariantsArgsExt<TArgs, TAdditionalArgs> = VariantsArgs<{
+  [key in (keyof TAdditionalArgs | keyof TArgs)]: key extends keyof TArgs ? TArgs[key]
+    : key extends keyof TAdditionalArgs ? TAdditionalArgs[key]
+      : never
+}>
+
 // type VariantsArgsOf<T> =
 //   T extends VariantsArgs<infer T> ? T : never
 
@@ -29,11 +35,9 @@ type PromiseOrValue<T> = Promise<T> | T
 
 export type TestVariantsCall<TArgs> = (callParams?: TestVariantsCallParams<TArgs>) => PromiseOrValue<number>
 
-export type TestVariantsSetArgs<TArgs> = <TAdditionalArgs>(args: VariantsArgs<{
-  [key in (keyof TAdditionalArgs | keyof TArgs)]: key extends keyof TArgs ? TArgs[key]
-    : key extends keyof TAdditionalArgs ? TAdditionalArgs[key]
-      : never
-}>) => TestVariantsCall<TArgs>
+export type TestVariantsSetArgs<TArgs> = <TAdditionalArgs>(
+  args: VariantsArgsExt<TArgs, TAdditionalArgs>
+) => TestVariantsCall<TArgs>
 
 export type ErrorEvent<TArgs> = {
   iteration: number,
@@ -63,8 +67,8 @@ function isPromiseLike<T>(value: PromiseOrValue<T>): value is Promise<T> {
     && typeof (value as any).then === 'function'
 }
 
-export function testVariantsIterable<TArgs extends object>(
-  args: VariantsArgs<TArgs>,
+export function testVariantsIterable<TArgs, TAdditionalArgs>(
+  args: VariantsArgsExt<TArgs, TAdditionalArgs>,
 ): Iterable<TArgs> {
   return {
     [Symbol.iterator]() {
@@ -127,24 +131,111 @@ export function testVariantsIterable<TArgs extends object>(
   }
 }
 
-export function createTestVariants<TArgs extends object>(
+export function createRunTest<TArgs extends object>({
+  test,
+  onError: onErrorCallback,
+}: {
   test: (args: TArgs, abortSignal: IAbortSignalFast) => Promise<number|void> | number | void,
+  onError?: ((event: ErrorEvent<TArgs>) => void) | null
+}) {
+  let debugIteration = 0
+
+  let errorEvent: ErrorEvent<TArgs> | null = null
+
+  function onError(
+    error: any,
+    iterations: number,
+    variantArgs: TArgs,
+  ) {
+    if (!errorEvent) {
+      errorEvent = {
+        iteration: iterations,
+        variant  : variantArgs,
+        error,
+      }
+
+      console.error(`error variant: ${
+        iterations
+      }\r\n${
+        JSON.stringify(variantArgs, (_, value) => {
+          if (value
+            && typeof value === 'object'
+            && !Array.isArray(value)
+            && value.constructor !== Object
+          ) {
+            return value + ''
+          }
+
+          return value
+        }, 2)
+      }`)
+      console.error(error)
+    }
+
+    // rerun failed variant 5 times for debug
+    const time0 = Date.now()
+    // eslint-disable-next-line no-debugger
+    debugger
+    if (Date.now() - time0 > 50 && debugIteration < 5) {
+      console.log('DEBUG ITERATION: ' + debugIteration)
+      debugIteration++
+      return null
+    }
+
+    if (onErrorCallback) {
+      onErrorCallback(errorEvent)
+    }
+
+    throw errorEvent.error
+  }
+
+  return function runTest(
+    _iterations: number,
+    variantArgs: TArgs,
+    abortSignal: IAbortSignalFast,
+  ): PromiseOrValue<{ iterationsAsync: number, iterationsSync: number } | null> {
+    try {
+      const promiseOrIterations = test(variantArgs, abortSignal)
+
+      if (isPromiseLike(promiseOrIterations)) {
+        return promiseOrIterations.then(value => {
+          const newIterations = typeof value === 'number' ? value : 1
+          return {
+            iterationsAsync: newIterations,
+            iterationsSync : 0,
+          }
+        }, err => {
+          return onError(err, _iterations, variantArgs)
+        })
+      }
+
+      const newIterations = typeof promiseOrIterations === 'number' ? promiseOrIterations : 1
+
+      return {
+        iterationsAsync: 0,
+        iterationsSync : newIterations,
+      }
+    }
+    catch (err) {
+      return onError(err, _iterations, variantArgs)
+    }
+  }
+}
+
+export function _createTestVariants<TArgs extends object>(
+  runTest: (iterations: number, variantArgs: TArgs, abortSignal: IAbortSignalFast) =>
+    PromiseOrValue<{iterationsAsync: number, iterationsSync: number} | null>,
 ): TestVariantsSetArgs<TArgs> {
-  return function testVariantsArgs(args) {
-    return function testVariantsCall({
+  return function _testVariantsArgs(args) {
+    return function _testVariantsCall({
       GC_Iterations = 1000000,
       GC_IterationsAsync = 10000,
       GC_Interval = 1000,
       logInterval = 5000,
       logCompleted = true,
-      onError: onErrorCallback = null,
       abortSignal: abortSignalExternal = null,
       parallel: _parallel,
     }: TestVariantsCallParams<TArgs> = {}) {
-      const abortControllerParallel = new AbortControllerFast()
-      const abortSignalParallel = combineAbortSignals(abortSignalExternal, abortControllerParallel.signal)
-      const abortSignalAll = abortSignalParallel
-
       let variantArgs: TArgs = {} as any
       const variantsIterator = testVariantsIterable(args)[Symbol.iterator]()
 
@@ -157,101 +248,13 @@ export function createTestVariants<TArgs extends object>(
         return false
       }
 
+      const abortControllerParallel = new AbortControllerFast()
+      const abortSignalParallel = combineAbortSignals(abortSignalExternal, abortControllerParallel.signal)
+      const abortSignalAll = abortSignalParallel
+
+      let debug = false
       let iterations = 0
       let iterationsAsync = 0
-      let debug = false
-      let debugIteration = 0
-
-      let errorEvent: ErrorEvent<TArgs> | null = null
-
-      function onError(
-        error: any,
-        iterations: number,
-        variantArgs: TArgs,
-      ) {
-        if (!errorEvent) {
-          errorEvent = {
-            iteration: iterations,
-            variant  : variantArgs,
-            error,
-          }
-
-          abortControllerParallel.abort(error)
-
-          console.error(`error variant: ${
-            iterations
-          }\r\n${
-            JSON.stringify(variantArgs, (_, value) => {
-              if (value
-                && typeof value === 'object'
-                && !Array.isArray(value)
-                && value.constructor !== Object
-              ) {
-                return value + ''
-              }
-
-              return value
-            }, 2)
-          }`)
-          console.error(error)
-        }
-
-        // rerun failed variant 5 times for debug
-        const time0 = Date.now()
-        // eslint-disable-next-line no-debugger
-        debugger
-        if (Date.now() - time0 > 50 && debugIteration < 5) {
-          console.log('DEBUG ITERATION: ' + debugIteration)
-          debug = true
-          debugIteration++
-          return null
-        }
-
-        if (onErrorCallback) {
-          onErrorCallback(errorEvent)
-        }
-
-        throw errorEvent.error
-      }
-
-      function runTest(
-        _iterations: number,
-        variantArgs: TArgs,
-        abortSignal: IAbortSignalFast,
-      ): PromiseOrValue<{ iterationsAsync: number, iterationsSync: number } | null> {
-        try {
-          const promiseOrIterations = test(variantArgs, abortSignal)
-
-          if (isPromiseLike(promiseOrIterations)) {
-            return promiseOrIterations.then(value => {
-              const newIterations = typeof value === 'number' ? value : 1
-              return {
-                iterationsAsync: newIterations,
-                iterationsSync : 0,
-              }
-            }, err => {
-              return onError(err, _iterations, variantArgs)
-            })
-          }
-
-          const newIterations = typeof promiseOrIterations === 'number' ? promiseOrIterations : 1
-
-          return {
-            iterationsAsync: 0,
-            iterationsSync : newIterations,
-          }
-        }
-        catch (err) {
-          return onError(err, _iterations, variantArgs)
-        }
-      }
-
-      function onCompleted() {
-        if (logCompleted) {
-          console.log('variants: ' + iterations)
-        }
-      }
-
       let prevLogTime = Date.now()
       let prevGC_Time = prevLogTime
       let prevGC_Iterations = iterations
@@ -266,6 +269,11 @@ export function createTestVariants<TArgs extends object>(
         ? null
         : new Pool(parallel)
 
+      function onCompleted() {
+        if (logCompleted) {
+          console.log('variants: ' + iterations)
+        }
+      }
 
       async function next(): Promise<number> {
         while (!abortSignalExternal?.aborted && (debug || nextVariant())) {
@@ -305,6 +313,7 @@ export function createTestVariants<TArgs extends object>(
             )
             if (!promiseOrIterations) {
               debug = true
+              abortControllerParallel.abort()
               continue
             }
             if (isPromiseLike(promiseOrIterations)) {
@@ -331,6 +340,7 @@ export function createTestVariants<TArgs extends object>(
                 )
                 if (!promiseOrIterations) {
                   debug = true
+                  abortControllerParallel.abort()
                   return
                 }
                 if (isPromiseLike(promiseOrIterations)) {
@@ -363,6 +373,38 @@ export function createTestVariants<TArgs extends object>(
       }
 
       return next()
+    }
+  }
+}
+
+export function createTestVariants<TArgs extends object>(
+  test: (args: TArgs, abortSignal: IAbortSignalFast) => Promise<number|void> | number | void,
+): TestVariantsSetArgs<TArgs> {
+  return function testVariantsArgs(args) {
+    return function testVariantsCall({
+      GC_Iterations = 1000000,
+      GC_IterationsAsync = 10000,
+      GC_Interval = 1000,
+      logInterval = 5000,
+      logCompleted = true,
+      onError: onErrorCallback = null,
+      abortSignal: abortSignalExternal = null,
+      parallel: _parallel,
+    }: TestVariantsCallParams<TArgs> = {}) {
+      const runTest = createRunTest<TArgs>({
+        test,
+        onError: onErrorCallback,
+      })
+
+      return _createTestVariants<TArgs>(runTest)(args)({
+        GC_Iterations,
+        GC_IterationsAsync,
+        GC_Interval,
+        logInterval,
+        logCompleted,
+        abortSignal: abortSignalExternal,
+        parallel   : _parallel,
+      })
     }
   }
 }
