@@ -1,0 +1,111 @@
+import {isPromiseLike, type PromiseOrValue} from '@flemist/async-utils'
+import {Obj} from 'src/test-variants/types'
+
+export type TestVariantsFindBestErrorOptions = {
+  groupSize?: null | number
+}
+
+export type TestVariantsFindBestErrorResult = {
+  index: null | number,
+  args: null | Obj,
+  iterations: number,
+}
+
+export async function testVariantsFindBestError<Args extends Obj>(
+  test: (index: number, args: Args) => PromiseOrValue<any>,
+  variants: Args[],
+  options?: null | TestVariantsFindBestErrorOptions,
+): Promise<TestVariantsFindBestErrorResult> {
+  const groupSize = options.groupSize ?? 1
+  let count = variants.length / groupSize
+  let iterations = 0
+  const resultsMap = new Map<number, number | false>()
+
+  function _test(index: number) {
+    const groupIndex = resultsMap.get(index)
+    if (groupIndex === false) {
+      return false
+    }
+    if (groupIndex >= groupSize) {
+      return true
+    }
+    const variantIndex = index * groupSize + (groupIndex ?? 0)
+    const args = variants[variantIndex]
+    try {
+      const promiseOrValue = test(variantIndex, args)
+      if (isPromiseLike(promiseOrValue)) {
+        return promiseOrValue.then((newIterations) => {
+          iterations += typeof newIterations === 'number' ? newIterations : 1
+          resultsMap.set(index, (groupIndex ?? 0) + 1)
+          return null
+        }, () => {
+          resultsMap.set(index, false)
+          return false
+        })
+      }
+      const newIterations = promiseOrValue
+      iterations += typeof newIterations === 'number' ? newIterations : 1
+      resultsMap.set(index, (groupIndex ?? 0) + 1)
+      return null
+    }
+    catch {
+      resultsMap.set(index, false)
+      return false
+    }
+  }
+
+  function createResult(index: number | null): TestVariantsFindBestErrorResult {
+    const args = index == null ? null : variants[index]
+    return {
+      index,
+      args,
+      iterations,
+    }
+  }
+
+  if (await _test(0) === false) {
+    return createResult(0)
+  }
+
+  while (true) {
+    const result = await _test(count - 1)
+    if (result === true) {
+      return createResult(null)
+    }
+    if (result === false) {
+      count = count - 1
+      break
+    }
+  }
+
+  while (count > 0) {
+    let min = 0
+    let max = count - 1
+    while (min + 1 < max) {
+      const mid = (min + max) >> 1
+      let resultOrPromise = _test(mid)
+      if (isPromiseLike(resultOrPromise)) {
+        resultOrPromise = await resultOrPromise
+      }
+      if (resultOrPromise === false) {
+        max = mid
+      }
+      else {
+        min = mid
+      }
+    }
+
+    while (true) {
+      const result = await _test(min)
+      if (result === true) {
+        return createResult(null)
+      }
+      if (result === false) {
+        count = min
+        break
+      }
+    }
+  }
+
+  return createResult(count)
+}

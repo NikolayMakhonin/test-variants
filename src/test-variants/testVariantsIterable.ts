@@ -6,15 +6,18 @@ export type TestVariantsTemplates<Args extends Obj> = {
   [key in keyof Args]: TestVariantsTemplate<Args, Args[key]>
 }
 
-export type TestVariantsTemplatesExt<Args extends Obj, AdditionalArgs extends Obj> =
+export type TestVariantsTemplatesExt<Args extends Obj, ArgsExtra extends Obj> =
   TestVariantsTemplates<{
-    [key in (keyof AdditionalArgs | keyof Args)]: key extends keyof Args ? Args[key]
-      : key extends keyof AdditionalArgs ? AdditionalArgs[key]
+    [key in (keyof ArgsExtra | keyof Args)]: key extends keyof Args ? Args[key]
+      : key extends keyof ArgsExtra ? ArgsExtra[key]
         : never
   }>
 
-export function testVariantsIterable<Args extends Obj, AdditionalArgs extends Obj>(
-  argsTemplates: TestVariantsTemplatesExt<Args, AdditionalArgs>,
+export function testVariantsIterable<
+  Args extends Obj,
+  ArgsExtra extends Obj,
+>(
+  argsTemplates: TestVariantsTemplatesExt<Args, ArgsExtra>,
 ): Iterable<Args> {
   return {
     [Symbol.iterator]() {

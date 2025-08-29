@@ -11,7 +11,7 @@ export type ErrorEvent<Args extends Obj> = {
 
 export type OnErrorCallback<Args extends Obj> = (event: ErrorEvent<Args>) => void
 
-export type TestVariantsCreateTestOptions<Args extends Obj> = {
+export type TestVariantsCreateTestRunOptions<Args extends Obj> = {
   onError?: null | OnErrorCallback<Args>,
 }
 
@@ -29,25 +29,9 @@ export type TestVariantsTestResult = number | void | TestVariantsTestRunResult
 export type TestVariantsTest<Args extends Obj> = (args: Args, abortSignal: IAbortSignalFast)
   => PromiseOrValue<TestVariantsTestResult>
 
-export function toTestRunResult(value: TestVariantsTestResult): TestVariantsTestRunResult {
-  if (typeof value === 'number') {
-    return {
-      iterationsAsync: value,
-      iterationsSync : 0,
-    }
-  }
-  if (value !== null && typeof value === 'object') {
-    return value
-  }
-  return {
-    iterationsAsync: 1,
-    iterationsSync : 0,
-  }
-}
-
 export function testVariantsCreateTestRun<Args extends Obj>(
   test: TestVariantsTest<Args>,
-  options?: null | TestVariantsCreateTestOptions<Args>,
+  options?: null | TestVariantsCreateTestRunOptions<Args>,
 ): TestVariantsTestRun<Args> {
   let debugIteration = 0
 

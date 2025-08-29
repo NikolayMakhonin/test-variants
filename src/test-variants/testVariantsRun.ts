@@ -4,27 +4,29 @@ import {combineAbortSignals, isPromiseLike} from '@flemist/async-utils'
 import {type IPool, Pool} from '@flemist/time-limits'
 import {garbageCollect} from 'src/garbage-collect/garbageCollect'
 import {Obj} from 'src/test-variants/types'
+import {TestVariantsFindBestErrorOptions} from 'src/test-variants/testVariantsFindBestError'
 
 export type TestVariantsRunOptions = {
   /** Wait for garbage collection after iterations */
-  GC_Iterations?: number,
+  GC_Iterations?: null | number,
   /** Same as GC_Iterations but only for async test variants, required for 10000 and more of Promise rejections */
-  GC_IterationsAsync?: number,
+  GC_IterationsAsync?: null | number,
   /** Wait for garbage collection after time interval, required to prevent the karma browserDisconnectTimeout */
-  GC_Interval?: number,
+  GC_Interval?: null | number,
   /** console log current iterations, required to prevent the karma browserNoActivityTimeout */
-  logInterval?: number,
+  logInterval?: null | number,
   /** console log iterations on test completed */
-  logCompleted?: boolean,
-  abortSignal?: IAbortSignalFast,
+  logCompleted?: null | boolean,
+  abortSignal?: null | IAbortSignalFast,
   parallel?: null | number | boolean,
+  findBestError?: null | TestVariantsFindBestErrorOptions,
 }
 
 export function testVariantsRun<Args extends Obj>(
   testRun: TestVariantsTestRun<Args>,
   variants: Iterable<Args>,
   options: TestVariantsRunOptions = {},
-) {
+): Promise<number> {
   const GC_Iterations = options.GC_Iterations ?? 1000000
   const GC_IterationsAsync = options.GC_IterationsAsync ?? 10000
   const GC_Interval = options.GC_Interval ?? 1000
@@ -168,7 +170,7 @@ export function testVariantsRun<Args extends Obj>(
     onCompleted()
     await garbageCollect(1)
 
-    return index
+    return iterations
   }
 
   return next()
