@@ -41,7 +41,8 @@ export function createTestVariants<Args extends Obj>(
           options.findBestError,
         )
         if (result.index != null) {
-          throw new Error(`[test-variants][findBestError] iterations: ${result.iterations}, index: ${result.index}, args: ${argsToString(result.args)}`)
+          console.error(`[test-variants][findBestError] iterations: ${result.iterations}, index: ${result.index}, args: ${argsToString(result.args)}`)
+          throw result.error
         }
         return result.iterations
       }

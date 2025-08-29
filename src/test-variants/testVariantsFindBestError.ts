@@ -9,6 +9,11 @@ export type TestVariantsFindBestErrorResult = {
   index: null | number,
   args: null | Obj,
   iterations: number,
+  error: any,
+}
+
+function isObject(value: any): value is object {
+  return value != null && typeof value === 'object'
 }
 
 export async function testVariantsFindBestError<Args extends Obj>(
@@ -19,11 +24,11 @@ export async function testVariantsFindBestError<Args extends Obj>(
   const groupSize = options.groupSize ?? 1
   let count = variants.length / groupSize
   let iterations = 0
-  const resultsMap = new Map<number, number | false>()
+  const resultsMap = new Map<number, number | { error: any, variantIndex: number }>()
 
   function _test(index: number) {
     const groupIndex = resultsMap.get(index)
-    if (groupIndex === false) {
+    if (isObject(groupIndex)) {
       return false
     }
     if (groupIndex >= groupSize) {
@@ -38,8 +43,8 @@ export async function testVariantsFindBestError<Args extends Obj>(
           iterations += typeof newIterations === 'number' ? newIterations : 1
           resultsMap.set(index, (groupIndex ?? 0) + 1)
           return null
-        }, () => {
-          resultsMap.set(index, false)
+        }, error => {
+          resultsMap.set(index, { error, variantIndex })
           return false
         })
       }
@@ -48,18 +53,23 @@ export async function testVariantsFindBestError<Args extends Obj>(
       resultsMap.set(index, (groupIndex ?? 0) + 1)
       return null
     }
-    catch {
-      resultsMap.set(index, false)
+    catch (error) {
+      resultsMap.set(index, { error, variantIndex })
       return false
     }
   }
 
   function createResult(index: number | null): TestVariantsFindBestErrorResult {
     const args = index == null ? null : variants[index]
+    const result = index == null ? null : resultsMap.get(index)
+    if (!isObject(result)) {
+      throw new Error('[test-variants][testVariantsFindBestError] Unexpected behavior')
+    }
     return {
-      index,
+      index: index * groupSize + (result ? result.variantIndex : 0),
       args,
       iterations,
+      error: result?.error,
     }
   }
 
