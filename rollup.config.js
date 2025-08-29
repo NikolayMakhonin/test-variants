@@ -46,7 +46,7 @@ const onwarnRollup = (warning, onwarn) => {
     ]
       .map(o => o?.toString()?.trim())
       .filter(o => o)
-      .join('\r\n') + '\r\n',
+      .join('\n') + '\n',
   )
 
   return false
