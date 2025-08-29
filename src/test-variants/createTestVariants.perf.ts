@@ -1,4 +1,4 @@
-import { calcPerformance } from 'rdtsc'
+import { calcPerformance } from 'rdtsc/node'
 import {createTestVariants} from './createTestVariants'
 
 describe('test > testVariants perf', function () {
