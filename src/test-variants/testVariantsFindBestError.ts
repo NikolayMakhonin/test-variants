@@ -21,20 +21,23 @@ export async function testVariantsFindBestError<Args extends Obj>(
   variants: Args[],
   options?: null | TestVariantsFindBestErrorOptions,
 ): Promise<TestVariantsFindBestErrorResult> {
-  const groupSize = options.groupSize ?? 1
-  let count = variants.length / groupSize
+  const groupSize = options?.groupSize ?? 1
+  let count = Math.ceil(variants.length / groupSize)
   let iterations = 0
-  const resultsMap = new Map<number, number | { error: any, variantIndex: number }>()
+  const resultsMap = new Map<number, number | { error: any, groupIndex: number }>()
 
   function _test(index: number) {
     const groupIndex = resultsMap.get(index)
     if (isObject(groupIndex)) {
       return false
     }
-    if (groupIndex >= groupSize) {
+    if ((groupIndex ?? 0) >= groupSize) {
       return true
     }
     const variantIndex = index * groupSize + (groupIndex ?? 0)
+    if (variantIndex >= variants.length) {
+      return true
+    }
     const args = variants[variantIndex]
     try {
       const promiseOrValue = test(variantIndex, args)
@@ -44,7 +47,7 @@ export async function testVariantsFindBestError<Args extends Obj>(
           resultsMap.set(index, (groupIndex ?? 0) + 1)
           return null
         }, error => {
-          resultsMap.set(index, { error, variantIndex })
+          resultsMap.set(index, { error, groupIndex: variantIndex })
           return false
         })
       }
@@ -54,22 +57,33 @@ export async function testVariantsFindBestError<Args extends Obj>(
       return null
     }
     catch (error) {
-      resultsMap.set(index, { error, variantIndex })
+      resultsMap.set(index, { error, groupIndex: variantIndex })
       return false
     }
   }
 
   function createResult(index: number | null): TestVariantsFindBestErrorResult {
-    const args = index == null ? null : variants[index]
-    const result = index == null ? null : resultsMap.get(index)
-    if (!isObject(result)) {
+    if (index == null) {
+      return {
+        index: null,
+        args : null,
+        iterations,
+        error: null,
+      }
+    }
+
+    const result = resultsMap.get(index)
+    if (result == null || !isObject(result)) {
       throw new Error('[test-variants][testVariantsFindBestError] Unexpected behavior')
     }
+
+    const variantIndex = index * groupSize + result.groupIndex
+    
     return {
-      index: index * groupSize + (result ? result.variantIndex : 0),
-      args,
+      index: variantIndex,
+      args : variants[variantIndex],
       iterations,
-      error: result?.error,
+      error: result.error,
     }
   }
 
