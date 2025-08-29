@@ -47,7 +47,7 @@ export async function testVariantsFindBestError<Args extends Obj>(
           resultsMap.set(index, (groupIndex ?? 0) + 1)
           return null
         }, error => {
-          resultsMap.set(index, { error, groupIndex: variantIndex })
+          resultsMap.set(index, { error, groupIndex: groupIndex ?? 0 }) // FIXED: use groupIndex, not variantIndex
           return false
         })
       }
@@ -57,7 +57,7 @@ export async function testVariantsFindBestError<Args extends Obj>(
       return null
     }
     catch (error) {
-      resultsMap.set(index, { error, groupIndex: variantIndex })
+      resultsMap.set(index, { error, groupIndex: groupIndex ?? 0 })
       return false
     }
   }
@@ -74,7 +74,7 @@ export async function testVariantsFindBestError<Args extends Obj>(
 
     const result = resultsMap.get(index)
     if (result == null || !isObject(result)) {
-      throw new Error('[test-variants][testVariantsFindBestError] Unexpected behavior')
+      throw new Error(`[test-variants][testVariantsFindBestError] Unexpected behavior. result: ${JSON.stringify(result)}`)
     }
 
     const variantIndex = index * groupSize + result.groupIndex
@@ -97,14 +97,13 @@ export async function testVariantsFindBestError<Args extends Obj>(
       return createResult(null)
     }
     if (result === false) {
-      count = count - 1
       break
     }
   }
 
-  while (count > 0) {
+  let max = count - 1
+  while (max > 0) {
     let min = 0
-    let max = count - 1
     while (min + 1 < max) {
       const mid = (min + max) >> 1
       let resultOrPromise = _test(mid)
@@ -122,10 +121,10 @@ export async function testVariantsFindBestError<Args extends Obj>(
     while (true) {
       const result = await _test(min)
       if (result === true) {
-        return createResult(null)
+        return createResult(max)
       }
       if (result === false) {
-        count = min
+        max = min
         break
       }
     }

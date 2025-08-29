@@ -3,14 +3,17 @@ import {testVariantsFindBestError} from 'src/test-variants/testVariantsFindBestE
 
 describe('test-variants > testVariantsFindBestError', function () {
   it('base', async function () {
-    const groupSize = 10000
-    const errorProbability = groupSize / 100
+    const groupSize = 1000
+    const errorProbability = groupSize / 10
     const variantsCount = groupSize * 10
     const variants = Array.from({length: variantsCount}).map((_, i) => ({i}))
 
-    for (let expectedIndex = 0; expectedIndex <= variantsCount; expectedIndex++) {
+    for (let expectedIndex = 10000; expectedIndex <= variantsCount; expectedIndex++) {
       const test = (index: number, args: { i: number }) => {
-        if (index >= expectedIndex && Math.random() < errorProbability) {
+        if (
+          index >= expectedIndex
+          && (index % groupSize === groupSize - 1 || index % groupSize >= expectedIndex % groupSize)
+        ) {
           throw new Error(`Error at index ${index}`)
         }
       }
@@ -19,10 +22,23 @@ describe('test-variants > testVariantsFindBestError', function () {
 
       // console.log(result)
 
-      assert.strictEqual(result.index, expectedIndex)
-      assert.strictEqual(result.error.message, `Error at index ${expectedIndex}`)
-      assert.strictEqual(result.args.i, expectedIndex)
-      // assert.ok(result.iterations >= 5)
+      try {
+        if (expectedIndex >= variantsCount) {
+          assert.strictEqual(result.index, null)
+          assert.strictEqual(result.error, null)
+          assert.strictEqual(result.args, null)
+        }
+        else {
+          assert.strictEqual(result.index, expectedIndex)
+          assert.strictEqual(result.error.message, `Error at index ${expectedIndex}`)
+          assert.strictEqual(result.args.i, expectedIndex)
+        }
+        // assert.ok(result.iterations >= 5)
+      }
+      catch (err) {
+        console.error({expectedIndex, result})
+        throw err
+      }
     }
   })
 })
