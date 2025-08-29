@@ -1,2 +1,1 @@
-// TODO: remove any
-export type Obj = any | Record<string, any>
+export type Obj = Record<string, any>

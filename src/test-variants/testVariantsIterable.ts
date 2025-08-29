@@ -18,7 +18,7 @@ export function testVariantsIterable<Args extends Obj, AdditionalArgs extends Ob
 ): Iterable<Args> {
   return {
     [Symbol.iterator]() {
-      const keys = Object.keys(argsTemplates)
+      const keys = Object.keys(argsTemplates) as (keyof Args)[]
       const templates: TestVariantsTemplate<Args, any>[] = Object.values(argsTemplates)
       const keysCount = keys.length
 
