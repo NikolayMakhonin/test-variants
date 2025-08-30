@@ -1,5 +1,6 @@
 import {isPromiseLike, type PromiseOrValue} from '@flemist/async-utils'
 import {Obj} from 'src/test-variants/types'
+import {nextPrime} from 'src/test-variants/prime'
 
 export type TestVariantsFindBestErrorOptions = {
   groupSize?: null | number
@@ -21,8 +22,12 @@ export async function testVariantsFindBestError<Args extends Obj>(
   variants: Args[],
   options?: null | TestVariantsFindBestErrorOptions,
 ): Promise<TestVariantsFindBestErrorResult> {
+  if (variants.length === 0) {
+    throw new Error(`[test-variants][testVariantsFindBestError] Variants is empty`)
+  }
   const groupSize = options?.groupSize ?? 1
-  let count = Math.ceil(variants.length / groupSize)
+  const countInitial = Math.ceil(variants.length / groupSize)
+  let count = countInitial
   let iterations = 0
   const resultsMap = new Map<number, number | { error: any, groupIndex: number }>()
 
@@ -44,17 +49,19 @@ export async function testVariantsFindBestError<Args extends Obj>(
       if (isPromiseLike(promiseOrValue)) {
         return promiseOrValue.then((newIterations) => {
           iterations += typeof newIterations === 'number' ? newIterations : 1
-          resultsMap.set(index, (groupIndex ?? 0) + 1)
-          return null
+          const newGroupIndex = (groupIndex ?? 0) + 1
+          resultsMap.set(index, newGroupIndex)
+          return newGroupIndex >= groupSize ? true : null
         }, error => {
-          resultsMap.set(index, { error, groupIndex: groupIndex ?? 0 }) // FIXED: use groupIndex, not variantIndex
+          resultsMap.set(index, { error, groupIndex: groupIndex ?? 0 })
           return false
         })
       }
       const newIterations = promiseOrValue
       iterations += typeof newIterations === 'number' ? newIterations : 1
-      resultsMap.set(index, (groupIndex ?? 0) + 1)
-      return null
+      const newGroupIndex = (groupIndex ?? 0) + 1
+      resultsMap.set(index, newGroupIndex)
+      return newGroupIndex >= groupSize ? true : null
     }
     catch (error) {
       resultsMap.set(index, { error, groupIndex: groupIndex ?? 0 })
@@ -62,8 +69,8 @@ export async function testVariantsFindBestError<Args extends Obj>(
     }
   }
 
-  function createResult(index: number | null): TestVariantsFindBestErrorResult {
-    if (index == null) {
+  function createResult(index: number): TestVariantsFindBestErrorResult {
+    if (index >= countInitial) {
       return {
         index: null,
         args : null,
@@ -87,46 +94,34 @@ export async function testVariantsFindBestError<Args extends Obj>(
     }
   }
 
-  if (await _test(0) === false) {
-    return createResult(0)
-  }
+  // For pseudo random based on prime numbers
+  // this guarantees that all generated numbers will be unique until we circle back to start
+  const prime = nextPrime(count >> 1)
+  let index = 0
+  let completedFromIndex: number | null = null
 
   while (true) {
-    const result = await _test(count - 1)
-    if (result === true) {
-      return createResult(null)
-    }
+    const result = await _test(index)
     if (result === false) {
-      break
-    }
-  }
-
-  let max = count - 1
-  while (max > 0) {
-    let min = 0
-    while (min + 1 < max) {
-      const mid = (min + max) >> 1
-      let resultOrPromise = _test(mid)
-      if (isPromiseLike(resultOrPromise)) {
-        resultOrPromise = await resultOrPromise
-      }
-      if (resultOrPromise === false) {
-        max = mid
-      }
-      else {
-        min = mid
-      }
-    }
-
-    while (true) {
-      const result = await _test(min)
-      if (result === true) {
-        return createResult(max)
-      }
-      if (result === false) {
-        max = min
+      completedFromIndex = null
+      count = index
+      if (count === 0) {
         break
       }
+    }
+    else if (result === true) {
+      if (completedFromIndex == null) {
+        completedFromIndex = index
+      }
+    }
+    else {
+      completedFromIndex = null
+    }
+
+    index = (index + prime) % count
+    // If all indices are completed and we have started to circle back, we end the loop
+    if (index === completedFromIndex) {
+      break
     }
   }
 

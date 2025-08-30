@@ -2,23 +2,33 @@
 import {testVariantsFindBestError} from 'src/test-variants/testVariantsFindBestError'
 
 describe('test-variants > testVariantsFindBestError', function () {
+  this.timeout(10 * 60 * 1000)
+
   it('base', async function () {
     const groupSize = 1000
-    const errorProbability = groupSize / 10
     const variantsCount = groupSize * 10
     const variants = Array.from({length: variantsCount}).map((_, i) => ({i}))
 
-    for (let expectedIndex = 10000; expectedIndex <= variantsCount; expectedIndex++) {
+    for (let expectedIndex = 0; expectedIndex <= variantsCount; expectedIndex++) {
+      let firstError: any = null
+
       const test = (index: number, args: { i: number }) => {
+        if (args.i !== index) {
+          firstError = new Error(`Error at index ${index}, args.i: ${args.i}`)
+          throw firstError
+        }
         if (
-          index >= expectedIndex
-          && (index % groupSize === groupSize - 1 || index % groupSize >= expectedIndex % groupSize)
+          index === expectedIndex
         ) {
           throw new Error(`Error at index ${index}`)
         }
       }
 
       const result = await testVariantsFindBestError(test, variants, {groupSize})
+
+      if (firstError) {
+        throw firstError
+      }
 
       // console.log(result)
 
@@ -34,9 +44,13 @@ describe('test-variants > testVariantsFindBestError', function () {
           assert.strictEqual(result.args.i, expectedIndex)
         }
         // assert.ok(result.iterations >= 5)
+        // console.log(result.iterations)
       }
       catch (err) {
-        console.error({expectedIndex, result})
+        console.error({
+          expectedIndex,
+          result,
+        })
         throw err
       }
     }
