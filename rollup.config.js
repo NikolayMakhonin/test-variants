@@ -17,6 +17,10 @@ import { terser } from 'rollup-plugin-terser'
 import path from 'path'
 import pkg from './package.json'
 import { createFilter } from '@rollup/pluginutils'
+import {fileURLToPath} from 'url'
+import { builtinModules } from 'module'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const dev = !!process.env.ROLLUP_WATCH
 
@@ -119,7 +123,7 @@ const nodeConfig = ({
     ...[
       ...Object.keys(pkg.dependencies),
       ...Object.keys(pkg.devDependencies),
-      ...require('module').builtinModules || Object.keys(process.binding('natives')),
+      ...builtinModules || Object.keys(process.binding('natives')),
     ].map(o => `**/node_modules/${o}/**`),
   ]),
 })
