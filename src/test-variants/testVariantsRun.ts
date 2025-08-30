@@ -4,7 +4,11 @@ import {combineAbortSignals, isPromiseLike} from '@flemist/async-utils'
 import {type IPool, Pool} from '@flemist/time-limits'
 import {garbageCollect} from 'src/garbage-collect/garbageCollect'
 import {Obj} from 'src/test-variants/types'
-import {TestVariantsFindBestErrorOptions} from 'src/test-variants/testVariantsFindBestError'
+
+export type TestVariantsFindBestErrorOptions = {
+  groupSize?: null | number
+  seeds: Iterable<any>
+}
 
 export type TestVariantsRunOptions = {
   /** Wait for garbage collection after iterations */
@@ -22,17 +26,29 @@ export type TestVariantsRunOptions = {
   findBestError?: null | TestVariantsFindBestErrorOptions,
 }
 
-export function testVariantsRun<Args extends Obj>(
+export type TestVariantsBestError<Args extends Obj> = {
+  index: number,
+  args: Args,
+  error: any,
+}
+
+export type TestVariantsRunResult<Arg extends Obj> = {
+  iterations: number
+  bestError: null | TestVariantsBestError<Arg>
+}
+
+export async function testVariantsRun<Args extends Obj>(
   testRun: TestVariantsTestRun<Args>,
   variants: Iterable<Args>,
   options: TestVariantsRunOptions = {},
-): Promise<number> {
+): Promise<TestVariantsRunResult<Args>> {
   const GC_Iterations = options.GC_Iterations ?? 1000000
   const GC_IterationsAsync = options.GC_IterationsAsync ?? 10000
   const GC_Interval = options.GC_Interval ?? 1000
   const logInterval = options.logInterval ?? 5000
   const logCompleted = options.logCompleted ?? true
   const abortSignalExternal = options.abortSignal
+  const findBestError = options.findBestError
 
   const parallel = options.parallel === true
     ? 2 ** 31
@@ -40,18 +56,41 @@ export function testVariantsRun<Args extends Obj>(
       ? 1
       : options.parallel
 
+  const seedsIterator = findBestError?.seeds[Symbol.iterator]() ?? null
+  let seedResult: any = seedsIterator?.next()
+  let bestError: TestVariantsBestError<Args> | null = null
+
   let index = -1
   let args: Args = {} as any
-  const variantsIterator = variants[Symbol.iterator]()
+  let variantsIterator = variants[Symbol.iterator]()
 
   function nextVariant() {
-    index++
-    const result = variantsIterator.next()
-    if (!result.done) {
-      args = result.value
-      return true
+    while (true) {
+      index++
+      if (seedResult && seedResult.done) {
+        return false
+      }
+
+      if (bestError == null || index < bestError.index) {
+        const result = variantsIterator.next()
+        if (!result.done) {
+          args = result.value
+          return true
+        }
+      }
+
+      if (!seedsIterator) {
+        return false
+      }
+
+      seedResult = seedsIterator.next()
+      if (seedResult.done) {
+        return false
+      }
+
+      index = -1
+      variantsIterator = variants[Symbol.iterator]()
     }
-    return false
   }
 
   const abortControllerParallel = new AbortControllerFast()
@@ -81,7 +120,7 @@ export function testVariantsRun<Args extends Obj>(
       const _index = index
       const _args = !pool
         ? args
-        : {...args}
+        : {...args, seed: seedResult?.value}
 
       const now = (logInterval || GC_Interval) && Date.now()
 
@@ -107,22 +146,36 @@ export function testVariantsRun<Args extends Obj>(
       }
 
       if (!pool || abortSignalParallel.aborted) {
-        let promiseOrIterations = testRun(
-          _index,
-          _args,
-          abortSignalParallel,
-        )
-        if (isPromiseLike(promiseOrIterations)) {
-          promiseOrIterations = await promiseOrIterations
+        try {
+          let promiseOrIterations = testRun(
+            _index,
+            _args,
+            abortSignalParallel,
+          )
+          if (isPromiseLike(promiseOrIterations)) {
+            promiseOrIterations = await promiseOrIterations
+          }
+          if (!promiseOrIterations) {
+            debug = true
+            abortControllerParallel.abort()
+            continue
+          }
+          const {iterationsAsync: _iterationsAsync, iterationsSync: _iterationsSync} = promiseOrIterations
+          iterationsAsync += _iterationsAsync
+          iterations += _iterationsSync + _iterationsAsync
         }
-        if (!promiseOrIterations) {
-          debug = true
-          abortControllerParallel.abort()
-          continue
+        catch (err) {
+          if (findBestError) {
+            bestError = {
+              index: _index,
+              args : _args,
+              error: err,
+            }
+          }
+          else {
+            throw err
+          }
         }
-        const {iterationsAsync: _iterationsAsync, iterationsSync: _iterationsSync} = promiseOrIterations
-        iterationsAsync += _iterationsAsync
-        iterations += _iterationsSync + _iterationsAsync
       }
       else {
         if (!pool.hold(1)) {
@@ -151,6 +204,18 @@ export function testVariantsRun<Args extends Obj>(
             iterationsAsync += _iterationsAsync
             iterations += _iterationsSync + _iterationsAsync
           }
+          catch (err) {
+            if (findBestError) {
+              bestError = {
+                index: _index,
+                args : _args,
+                error: err,
+              }
+            }
+            else {
+              throw err
+            }
+          }
           finally {
             void pool.release(1)
           }
@@ -173,5 +238,10 @@ export function testVariantsRun<Args extends Obj>(
     return iterations
   }
 
-  return next()
+  const result = await next()
+
+  return {
+    iterations: result,
+    bestError,
+  }
 }

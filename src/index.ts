@@ -1,8 +1,6 @@
 export {
-  type TestVariantsFindBestErrorOptions,
-  type TestVariantsFindBestErrorResult,
-} from 'src/test-variants/testVariantsFindBestError'
-export { type TestVariantsRunOptions } from 'src/test-variants/testVariantsRun'
+  type Obj,
+} from 'src/test-variants/types'
 export {
   type TestVariantsTemplate,
   type TestVariantsTemplates,
@@ -17,5 +15,14 @@ export {
   type TestVariantsTestRun,
   type TestVariantsTestRunResult,
 } from 'src/test-variants/testVariantsCreateTestRun'
-export { type TestVariantsSetArgs, type TestVariantsCall } from './test-variants/createTestVariants'
-export { createTestVariants } from './test-variants/createTestVariants'
+export {
+  type TestVariantsFindBestErrorOptions,
+  type TestVariantsRunOptions,
+  type TestVariantsBestError,
+  type TestVariantsRunResult,
+} from 'src/test-variants/testVariantsRun'
+export {
+  type TestVariantsSetArgs,
+  type TestVariantsCall,
+  createTestVariants,
+} from './test-variants/createTestVariants'

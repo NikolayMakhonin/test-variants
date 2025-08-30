@@ -6,14 +6,12 @@ import {
   testVariantsCreateTestRun,
   TestVariantsTest,
 } from 'src/test-variants/testVariantsCreateTestRun'
-import {testVariantsRun, TestVariantsRunOptions} from 'src/test-variants/testVariantsRun'
+import {testVariantsRun, TestVariantsRunOptions, TestVariantsRunResult} from 'src/test-variants/testVariantsRun'
 import {Obj} from 'src/test-variants/types'
-import {testVariantsFindBestError} from 'src/test-variants/testVariantsFindBestError'
-import {argsToString} from 'src/test-variants/argsToString'
 
 export type TestVariantsCall<Args extends Obj> = (
   options?: null | TestVariantsRunOptions & TestVariantsCreateTestRunOptions<Args>
-) => PromiseOrValue<number>
+) => PromiseOrValue<TestVariantsRunResult<Args>>
 
 export type TestVariantsSetArgs<Args extends Obj> = <ArgsExtra extends Obj>(
   args: TestVariantsTemplatesExt<Args, ArgsExtra>
@@ -23,29 +21,12 @@ export function createTestVariants<Args extends Obj>(
   test: TestVariantsTest<Args>,
 ): TestVariantsSetArgs<Args> {
   return function testVariantsArgs(args) {
-    let variantsArray: Args[] | null = null
     return async function testVariantsCall(options) {
       const testRun = testVariantsCreateTestRun<Args>(test, {
         onError: options?.onError,
       })
 
-      const variants = variantsArray || testVariantsIterable(args)
-
-      if (options?.findBestError) {
-        if (!variantsArray) {
-          variantsArray = Array.from(variants)
-        }
-        const result = await testVariantsFindBestError(
-          (index, args) => testRun(index, args, options?.abortSignal ?? null as any),
-          variantsArray,
-          options.findBestError,
-        )
-        if (result.index != null) {
-          console.error(`[test-variants][findBestError] iterations: ${result.iterations}, index: ${result.index}, args: ${argsToString(result.args)}`)
-          throw result.error
-        }
-        return result.iterations
-      }
+      const variants = testVariantsIterable(args)
 
       return testVariantsRun<Args>(testRun, variants, options)
     }
