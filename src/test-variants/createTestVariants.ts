@@ -14,7 +14,7 @@ export type TestVariantsCall<Args extends Obj> = (
 ) => PromiseOrValue<TestVariantsRunResult<Args>>
 
 export type TestVariantsSetArgs<Args extends Obj> = <ArgsExtra extends Obj>(
-  args: TestVariantsTemplatesExt<Args, ArgsExtra>
+  args: TestVariantsTemplatesExt<Omit<Args, 'seed'>, Omit<ArgsExtra, 'seed'>>
 ) => TestVariantsCall<Args>
 
 export function createTestVariants<Args extends Obj>(
@@ -28,7 +28,7 @@ export function createTestVariants<Args extends Obj>(
 
       const variants = testVariantsIterable(args)
 
-      return testVariantsRun<Args>(testRun, variants, options)
+      return testVariantsRun<Args>(testRun, variants as any, options)
     }
   }
 }

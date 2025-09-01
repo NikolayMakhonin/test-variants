@@ -6,7 +6,6 @@ import {garbageCollect} from 'src/garbage-collect/garbageCollect'
 import {Obj} from 'src/test-variants/types'
 
 export type TestVariantsFindBestErrorOptions = {
-  groupSize?: null | number
   seeds: Iterable<any>
 }
 

@@ -42,15 +42,13 @@ export function testVariantsCreateTestRun<Args extends Obj>(
     index: number,
     args: Args,
   ): void {
-    if (!errorEvent) {
-      errorEvent = {
-        error,
-        index: index,
-        args : args,
-      }
-      console.error(`[test-variants] error variant: ${index}\n${argsToString(args)}`)
-      console.error(error)
+    errorEvent = {
+      error,
+      index: index,
+      args : args,
     }
+    console.error(`[test-variants] error variant: ${index}\n${argsToString(args)}`)
+    console.error(error)
 
     // Rerun failed variant 5 times for debug
     const time0 = Date.now()
