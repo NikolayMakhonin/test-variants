@@ -35,12 +35,13 @@ export type TestVariantsRunResult<Arg extends Obj> = {
   bestError: null | TestVariantsBestError<Arg>
 }
 
-export type TestVariantsGetVariantsOptions<Args extends Obj> = {
-  max: null | Args
+export type TestVariantsGetVariantsOptions = {
+  useLastItemAsMax: boolean,
+  useLastItemAsMaxExclusive: boolean,
 }
 
 export type TestVariantsGetVariants<Args extends Obj> = (
-  options: TestVariantsGetVariantsOptions<Args>
+  options: TestVariantsGetVariantsOptions
 ) => Iterator<Args>
 
 export async function testVariantsRun<Args extends Obj>(
@@ -69,7 +70,8 @@ export async function testVariantsRun<Args extends Obj>(
 
   let args: null | Args = null
   let variantsIterator = getVariants({
-    max: null,
+    useLastItemAsMax         : false,
+    useLastItemAsMaxExclusive: false,
   })
 
   function nextVariant() {
@@ -78,10 +80,11 @@ export async function testVariantsRun<Args extends Obj>(
         return false
       }
 
+      let done = false
       if (!restart) {
         const result = variantsIterator.next()
         if (result.done) {
-          args = null
+          done = true
         }
         else {
           args = result.value
@@ -102,7 +105,8 @@ export async function testVariantsRun<Args extends Obj>(
       }
 
       variantsIterator = getVariants({
-        max: {...args},
+        useLastItemAsMax         : true,
+        useLastItemAsMaxExclusive: !done,
       })
     }
   }
@@ -131,9 +135,7 @@ export async function testVariantsRun<Args extends Obj>(
 
   async function next(): Promise<number> {
     while (!abortSignalExternal?.aborted && (debug || nextVariant())) {
-      const _args = !pool
-        ? args
-        : {...args, seed: seedResult?.value}
+      const _args = {...args, seed: seedResult?.value}
 
       const now = (logInterval || GC_Interval) && Date.now()
 

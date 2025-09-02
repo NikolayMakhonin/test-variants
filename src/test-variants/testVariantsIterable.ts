@@ -16,8 +16,13 @@ export type TestVariantsTemplatesExt<Args extends Obj, ArgsExtra extends Obj> =
 export type TestVariantsIterableOptions<Args extends Obj, ArgsExtra extends Obj> = {
   argsTemplates: TestVariantsTemplatesExt<Args, ArgsExtra>
   /** Max values for each argument, null - no limit */
-  argsMaxValues?: null | Args
-  argsMaxValuesExclusive?: null | boolean
+  argsMaxIndexes?: null | { [key in keyof Args]?: null | number }
+  argsMaxIndexesExclusive?: null | boolean
+}
+
+export type TestVariantsIterableItem<Args extends Obj> = {
+  args: Args,
+  indexes: { [key in keyof Args]: number }
 }
 
 export function testVariantsIterable<
@@ -25,18 +30,19 @@ export function testVariantsIterable<
   ArgsExtra extends Obj,
 >({
   argsTemplates,
-  argsMaxValues,
-  argsMaxValuesExclusive,
-}: TestVariantsIterableOptions<Args, ArgsExtra>): Iterable<Args> {
+  argsMaxIndexes,
+  argsMaxIndexesExclusive,
+}: TestVariantsIterableOptions<Args, ArgsExtra>): Iterable<TestVariantsIterableItem<Args>> {
   return {
     [Symbol.iterator]() {
       const keys = Object.keys(argsTemplates) as (keyof Args)[]
       const templates: TestVariantsTemplate<Args, any>[] = Object.values(argsTemplates)
       const keysCount = keys.length
-      const keysMax = argsMaxValues ? Object.keys(argsMaxValues) as (keyof Args)[] : null
+      const keysMax = argsMaxIndexes ? Object.keys(argsMaxIndexes) as (keyof Args)[] : null
       const keysMaxCount = keysMax ? keysMax.length : 0
 
       const args: Args = {} as any
+      const argsIndexes: { [key in keyof Args]: number } = {} as any
 
       function calcVariants(keyIndex: number) {
         let template = templates[keyIndex]
@@ -61,13 +67,17 @@ export function testVariantsIterable<
             const key = keys[keyIndex]
             const value = variants[keyIndex][valueIndex]
             if (valueIndex > 0) {
-              const valuePrev = variants[keyIndex][valueIndex - 1]
-              if (argsMaxValues && key in argsMaxValues && argsMaxValues[key] === valuePrev) {
+              if (
+                argsMaxIndexes
+                && key in argsMaxIndexes
+                && argsMaxIndexes[key] === valueIndex - 1
+              ) {
                 continue
               }
             }
             indexes[keyIndex] = valueIndex
             args[key] = value
+            argsIndexes[key] = valueIndex
             for (keyIndex++; keyIndex < keysCount; keyIndex++) {
               const keyVariants = calcVariants(keyIndex)
               if (keyVariants.length === 0) {
@@ -78,6 +88,7 @@ export function testVariantsIterable<
               const key = keys[keyIndex]
               const value = keyVariants[0]
               args[key] = value
+              argsIndexes[key] = 0
             }
             if (keyIndex >= keysCount) {
               return true
@@ -89,12 +100,12 @@ export function testVariantsIterable<
       }
 
       function isMax() {
-        if (!argsMaxValues) {
+        if (!argsMaxIndexesExclusive || !argsMaxIndexes) {
           return false
         }
         for (let nKey = 0; nKey < keysMaxCount; nKey++) {
           const key = keysMax[nKey]
-          if (args[key] !== argsMaxValues[key]) {
+          if (argsIndexes[key] !== argsMaxIndexes[key]) {
             return false
           }
         }
@@ -104,10 +115,16 @@ export function testVariantsIterable<
       return {
         next() {
           while (nextVariant()) {
-            if (argsMaxValuesExclusive && isMax()) {
+            if (isMax()) {
               continue
             }
-            return {done: false, value: args}
+            return {
+              done : false,
+              value: {
+                args   : {...args},
+                indexes: {...argsIndexes},
+              },
+            }
           }
 
           return {done: true, value: null}

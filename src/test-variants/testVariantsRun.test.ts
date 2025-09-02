@@ -16,7 +16,7 @@ describe('test-variants > testVariantsRun', function () {
 
       const testRun: TestVariantsTestRun<typeof expectedArgs> = (args: { i: number }) => {
         if (
-          args === expectedArgs
+          expectedArgs != null && args.i === expectedArgs.i
           || args.i > (expectedIndex + variantsCount) / 2
         ) {
           throw new Error(`Error at index ${expectedIndex}`)
@@ -27,14 +27,16 @@ describe('test-variants > testVariantsRun', function () {
         }
       }
 
+      let lastItem: { i: number } | null = null
       const result = await testVariantsRun(testRun, function *({
-        max,
+        useLastItemAsMax,
       }) {
         for (let i = 0; i < variants.length; i++) {
-          if (max && variants[i].i > max.i) {
+          if (useLastItemAsMax && lastItem && variants[i].i > lastItem.i) {
             break
           }
-          yield variants[i]
+          lastItem = variants[i]
+          yield lastItem
         }
       }, {
         findBestError: {
