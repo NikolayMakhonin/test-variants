@@ -17,6 +17,7 @@ describe('test-variants > testVariantsRun', function () {
       const testRun: TestVariantsTestRun<typeof expectedArgs> = (args: { i: number }) => {
         if (
           args === expectedArgs
+          || args.i > (expectedIndex + variantsCount) / 2
         ) {
           throw new Error(`Error at index ${expectedIndex}`)
         }

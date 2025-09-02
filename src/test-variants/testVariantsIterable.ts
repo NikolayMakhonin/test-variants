@@ -17,7 +17,7 @@ export type TestVariantsIterableOptions<Args extends Obj, ArgsExtra extends Obj>
   argsTemplates: TestVariantsTemplatesExt<Args, ArgsExtra>
   /** Max values for each argument, null - no limit */
   argsMaxValues?: null | Args
-  excludeLast?: null | boolean
+  argsMaxValuesExclusive?: null | boolean
 }
 
 export function testVariantsIterable<
@@ -26,13 +26,15 @@ export function testVariantsIterable<
 >({
   argsTemplates,
   argsMaxValues,
-  excludeLast,
+  argsMaxValuesExclusive,
 }: TestVariantsIterableOptions<Args, ArgsExtra>): Iterable<Args> {
   return {
     [Symbol.iterator]() {
       const keys = Object.keys(argsTemplates) as (keyof Args)[]
       const templates: TestVariantsTemplate<Args, any>[] = Object.values(argsTemplates)
       const keysCount = keys.length
+      const keysMax = argsMaxValues ? Object.keys(argsMaxValues) as (keyof Args)[] : null
+      const keysMaxCount = keysMax ? keysMax.length : 0
 
       const args: Args = {} as any
 
@@ -53,7 +55,6 @@ export function testVariantsIterable<
       variants[0] = calcVariants(0)
 
       function nextVariant() {
-        let last = true
         for (let keyIndex = keysCount - 1; keyIndex >= 0; keyIndex--) {
           const valueIndex = indexes[keyIndex] + 1
           if (valueIndex < variants[keyIndex].length) {
@@ -64,12 +65,6 @@ export function testVariantsIterable<
               if (argsMaxValues && key in argsMaxValues && argsMaxValues[key] === valuePrev) {
                 continue
               }
-            }
-            if (
-              valueIndex < variants[keyIndex].length - 1
-              && (!argsMaxValues || !(key in argsMaxValues) || argsMaxValues[key] !== value)
-            ) {
-              last = false
             }
             indexes[keyIndex] = valueIndex
             args[key] = value
@@ -83,17 +78,8 @@ export function testVariantsIterable<
               const key = keys[keyIndex]
               const value = keyVariants[0]
               args[key] = value
-              if (
-                keyVariants.length > 1
-                && (!argsMaxValues || !(key in argsMaxValues) || argsMaxValues[key] !== value)
-              ) {
-                last = false
-              }
             }
             if (keyIndex >= keysCount) {
-              if (excludeLast && last) {
-                return false
-              }
               return true
             }
           }
@@ -102,9 +88,25 @@ export function testVariantsIterable<
         return false
       }
 
+      function isMax() {
+        if (!argsMaxValues) {
+          return false
+        }
+        for (let nKey = 0; nKey < keysMaxCount; nKey++) {
+          const key = keysMax[nKey]
+          if (args[key] !== argsMaxValues[key]) {
+            return false
+          }
+        }
+        return true
+      }
+
       return {
         next() {
-          if (nextVariant()) {
+          while (nextVariant()) {
+            if (argsMaxValuesExclusive && isMax()) {
+              continue
+            }
             return {done: false, value: args}
           }
 

@@ -30,8 +30,9 @@ export function createTestVariants<Args extends Obj>(
         max,
       }) => {
         return testVariantsIterable({
-          argsTemplates: args,
-          argsMaxValues: max,
+          argsTemplates         : args,
+          argsMaxValues         : max,
+          argsMaxValuesExclusive: !!max,
         })[Symbol.iterator]()
       }, options)
     }
