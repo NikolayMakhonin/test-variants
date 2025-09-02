@@ -26,7 +26,6 @@ export type TestVariantsRunOptions = {
 }
 
 export type TestVariantsBestError<Args extends Obj> = {
-  index: number,
   args: Args,
   error: any,
 }
@@ -36,9 +35,17 @@ export type TestVariantsRunResult<Arg extends Obj> = {
   bestError: null | TestVariantsBestError<Arg>
 }
 
+export type TestVariantsGetVariantsOptions<Args extends Obj> = {
+  max: null | Args
+}
+
+export type TestVariantsGetVariants<Args extends Obj> = (
+  options: TestVariantsGetVariantsOptions<Args>
+) => Iterator<Args>
+
 export async function testVariantsRun<Args extends Obj>(
   testRun: TestVariantsTestRun<Args>,
-  variants: Iterable<Args>,
+  getVariants: TestVariantsGetVariants<Omit<Args, 'seed'>>,
   options: TestVariantsRunOptions = {},
 ): Promise<TestVariantsRunResult<Args>> {
   const GC_Iterations = options.GC_Iterations ?? 1000000
@@ -57,22 +64,28 @@ export async function testVariantsRun<Args extends Obj>(
 
   const seedsIterator = findBestError?.seeds[Symbol.iterator]() ?? null
   let seedResult: any = seedsIterator?.next()
+  let restart = false
   let bestError: TestVariantsBestError<Args> | null = null
 
-  let index = -1
-  let args: Args = {} as any
-  let variantsIterator = variants[Symbol.iterator]()
+  let argsPrev: null | Args = null
+  let args: null | Args = null
+  let variantsIterator = getVariants({
+    max: null,
+  })
 
   function nextVariant() {
     while (true) {
-      index++
       if (seedResult && seedResult.done) {
         return false
       }
 
-      if (bestError == null || index < bestError.index) {
+      if (!restart) {
         const result = variantsIterator.next()
-        if (!result.done) {
+        argsPrev = args
+        if (result.done) {
+          args = null
+        }
+        else {
           args = result.value
           return true
         }
@@ -87,8 +100,9 @@ export async function testVariantsRun<Args extends Obj>(
         return false
       }
 
-      index = -1
-      variantsIterator = variants[Symbol.iterator]()
+      variantsIterator = getVariants({
+        max: argsPrev,
+      })
     }
   }
 
@@ -110,13 +124,12 @@ export async function testVariantsRun<Args extends Obj>(
 
   function onCompleted() {
     if (logCompleted) {
-      console.log(`[test-variants] variants: ${index}, iterations: ${iterations}, async: ${iterationsAsync}`)
+      console.log(`[test-variants] variants: iterations: ${iterations}, async: ${iterationsAsync}`)
     }
   }
 
   async function next(): Promise<number> {
     while (!abortSignalExternal?.aborted && (debug || nextVariant())) {
-      const _index = index
       const _args = !pool
         ? args
         : {...args, seed: seedResult?.value}
@@ -125,7 +138,7 @@ export async function testVariantsRun<Args extends Obj>(
 
       if (logInterval && now - prevLogTime >= logInterval) {
         // the log is required to prevent the karma browserNoActivityTimeout
-        console.log(_index)
+        console.log(iterations)
         prevLogTime = now
       }
 
@@ -147,7 +160,6 @@ export async function testVariantsRun<Args extends Obj>(
       if (!pool || abortSignalParallel.aborted) {
         try {
           let promiseOrIterations = testRun(
-            _index,
             _args,
             abortSignalParallel,
           )
@@ -166,10 +178,10 @@ export async function testVariantsRun<Args extends Obj>(
         catch (err) {
           if (findBestError) {
             bestError = {
-              index: _index,
               args : _args,
               error: err,
             }
+            restart = true
           }
           else {
             throw err
@@ -187,7 +199,6 @@ export async function testVariantsRun<Args extends Obj>(
               return
             }
             let promiseOrIterations = testRun(
-              _index,
               _args,
               abortSignalParallel,
             )
@@ -206,10 +217,10 @@ export async function testVariantsRun<Args extends Obj>(
           catch (err) {
             if (findBestError) {
               bestError = {
-                index: _index,
                 args : _args,
                 error: err,
               }
+              restart = true
             }
             else {
               throw err

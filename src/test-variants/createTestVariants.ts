@@ -26,9 +26,14 @@ export function createTestVariants<Args extends Obj>(
         onError: options?.onError,
       })
 
-      const variants = testVariantsIterable(args)
-
-      return testVariantsRun<Args>(testRun, variants as any, options)
+      return testVariantsRun<Args>(testRun, ({
+        max,
+      }) => {
+        return testVariantsIterable({
+          argsTemplates: args,
+          argsMaxValues: max,
+        })[Symbol.iterator]()
+      }, options)
     }
   }
 }

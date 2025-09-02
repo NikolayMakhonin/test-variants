@@ -13,12 +13,19 @@ export type TestVariantsTemplatesExt<Args extends Obj, ArgsExtra extends Obj> =
         : never
   }>
 
+export type TestVariantsIterableOptions<Args extends Obj, ArgsExtra extends Obj> = {
+  argsTemplates: TestVariantsTemplatesExt<Args, ArgsExtra>
+  /** Max values for each argument, null - no limit */
+  argsMaxValues?: null | Args
+}
+
 export function testVariantsIterable<
   Args extends Obj,
   ArgsExtra extends Obj,
->(
-  argsTemplates: TestVariantsTemplatesExt<Args, ArgsExtra>,
-): Iterable<Args> {
+>({
+  argsTemplates,
+  argsMaxValues,
+}: TestVariantsIterableOptions<Args, ArgsExtra>): Iterable<Args> {
   return {
     [Symbol.iterator]() {
       const keys = Object.keys(argsTemplates) as (keyof Args)[]
@@ -47,6 +54,13 @@ export function testVariantsIterable<
         for (let keyIndex = keysCount - 1; keyIndex >= 0; keyIndex--) {
           const valueIndex = indexes[keyIndex] + 1
           if (valueIndex < variants[keyIndex].length) {
+            if (valueIndex > 0) {
+              const key = keys[keyIndex]
+              const valuePrev = variants[keyIndex][valueIndex - 1]
+              if (argsMaxValues && key in argsMaxValues && argsMaxValues[key] === valuePrev) {
+                continue
+              }
+            }
             indexes[keyIndex] = valueIndex
             args[keys[keyIndex]] = variants[keyIndex][valueIndex]
             for (keyIndex++; keyIndex < keysCount; keyIndex++) {

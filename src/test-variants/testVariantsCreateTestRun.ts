@@ -5,7 +5,6 @@ import {argsToString} from 'src/test-variants/argsToString'
 
 export type ErrorEvent<Args extends Obj> = {
   error: any,
-  index: number,
   args: Args,
 }
 
@@ -21,7 +20,7 @@ export type TestVariantsTestRunResult = void | {
 }
 
 export type TestVariantsTestRun<Args extends Obj> =(
-  index: number, args: Args, abortSignal: IAbortSignalFast
+  args: Args, abortSignal: IAbortSignalFast
 ) => PromiseOrValue<TestVariantsTestRunResult>
 
 export type TestVariantsTestResult = number | void | TestVariantsTestRunResult
@@ -39,15 +38,13 @@ export function testVariantsCreateTestRun<Args extends Obj>(
 
   function onError(
     error: any,
-    index: number,
     args: Args,
   ): void {
     errorEvent = {
       error,
-      index: index,
-      args : args,
+      args: args,
     }
-    console.error(`[test-variants] error variant: ${index}\n${argsToString(args)}`)
+    console.error(`[test-variants] error variant: ${argsToString(args)}`)
     console.error(error)
 
     // Rerun failed variant 5 times for debug
@@ -69,7 +66,6 @@ export function testVariantsCreateTestRun<Args extends Obj>(
   }
 
   return function testRun(
-    index: number,
     args: Args,
     abortSignal: IAbortSignalFast,
   ): PromiseOrValue<TestVariantsTestRunResult> {
@@ -92,7 +88,7 @@ export function testVariantsCreateTestRun<Args extends Obj>(
             iterationsSync : 0,
           }
         }, err => {
-          onError(err, index, args)
+          onError(err, args)
         })
       }
 
@@ -112,7 +108,7 @@ export function testVariantsCreateTestRun<Args extends Obj>(
       }
     }
     catch (err) {
-      onError(err, index, args)
+      onError(err, args)
     }
   }
 }
