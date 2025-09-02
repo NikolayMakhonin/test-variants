@@ -2,7 +2,6 @@ import {type PromiseOrValue} from '@flemist/async-utils'
 
 import {
   testVariantsIterable,
-  TestVariantsIterableItem,
   TestVariantsTemplatesExt,
 } from 'src/test-variants/testVariantsIterable'
 import {
@@ -30,25 +29,11 @@ export function createTestVariants<Args extends Obj>(
         onError: options?.onError,
       })
 
-      let lastItem: TestVariantsIterableItem<Omit<Args, 'seed'>> | null = null
+      const variants = testVariantsIterable({
+        argsTemplates: args,
+      })
 
-      return testVariantsRun<Args>(testRun, ({
-        useLastItemAsMax,
-        useLastItemAsMaxExclusive,
-      }) => {
-        const iterable = testVariantsIterable({
-          argsTemplates          : args,
-          argsMaxIndexes         : useLastItemAsMax && lastItem ? lastItem.indexes : null,
-          argsMaxIndexesExclusive: useLastItemAsMaxExclusive,
-        })
-
-        return (function *iterator() {
-          for (const item of iterable) {
-            lastItem = item
-            yield lastItem.args
-          }
-        })()
-      }, options)
+      return testVariantsRun<Args>(testRun, variants as any, options)
     }
   }
 }

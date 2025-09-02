@@ -15,14 +15,6 @@ export type TestVariantsTemplatesExt<Args extends Obj, ArgsExtra extends Obj> =
 
 export type TestVariantsIterableOptions<Args extends Obj, ArgsExtra extends Obj> = {
   argsTemplates: TestVariantsTemplatesExt<Args, ArgsExtra>
-  /** Max values for each argument, null - no limit */
-  argsMaxIndexes?: null | { [key in keyof Args]?: null | number }
-  argsMaxIndexesExclusive?: null | boolean
-}
-
-export type TestVariantsIterableItem<Args extends Obj> = {
-  args: Args,
-  indexes: { [key in keyof Args]: number }
 }
 
 export function testVariantsIterable<
@@ -30,19 +22,14 @@ export function testVariantsIterable<
   ArgsExtra extends Obj,
 >({
   argsTemplates,
-  argsMaxIndexes,
-  argsMaxIndexesExclusive,
-}: TestVariantsIterableOptions<Args, ArgsExtra>): Iterable<TestVariantsIterableItem<Args>> {
+}: TestVariantsIterableOptions<Args, ArgsExtra>): Iterable<Args> {
   return {
     [Symbol.iterator]() {
       const keys = Object.keys(argsTemplates) as (keyof Args)[]
       const templates: TestVariantsTemplate<Args, any>[] = Object.values(argsTemplates)
       const keysCount = keys.length
-      const keysMax = argsMaxIndexes ? Object.keys(argsMaxIndexes) as (keyof Args)[] : null
-      const keysMaxCount = keysMax ? keysMax.length : 0
 
       const args: Args = {} as any
-      const argsIndexes: { [key in keyof Args]: number } = {} as any
 
       function calcVariants(keyIndex: number) {
         let template = templates[keyIndex]
@@ -66,18 +53,8 @@ export function testVariantsIterable<
           if (valueIndex < variants[keyIndex].length) {
             const key = keys[keyIndex]
             const value = variants[keyIndex][valueIndex]
-            if (valueIndex > 0) {
-              if (
-                argsMaxIndexes
-                && key in argsMaxIndexes
-                && argsMaxIndexes[key] === valueIndex - 1
-              ) {
-                continue
-              }
-            }
             indexes[keyIndex] = valueIndex
             args[key] = value
-            argsIndexes[key] = valueIndex
             for (keyIndex++; keyIndex < keysCount; keyIndex++) {
               const keyVariants = calcVariants(keyIndex)
               if (keyVariants.length === 0) {
@@ -88,7 +65,6 @@ export function testVariantsIterable<
               const key = keys[keyIndex]
               const value = keyVariants[0]
               args[key] = value
-              argsIndexes[key] = 0
             }
             if (keyIndex >= keysCount) {
               return true
@@ -99,31 +75,12 @@ export function testVariantsIterable<
         return false
       }
 
-      function isMax() {
-        if (!argsMaxIndexesExclusive || !argsMaxIndexes) {
-          return false
-        }
-        for (let nKey = 0; nKey < keysMaxCount; nKey++) {
-          const key = keysMax[nKey]
-          if (argsIndexes[key] !== argsMaxIndexes[key]) {
-            return false
-          }
-        }
-        return true
-      }
-
       return {
         next() {
-          while (nextVariant()) {
-            if (isMax()) {
-              continue
-            }
+          if (nextVariant()) {
             return {
               done : false,
-              value: {
-                args   : {...args},
-                indexes: {...argsIndexes},
-              },
+              value: {...args},
             }
           }
 

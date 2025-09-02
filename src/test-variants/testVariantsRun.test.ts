@@ -27,18 +27,7 @@ describe('test-variants > testVariantsRun', function () {
         }
       }
 
-      let lastItem: { i: number } | null = null
-      const result = await testVariantsRun(testRun, function *({
-        useLastItemAsMax,
-      }) {
-        for (let i = 0; i < variants.length; i++) {
-          if (useLastItemAsMax && lastItem && variants[i].i > lastItem.i) {
-            break
-          }
-          lastItem = variants[i]
-          yield lastItem
-        }
-      }, {
+      const result = await testVariantsRun(testRun, variants, {
         findBestError: {
           seeds,
         },

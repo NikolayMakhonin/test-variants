@@ -26,8 +26,9 @@ export type TestVariantsRunOptions = {
 }
 
 export type TestVariantsBestError<Args extends Obj> = {
-  args: Args,
   error: any,
+  args: Args,
+  index: number,
 }
 
 export type TestVariantsRunResult<Arg extends Obj> = {
@@ -35,18 +36,9 @@ export type TestVariantsRunResult<Arg extends Obj> = {
   bestError: null | TestVariantsBestError<Arg>
 }
 
-export type TestVariantsGetVariantsOptions = {
-  useLastItemAsMax: boolean,
-  useLastItemAsMaxExclusive: boolean,
-}
-
-export type TestVariantsGetVariants<Args extends Obj> = (
-  options: TestVariantsGetVariantsOptions
-) => Iterator<Args>
-
 export async function testVariantsRun<Args extends Obj>(
   testRun: TestVariantsTestRun<Args>,
-  getVariants: TestVariantsGetVariants<Omit<Args, 'seed'>>,
+  variants: Iterable<Args>,
   options: TestVariantsRunOptions = {},
 ): Promise<TestVariantsRunResult<Args>> {
   const GC_Iterations = options.GC_Iterations ?? 1000000
@@ -65,34 +57,25 @@ export async function testVariantsRun<Args extends Obj>(
 
   const seedsIterator = findBestError?.seeds[Symbol.iterator]() ?? null
   let seedResult: any = seedsIterator?.next()
-  let restart = false
   let bestError: TestVariantsBestError<Args> | null = null
 
-  let args: null | Args = null
-  let variantsIterator = getVariants({
-    useLastItemAsMax         : false,
-    useLastItemAsMaxExclusive: false,
-  })
+  let index = -1
+  let args: Args = {} as any
+  let variantsIterator = variants[Symbol.iterator]()
 
   function nextVariant() {
     while (true) {
+      index++
       if (seedResult && seedResult.done) {
         return false
       }
 
-      let done = false
-      if (!restart) {
+      if (bestError == null || index < bestError.index) {
         const result = variantsIterator.next()
-        if (result.done) {
-          done = true
-        }
-        else {
+        if (!result.done) {
           args = result.value
           return true
         }
-      }
-      else {
-        restart = false
       }
 
       if (!seedsIterator) {
@@ -104,10 +87,8 @@ export async function testVariantsRun<Args extends Obj>(
         return false
       }
 
-      variantsIterator = getVariants({
-        useLastItemAsMax         : true,
-        useLastItemAsMaxExclusive: !done,
-      })
+      index = -1
+      variantsIterator = variants[Symbol.iterator]()
     }
   }
 
@@ -129,12 +110,13 @@ export async function testVariantsRun<Args extends Obj>(
 
   function onCompleted() {
     if (logCompleted) {
-      console.log(`[test-variants] variants: iterations: ${iterations}, async: ${iterationsAsync}`)
+      console.log(`[test-variants] variants: ${index}, iterations: ${iterations}, async: ${iterationsAsync}`)
     }
   }
 
   async function next(): Promise<number> {
     while (!abortSignalExternal?.aborted && (debug || nextVariant())) {
+      const _index = index
       const _args = {...args, seed: seedResult?.value}
 
       const now = (logInterval || GC_Interval) && Date.now()
@@ -164,6 +146,7 @@ export async function testVariantsRun<Args extends Obj>(
         try {
           let promiseOrIterations = testRun(
             _args,
+            _index,
             abortSignalParallel,
           )
           if (isPromiseLike(promiseOrIterations)) {
@@ -181,10 +164,10 @@ export async function testVariantsRun<Args extends Obj>(
         catch (err) {
           if (findBestError) {
             bestError = {
-              args : _args,
               error: err,
+              args : _args,
+              index: _index,
             }
-            restart = true
             debug = false
           }
           else {
@@ -204,6 +187,7 @@ export async function testVariantsRun<Args extends Obj>(
             }
             let promiseOrIterations = testRun(
               _args,
+              _index,
               abortSignalParallel,
             )
             if (isPromiseLike(promiseOrIterations)) {
@@ -221,10 +205,10 @@ export async function testVariantsRun<Args extends Obj>(
           catch (err) {
             if (findBestError) {
               bestError = {
-                args : _args,
                 error: err,
+                args : _args,
+                index: _index,
               }
-              restart = true
               debug = false
             }
             else {
