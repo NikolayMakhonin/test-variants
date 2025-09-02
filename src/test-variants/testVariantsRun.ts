@@ -67,7 +67,6 @@ export async function testVariantsRun<Args extends Obj>(
   let restart = false
   let bestError: TestVariantsBestError<Args> | null = null
 
-  let argsPrev: null | Args = null
   let args: null | Args = null
   let variantsIterator = getVariants({
     max: null,
@@ -81,7 +80,6 @@ export async function testVariantsRun<Args extends Obj>(
 
       if (!restart) {
         const result = variantsIterator.next()
-        argsPrev = args
         if (result.done) {
           args = null
         }
@@ -89,6 +87,9 @@ export async function testVariantsRun<Args extends Obj>(
           args = result.value
           return true
         }
+      }
+      else {
+        restart = false
       }
 
       if (!seedsIterator) {
@@ -101,7 +102,7 @@ export async function testVariantsRun<Args extends Obj>(
       }
 
       variantsIterator = getVariants({
-        max: argsPrev,
+        max: {...args},
       })
     }
   }
@@ -182,6 +183,7 @@ export async function testVariantsRun<Args extends Obj>(
               error: err,
             }
             restart = true
+            debug = false
           }
           else {
             throw err
@@ -221,6 +223,7 @@ export async function testVariantsRun<Args extends Obj>(
                 error: err,
               }
               restart = true
+              debug = false
             }
             else {
               throw err

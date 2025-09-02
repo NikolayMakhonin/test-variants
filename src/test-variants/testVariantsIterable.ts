@@ -17,6 +17,7 @@ export type TestVariantsIterableOptions<Args extends Obj, ArgsExtra extends Obj>
   argsTemplates: TestVariantsTemplatesExt<Args, ArgsExtra>
   /** Max values for each argument, null - no limit */
   argsMaxValues?: null | Args
+  excludeLast?: null | boolean
 }
 
 export function testVariantsIterable<
@@ -25,6 +26,7 @@ export function testVariantsIterable<
 >({
   argsTemplates,
   argsMaxValues,
+  excludeLast,
 }: TestVariantsIterableOptions<Args, ArgsExtra>): Iterable<Args> {
   return {
     [Symbol.iterator]() {
@@ -51,18 +53,26 @@ export function testVariantsIterable<
       variants[0] = calcVariants(0)
 
       function nextVariant() {
+        let last = true
         for (let keyIndex = keysCount - 1; keyIndex >= 0; keyIndex--) {
           const valueIndex = indexes[keyIndex] + 1
           if (valueIndex < variants[keyIndex].length) {
+            const key = keys[keyIndex]
+            const value = variants[keyIndex][valueIndex]
             if (valueIndex > 0) {
-              const key = keys[keyIndex]
               const valuePrev = variants[keyIndex][valueIndex - 1]
               if (argsMaxValues && key in argsMaxValues && argsMaxValues[key] === valuePrev) {
                 continue
               }
             }
+            if (
+              valueIndex < variants[keyIndex].length - 1
+              && (!argsMaxValues || !(key in argsMaxValues) || argsMaxValues[key] !== value)
+            ) {
+              last = false
+            }
             indexes[keyIndex] = valueIndex
-            args[keys[keyIndex]] = variants[keyIndex][valueIndex]
+            args[key] = value
             for (keyIndex++; keyIndex < keysCount; keyIndex++) {
               const keyVariants = calcVariants(keyIndex)
               if (keyVariants.length === 0) {
@@ -70,9 +80,20 @@ export function testVariantsIterable<
               }
               indexes[keyIndex] = 0
               variants[keyIndex] = keyVariants
-              args[keys[keyIndex]] = keyVariants[0]
+              const key = keys[keyIndex]
+              const value = keyVariants[0]
+              args[key] = value
+              if (
+                keyVariants.length > 1
+                && (!argsMaxValues || !(key in argsMaxValues) || argsMaxValues[key] !== value)
+              ) {
+                last = false
+              }
             }
             if (keyIndex >= keysCount) {
+              if (excludeLast && last) {
+                return false
+              }
               return true
             }
           }
