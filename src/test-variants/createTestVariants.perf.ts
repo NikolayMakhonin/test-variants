@@ -4,7 +4,7 @@ import {createTestVariants} from './createTestVariants'
 describe('test > testVariants perf', function () {
   this.timeout(300000)
 
-  it('sync', function () {
+  it('sync', async function () {
     let value = 0
     const testVariantsSync = createTestVariants(({a, b, c}: {a: number, b: string, c: boolean}) => {
       if (a === 1 && b === '4' && c === false) {
@@ -18,23 +18,21 @@ describe('test > testVariants perf', function () {
       c: [true, false],
     }
 
-    // const _testVariantsSync = testVariantsSync(args)
-
-    const result = calcPerformance({
-      time : 1000,
+    const perfResult = calcPerformance({
+      time : 10000,
       funcs: [
         () => {
 
         },
         () => {
-          testVariantsSync(args).run()
+          testVariantsSync(args)()
         },
       ],
     })
 
-    const count = testVariantsSync(args).run() as number
+    const result = await testVariantsSync(args)()
 
-    result.absoluteDiff = result.absoluteDiff.map(o => o / count)
+    perfResult.absoluteDiff = perfResult.absoluteDiff.map(o => o / result.iterations)
 
     console.log('testVariants perf:', result)
   })

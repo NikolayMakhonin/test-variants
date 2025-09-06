@@ -1,6 +1,6 @@
 {
   "name": "@flemist/test-variants",
-  "version": "1.0.7",
+  "version": "2.0.0",
   "description": "Runs a test function with all possible combinations of its parameters.",
   "main": "dist/lib/index.cjs",
   "module": "dist/lib/index.mjs",
@@ -55,7 +55,7 @@
     "@babel/plugin-transform-classes": "7.18.4",
     "@babel/plugin-transform-runtime": "7.18.5",
     "@babel/preset-env": "7.18.2",
-    "@babel/runtime-corejs3": "7.18.3",
+    "@babel/runtime-corejs3": "7.28.3",
     "@flemist/copy-glob-flat": "0.0.5",
     "@flemist/karma-custom-launcher": "0.0.0",
     "@flemist/test-utils": "1.0.2",
@@ -67,7 +67,7 @@
     "@rollup/plugin-multi-entry": "4.1.0",
     "@rollup/plugin-node-resolve": "13.3.0",
     "@rollup/plugin-replace": "4.0.0",
-    "@rollup/plugin-typescript": "11.1.5",
+    "@rollup/plugin-typescript": "12.1.4",
     "@rollup/pluginutils": "4.2.1",
     "@types/assert": "1.5.6",
     "@types/mocha": "9.1.1",
@@ -87,7 +87,7 @@
     "nyc": "15.1.0",
     "rdtsc": "5.0.7",
     "rimraf": "3.0.2",
-    "rollup": "2.75.7",
+    "rollup": "2.79.2",
     "rollup-plugin-delete": "2.0.0",
     "rollup-plugin-istanbul": "3.0.0",
     "rollup-plugin-multi-input": "1.3.1",
@@ -101,6 +101,6 @@
     "@flemist/abort-controller-fast": "^1.0.0",
     "@flemist/async-utils": "^1.0.0",
     "@flemist/time-limits": "^1.0.1",
-    "tslib": "^2.4.0"
+    "tslib": "2.5.3"
   }
 }
