@@ -12,7 +12,7 @@ describe('test-variants > createTestVariants', function () {
         a: [1, 2],
         b: ['3', '4'],
         c: [true, false],
-      }).run()
+      })()
 
       assert.deepStrictEqual(results, [
         [1, '3', true],
@@ -35,7 +35,7 @@ describe('test-variants > createTestVariants', function () {
         a: [1, 2],
         b: ['3', '4'],
         c: [],
-      }).run()
+      })()
 
       assert.deepStrictEqual(results, [])
       assert.strictEqual(result.iterations, results.length)
@@ -51,7 +51,7 @@ describe('test-variants > createTestVariants', function () {
         b: [],
         d: [2, 3],
         c: [false, true],
-      }).run()
+      })()
 
       assert.deepStrictEqual(results, [])
       assert.strictEqual(result.iterations, results.length)
@@ -65,7 +65,7 @@ describe('test-variants > createTestVariants', function () {
         a: [],
         b: ['3', '4'],
         c: [false, true],
-      }).run()
+      })()
 
       assert.deepStrictEqual(results, [])
       assert.strictEqual(result.iterations, results.length)
@@ -81,7 +81,7 @@ describe('test-variants > createTestVariants', function () {
         c: ({b}) => b === '2' ? [false, true]
           : b === '3' ? []
             : [true],
-      }).run()
+      })()
 
       assert.deepStrictEqual(results, [
         [1, '2', false],
@@ -103,7 +103,7 @@ describe('test-variants > createTestVariants', function () {
         a: [1, 2],
         b: ['3', '4'],
         c: [true, false],
-      }).run()
+      })()
 
       assert.deepStrictEqual(results, [
         [1, '3', true],
@@ -126,7 +126,7 @@ describe('test-variants > createTestVariants', function () {
         a: [1, 2],
         b: ['3', '4'],
         c: [],
-      }).run()
+      })()
 
       assert.deepStrictEqual(results, [])
       assert.strictEqual(result.iterations, results.length)
@@ -142,7 +142,7 @@ describe('test-variants > createTestVariants', function () {
         b: [],
         d: [2, 3],
         c: [false, true],
-      }).run()
+      })()
 
       assert.deepStrictEqual(results, [])
       assert.strictEqual(result.iterations, results.length)
@@ -156,7 +156,7 @@ describe('test-variants > createTestVariants', function () {
         a: [],
         b: ['3', '4'],
         c: [false, true],
-      }).run()
+      })()
 
       assert.deepStrictEqual(results, [])
       assert.strictEqual(result.iterations, results.length)
@@ -172,7 +172,7 @@ describe('test-variants > createTestVariants', function () {
         c: ({b}) => b === '2' ? [false, true]
           : b === '3' ? []
             : [true],
-      }).run()
+      })()
 
       assert.deepStrictEqual(results, [
         [1, '2', false],
@@ -195,7 +195,7 @@ describe('test-variants > createTestVariants', function () {
         a: [1, 2],
         b: ['3', '4'],
         c: [true, false],
-      }).run()
+      })()
 
       assert.deepStrictEqual(results, [
         [1, '3', true],
@@ -219,7 +219,7 @@ describe('test-variants > createTestVariants', function () {
         a: [1, 2],
         b: ['3', '4'],
         c: [],
-      }).run()
+      })()
 
       assert.deepStrictEqual(results, [])
       assert.strictEqual(result.iterations, results.length)
@@ -236,7 +236,7 @@ describe('test-variants > createTestVariants', function () {
         b: [],
         d: [2, 3],
         c: [false, true],
-      }).run()
+      })()
 
       assert.deepStrictEqual(results, [])
       assert.strictEqual(result.iterations, results.length)
@@ -251,7 +251,7 @@ describe('test-variants > createTestVariants', function () {
         a: [],
         b: ['3', '4'],
         c: [false, true],
-      }).run()
+      })()
 
       assert.deepStrictEqual(results, [])
       assert.strictEqual(result.iterations, results.length)
@@ -268,7 +268,7 @@ describe('test-variants > createTestVariants', function () {
         c: ({b}) => b === '2' ? [false, true]
           : b === '3' ? []
             : [true],
-      }).run()
+      })()
 
       assert.deepStrictEqual(results, [
         [1, '2', false],
@@ -307,7 +307,7 @@ describe('test-variants > createTestVariants', function () {
         a5: ({ op }) => [op === 5],
         b : [1, 2, 3],
         c : [1, 2, 3, 4, 5],
-      }).run()
+      })()
 
       assert.strictEqual(result.iterations, 75)
       // assert.deepStrictEqual(results, arr.map(a => [a]))
@@ -322,7 +322,7 @@ describe('test-variants > createTestVariants', function () {
         results.push([a])
       })({
         a: [1, 2],
-      }).run()
+      })()
 
       assert.strictEqual(result.iterations, 2)
       assert.deepStrictEqual(results, [
@@ -360,7 +360,7 @@ describe('test-variants > createTestVariants', function () {
         a: [1, 2, 3],
         b: ['3', '4'],
         c: [true, false],
-      }).run({
+      })({
         parallel: countParallel,
       })
 
@@ -432,7 +432,7 @@ describe('test-variants > million of Promise reject', function () {
       f: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
       g: [0],
       // g: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-    }).run()
+    })()
 
     console.log('try delay')
     for (let i = 0; i < 100; i++) {
