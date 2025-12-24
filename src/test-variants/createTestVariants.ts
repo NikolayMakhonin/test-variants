@@ -12,8 +12,8 @@ import {
 import {testVariantsRun, TestVariantsRunOptions, TestVariantsRunResult} from 'src/test-variants/testVariantsRun'
 import {Obj} from 'src/test-variants/types'
 
-export type TestVariantsCall<Args extends Obj> = (
-  options?: null | TestVariantsRunOptions & TestVariantsCreateTestRunOptions<Args>
+export type TestVariantsCall<Args extends Obj> = <SavedArgs = Args>(
+  options?: null | TestVariantsRunOptions<Args, SavedArgs> & TestVariantsCreateTestRunOptions<Args>
 ) => PromiseOrValue<TestVariantsRunResult<Args>>
 
 export type TestVariantsSetArgs<Args extends Obj> = <ArgsExtra extends Obj>(
@@ -33,7 +33,7 @@ export function createTestVariants<Args extends Obj>(
         argsTemplates: args,
       })
 
-      return testVariantsRun<Args>(testRun, variants as any, options)
+      return testVariantsRun(testRun, variants as any, options)
     }
   }
 }

@@ -1,5 +1,17 @@
 export type Obj = Record<string, any>
 
+/** Options for saving and replaying error-causing parameter combinations */
+export type SaveErrorVariantsOptions<Args, SavedArgs = Args> = {
+  /** Directory path for error variant JSON files */
+  dir: string
+  /** Retry attempts per variant during replay phase (default: 1) */
+  retriesPerVariant?: null | number
+  /** Transform args before JSON serialization */
+  argsToJson?: null | ((args: Args) => string | SavedArgs)
+  /** Transform parsed JSON back to args */
+  jsonToArgs?: null | ((json: SavedArgs) => Args)
+}
+
 /*
 type Func<Args extends Obj> = (args: Args) => any
 

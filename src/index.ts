@@ -1,5 +1,6 @@
 export {
   type Obj,
+  type SaveErrorVariantsOptions,
 } from 'src/test-variants/types'
 export {
   type TestVariantsTemplate,

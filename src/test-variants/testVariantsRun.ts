@@ -3,13 +3,14 @@ import {AbortControllerFast, type IAbortSignalFast} from '@flemist/abort-control
 import {combineAbortSignals, isPromiseLike} from '@flemist/async-utils'
 import {type IPool, Pool} from '@flemist/time-limits'
 import {garbageCollect} from 'src/garbage-collect/garbageCollect'
-import {Obj} from 'src/test-variants/types'
+import {Obj, type SaveErrorVariantsOptions} from 'src/test-variants/types'
+import {parseErrorVariantFile, readErrorVariantFiles, saveErrorVariantFile} from 'src/test-variants/saveErrorVariants'
 
 export type TestVariantsFindBestErrorOptions = {
   seeds: Iterable<any>
 }
 
-export type TestVariantsRunOptions = {
+export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
   /** Wait for garbage collection after iterations */
   GC_Iterations?: null | number,
   /** Same as GC_Iterations but only for async test variants, required for 10000 and more of Promise rejections */
@@ -23,6 +24,8 @@ export type TestVariantsRunOptions = {
   abortSignal?: null | IAbortSignalFast,
   parallel?: null | number | boolean,
   findBestError?: null | TestVariantsFindBestErrorOptions,
+  /** Save error-causing args to files and replay them before normal iteration */
+  saveErrorVariants?: null | SaveErrorVariantsOptions<Args, SavedArgs>,
 }
 
 export type TestVariantsBestError<Args extends Obj> = {
@@ -36,11 +39,28 @@ export type TestVariantsRunResult<Arg extends Obj> = {
   bestError: null | TestVariantsBestError<Arg>
 }
 
-export async function testVariantsRun<Args extends Obj>(
+export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   testRun: TestVariantsTestRun<Args>,
   variants: Iterable<Args>,
-  options: TestVariantsRunOptions = {},
+  options: TestVariantsRunOptions<Args, SavedArgs> = {},
 ): Promise<TestVariantsRunResult<Args>> {
+  const saveErrorVariants = options.saveErrorVariants
+  const retriesPerVariant = saveErrorVariants?.retriesPerVariant ?? 1
+
+  // Replay phase: run previously saved error variants before normal iteration
+  if (saveErrorVariants) {
+    const files = await readErrorVariantFiles(saveErrorVariants.dir)
+    for (const filePath of files) {
+      const args = await parseErrorVariantFile<Args, SavedArgs>(filePath, saveErrorVariants.jsonToArgs)
+      for (let retry = 0; retry < retriesPerVariant; retry++) {
+        const promiseOrResult = testRun(args, -1, null as any)
+        if (isPromiseLike(promiseOrResult)) {
+          await promiseOrResult
+        }
+      }
+    }
+  }
+
   const GC_Iterations = options.GC_Iterations ?? 1000000
   const GC_IterationsAsync = options.GC_IterationsAsync ?? 10000
   const GC_Interval = options.GC_Interval ?? 1000
@@ -162,6 +182,9 @@ export async function testVariantsRun<Args extends Obj>(
           iterations += _iterationsSync + _iterationsAsync
         }
         catch (err) {
+          if (saveErrorVariants) {
+            await saveErrorVariantFile(_args, saveErrorVariants)
+          }
           if (findBestError) {
             bestError = {
               error: err,
@@ -203,6 +226,9 @@ export async function testVariantsRun<Args extends Obj>(
             iterations += _iterationsSync + _iterationsAsync
           }
           catch (err) {
+            if (saveErrorVariants) {
+              await saveErrorVariantFile(_args, saveErrorVariants)
+            }
             if (findBestError) {
               bestError = {
                 error: err,

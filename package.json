@@ -6,7 +6,7 @@
   "module": "dist/lib/index.mjs",
   "types": "dist/lib/index.d.ts",
   "engines": {
-    "node": ">=10.4.0",
+    "node": ">=11.14.0",
     "pnpm": ">=7.1.6"
   },
   "repository": {
@@ -47,9 +47,11 @@
     "test:mocha:watch": "mocha --watch ./src/**/*.test.*",
     "test:karma": "rimraf tmp/coverage/karma && karma start --single-run --log-level debug",
     "test:mocha:ci": "rimraf tmp/coverage/mocha && nyc --all mocha ./{src,dist/lib}/**/*.test.*",
-    "coveralls": "pnpm run coverage:check && nyc report --reporter=text-lcov --temp-dir \"tmp/coverage/merge/\" | coveralls"
+    "coveralls": "pnpm run coverage:check && nyc report --reporter=text-lcov --temp-dir \"tmp/coverage/merge/\" | coveralls",
+    "mcp:tools": "mcp-project-tools"
   },
   "devDependencies": {
+    "@anthropic-ai/claude-code": "^2.0.76",
     "@babel/core": "7.18.5",
     "@babel/plugin-syntax-dynamic-import": "7.8.3",
     "@babel/plugin-transform-classes": "7.18.4",
@@ -58,6 +60,7 @@
     "@babel/runtime-corejs3": "7.28.3",
     "@flemist/copy-glob-flat": "0.0.5",
     "@flemist/karma-custom-launcher": "0.0.0",
+    "@flemist/mcp-project-tools": "3.0.19",
     "@flemist/test-utils": "1.0.2",
     "@rollup/plugin-alias": "3.1.9",
     "@rollup/plugin-babel": "5.3.1",
