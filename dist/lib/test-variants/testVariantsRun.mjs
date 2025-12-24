@@ -1,17 +1,39 @@
 import { __awaiter } from 'tslib';
 import { AbortControllerFast } from '@flemist/abort-controller-fast';
-import { combineAbortSignals, isPromiseLike } from '@flemist/async-utils';
+import { isPromiseLike, combineAbortSignals } from '@flemist/async-utils';
 import { Pool } from '@flemist/time-limits';
 import { garbageCollect } from '../garbage-collect/garbageCollect.mjs';
+import { generateErrorVariantFilePath, readErrorVariantFiles, parseErrorVariantFile, saveErrorVariantFile } from './saveErrorVariants.mjs';
+import * as path from 'path';
+import 'fs';
 
 function testVariantsRun(testRun, variants, options = {}) {
-    var _a, _b, _c, _d, _e, _f;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j;
     return __awaiter(this, void 0, void 0, function* () {
-        const GC_Iterations = (_a = options.GC_Iterations) !== null && _a !== void 0 ? _a : 1000000;
-        const GC_IterationsAsync = (_b = options.GC_IterationsAsync) !== null && _b !== void 0 ? _b : 10000;
-        const GC_Interval = (_c = options.GC_Interval) !== null && _c !== void 0 ? _c : 1000;
-        const logInterval = (_d = options.logInterval) !== null && _d !== void 0 ? _d : 5000;
-        const logCompleted = (_e = options.logCompleted) !== null && _e !== void 0 ? _e : true;
+        const saveErrorVariants = options.saveErrorVariants;
+        const retriesPerVariant = (_a = saveErrorVariants === null || saveErrorVariants === void 0 ? void 0 : saveErrorVariants.retriesPerVariant) !== null && _a !== void 0 ? _a : 1;
+        const sessionDate = new Date();
+        const errorVariantFilePath = saveErrorVariants
+            ? path.resolve(saveErrorVariants.dir, (_c = (_b = saveErrorVariants.getFilePath) === null || _b === void 0 ? void 0 : _b.call(saveErrorVariants, { sessionDate })) !== null && _c !== void 0 ? _c : generateErrorVariantFilePath({ sessionDate }))
+            : null;
+        // Replay phase: run previously saved error variants before normal iteration
+        if (saveErrorVariants) {
+            const files = yield readErrorVariantFiles(saveErrorVariants.dir);
+            for (const filePath of files) {
+                const args = yield parseErrorVariantFile(filePath, saveErrorVariants.jsonToArgs);
+                for (let retry = 0; retry < retriesPerVariant; retry++) {
+                    const promiseOrResult = testRun(args, -1, null);
+                    if (isPromiseLike(promiseOrResult)) {
+                        yield promiseOrResult;
+                    }
+                }
+            }
+        }
+        const GC_Iterations = (_d = options.GC_Iterations) !== null && _d !== void 0 ? _d : 1000000;
+        const GC_IterationsAsync = (_e = options.GC_IterationsAsync) !== null && _e !== void 0 ? _e : 10000;
+        const GC_Interval = (_f = options.GC_Interval) !== null && _f !== void 0 ? _f : 1000;
+        const logInterval = (_g = options.logInterval) !== null && _g !== void 0 ? _g : 5000;
+        const logCompleted = (_h = options.logCompleted) !== null && _h !== void 0 ? _h : true;
         const abortSignalExternal = options.abortSignal;
         const findBestError = options.findBestError;
         const parallel = options.parallel === true
@@ -19,7 +41,7 @@ function testVariantsRun(testRun, variants, options = {}) {
             : !options.parallel || options.parallel <= 0
                 ? 1
                 : options.parallel;
-        const seedsIterator = (_f = findBestError === null || findBestError === void 0 ? void 0 : findBestError.seeds[Symbol.iterator]()) !== null && _f !== void 0 ? _f : null;
+        const seedsIterator = (_j = findBestError === null || findBestError === void 0 ? void 0 : findBestError.seeds[Symbol.iterator]()) !== null && _j !== void 0 ? _j : null;
         let seedResult = seedsIterator === null || seedsIterator === void 0 ? void 0 : seedsIterator.next();
         let bestError = null;
         let index = -1;
@@ -105,6 +127,9 @@ function testVariantsRun(testRun, variants, options = {}) {
                             iterations += _iterationsSync + _iterationsAsync;
                         }
                         catch (err) {
+                            if (errorVariantFilePath) {
+                                yield saveErrorVariantFile(_args, errorVariantFilePath, saveErrorVariants.argsToJson);
+                            }
                             if (findBestError) {
                                 bestError = {
                                     error: err,
@@ -142,6 +167,9 @@ function testVariantsRun(testRun, variants, options = {}) {
                                 iterations += _iterationsSync + _iterationsAsync;
                             }
                             catch (err) {
+                                if (errorVariantFilePath) {
+                                    yield saveErrorVariantFile(_args, errorVariantFilePath, saveErrorVariants.argsToJson);
+                                }
                                 if (findBestError) {
                                     bestError = {
                                         error: err,

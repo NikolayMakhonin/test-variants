@@ -11,6 +11,9 @@ require('./argsToString.cjs');
 require('@flemist/abort-controller-fast');
 require('@flemist/time-limits');
 require('../garbage-collect/garbageCollect.cjs');
+require('./saveErrorVariants.cjs');
+require('fs');
+require('path');
 
 function createTestVariants(test) {
     return function testVariantsArgs(args) {

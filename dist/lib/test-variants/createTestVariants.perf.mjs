@@ -9,6 +9,9 @@ import './testVariantsRun.mjs';
 import '@flemist/abort-controller-fast';
 import '@flemist/time-limits';
 import '../garbage-collect/garbageCollect.mjs';
+import './saveErrorVariants.mjs';
+import 'fs';
+import 'path';
 
 describe('test > testVariants perf', function () {
     this.timeout(300000);

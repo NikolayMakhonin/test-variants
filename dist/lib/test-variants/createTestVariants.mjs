@@ -7,6 +7,9 @@ import './argsToString.mjs';
 import '@flemist/abort-controller-fast';
 import '@flemist/time-limits';
 import '../garbage-collect/garbageCollect.mjs';
+import './saveErrorVariants.mjs';
+import 'fs';
+import 'path';
 
 function createTestVariants(test) {
     return function testVariantsArgs(args) {

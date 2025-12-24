@@ -1,5 +1,8 @@
+export { generateErrorVariantFilePath } from './test-variants/saveErrorVariants.mjs';
 export { createTestVariants } from './test-variants/createTestVariants.mjs';
 import 'tslib';
+import 'fs';
+import 'path';
 import './test-variants/testVariantsIterable.mjs';
 import './test-variants/testVariantsCreateTestRun.mjs';
 import '@flemist/async-utils';

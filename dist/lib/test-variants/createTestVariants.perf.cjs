@@ -11,6 +11,9 @@ require('./testVariantsRun.cjs');
 require('@flemist/abort-controller-fast');
 require('@flemist/time-limits');
 require('../garbage-collect/garbageCollect.cjs');
+require('./saveErrorVariants.cjs');
+require('fs');
+require('path');
 
 describe('test > testVariants perf', function () {
     this.timeout(300000);
