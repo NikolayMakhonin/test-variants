@@ -1,6 +1,6 @@
 import * as fs from 'fs'
 import * as path from 'path'
-import {type Obj, type SaveErrorVariantsOptions} from 'src/test-variants/types'
+import {type GenerateErrorVariantFilePathOptions, type Obj} from 'src/test-variants/types'
 
 /** Reads saved error variant files from directory, sorted by filename descending (newest first) */
 export async function readErrorVariantFiles(dir: string): Promise<string[]> {
@@ -46,29 +46,17 @@ export async function parseErrorVariantFile<Args extends Obj, SavedArgs>(
   return json as unknown as Args
 }
 
-/** Generates unique filename with format YYYY-MM-DD_HH-mm-ss.json (UTC) */
-async function generateUniqueFilename(dir: string): Promise<string> {
-  const baseName = new Date().toISOString().substring(0, 19).replace('T', '_').replaceAll(':', '-')
-  let filename = `${baseName}.json`
-  let filePath = path.join(dir, filename)
-
-  let suffix = 0
-  while (await fs.promises.stat(filePath).catch(() => null) != null) {
-    suffix++
-    filename = `${baseName}_${suffix}.json`
-    filePath = path.join(dir, filename)
-  }
-
-  return filePath
+/** Generates default error variant file path: YYYY-MM-DD_HH-mm-ss.json (UTC) */
+export function generateErrorVariantFilePath(options: GenerateErrorVariantFilePathOptions): string {
+  return options.sessionDate.toISOString().substring(0, 19).replace('T', '_').replaceAll(':', '-') + '.json'
 }
 
-/** Saves error-causing args to a JSON file */
+/** Saves error-causing args to a JSON file, overwrites if file exists */
 export async function saveErrorVariantFile<Args extends Obj, SavedArgs>(
   args: Args,
-  options: SaveErrorVariantsOptions<Args, SavedArgs>,
+  filePath: string,
+  argsToJson?: null | ((args: Args) => string | SavedArgs),
 ): Promise<void> {
-  const {dir, argsToJson} = options
-
   let content: string
   if (argsToJson) {
     const result = argsToJson(args)
@@ -83,7 +71,6 @@ export async function saveErrorVariantFile<Args extends Obj, SavedArgs>(
     content = JSON.stringify(args, null, 2)
   }
 
-  await fs.promises.mkdir(dir, {recursive: true})
-  const filePath = await generateUniqueFilename(dir)
+  await fs.promises.mkdir(path.dirname(filePath), {recursive: true})
   await fs.promises.writeFile(filePath, content, 'utf-8')
 }

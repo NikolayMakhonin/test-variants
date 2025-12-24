@@ -1,7 +1,11 @@
 export {
   type Obj,
+  type GenerateErrorVariantFilePathOptions,
   type SaveErrorVariantsOptions,
 } from 'src/test-variants/types'
+export {
+  generateErrorVariantFilePath,
+} from 'src/test-variants/saveErrorVariants'
 export {
   type TestVariantsTemplate,
   type TestVariantsTemplates,

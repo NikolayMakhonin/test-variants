@@ -4,7 +4,8 @@ import {combineAbortSignals, isPromiseLike} from '@flemist/async-utils'
 import {type IPool, Pool} from '@flemist/time-limits'
 import {garbageCollect} from 'src/garbage-collect/garbageCollect'
 import {Obj, type SaveErrorVariantsOptions} from 'src/test-variants/types'
-import {parseErrorVariantFile, readErrorVariantFiles, saveErrorVariantFile} from 'src/test-variants/saveErrorVariants'
+import {generateErrorVariantFilePath, parseErrorVariantFile, readErrorVariantFiles, saveErrorVariantFile} from 'src/test-variants/saveErrorVariants'
+import * as path from 'path'
 
 export type TestVariantsFindBestErrorOptions = {
   seeds: Iterable<any>
@@ -46,6 +47,13 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
 ): Promise<TestVariantsRunResult<Args>> {
   const saveErrorVariants = options.saveErrorVariants
   const retriesPerVariant = saveErrorVariants?.retriesPerVariant ?? 1
+  const sessionDate = new Date()
+  const errorVariantFilePath = saveErrorVariants
+    ? path.resolve(
+      saveErrorVariants.dir,
+      saveErrorVariants.getFilePath?.({sessionDate}) ?? generateErrorVariantFilePath({sessionDate}),
+    )
+    : null
 
   // Replay phase: run previously saved error variants before normal iteration
   if (saveErrorVariants) {
@@ -182,8 +190,8 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
           iterations += _iterationsSync + _iterationsAsync
         }
         catch (err) {
-          if (saveErrorVariants) {
-            await saveErrorVariantFile(_args, saveErrorVariants)
+          if (errorVariantFilePath) {
+            await saveErrorVariantFile(_args, errorVariantFilePath, saveErrorVariants.argsToJson)
           }
           if (findBestError) {
             bestError = {
@@ -226,8 +234,8 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
             iterations += _iterationsSync + _iterationsAsync
           }
           catch (err) {
-            if (saveErrorVariants) {
-              await saveErrorVariantFile(_args, saveErrorVariants)
+            if (errorVariantFilePath) {
+              await saveErrorVariantFile(_args, errorVariantFilePath, saveErrorVariants.argsToJson)
             }
             if (findBestError) {
               bestError = {
