@@ -11,3 +11,6 @@
 /.eslintcache
 /package-lock.json
 /yarn.lock
+/.idea/copilot*
+/.claude
+/ai
