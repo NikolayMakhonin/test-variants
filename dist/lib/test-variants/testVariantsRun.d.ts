@@ -1,8 +1,25 @@
 import { TestVariantsTestRun } from './testVariantsCreateTestRun';
 import { type IAbortSignalFast } from '@flemist/abort-controller-fast';
 import { Obj, type SaveErrorVariantsOptions } from "./types";
+/** Parameters passed to getSeed function for generating test seeds */
+export declare type GetSeedParams = {
+    /** Index of current variant/parameter-combination being tested */
+    variantIndex: number;
+    /** Index of current cycle - full pass through all variants (0..cycles-1) */
+    cycleIndex: number;
+    /** Index of repeat for current variant within this cycle (0..repeatsPerVariant-1) */
+    repeatIndex: number;
+    /** Total index across all cycles: cycleIndex × repeatsPerVariant + repeatIndex */
+    totalIndex: number;
+};
+/** Options for finding the earliest failing variant across multiple test runs */
 export declare type TestVariantsFindBestErrorOptions = {
-    seeds: Iterable<any>;
+    /** Function to generate seed based on current iteration state */
+    getSeed: (params: GetSeedParams) => any;
+    /** Number of full passes through all variants */
+    cycles: number;
+    /** Number of repeat tests per variant within each cycle */
+    repeatsPerVariant: number;
 };
 export declare type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
     /** Wait for garbage collection after iterations */
@@ -20,6 +37,8 @@ export declare type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = A
     findBestError?: null | TestVariantsFindBestErrorOptions;
     /** Save error-causing args to files and replay them before normal iteration */
     saveErrorVariants?: null | SaveErrorVariantsOptions<Args, SavedArgs>;
+    /** Tests only first N variants, ignores the rest. If null or not specified, tests all variants */
+    limitVariantsCount?: null | number;
 };
 export declare type TestVariantsBestError<Args extends Obj> = {
     error: any;

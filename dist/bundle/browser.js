@@ -146,7 +146,7 @@ m=null})}())}function S(t,e,n){j(()=>{try{
 const r=e?e(t):t;n._resolve(r)}catch(t){
 n._reject(t)}})}function x(t,e,n){j(()=>{if(e)try{
 const r=e(t);n._resolve(r)}catch(t){n._reject(t)
-}else n._reject(t)})}const E=function(){};class A{
+}else n._reject(t)})}const E=function(){};class P{
 constructor(t){
 this.status="pending",this.value=void 0,this.reason=void 0,this._handlers=null
 ;const e=this._resolve,n=this._reject,r=this._resolveAsync,s=this._rejectAsync,i=this
@@ -168,25 +168,25 @@ this.status="rejected",g(t)?t.then(this._rejectAsync,this._rejectAsync):this._re
 }_rejectSync(t){const e=this._handlers
 ;if(this.reason=t,null!=e){this._handlers=null
 ;for(let n=0,r=e.length;n<r;n++){const[,r,s]=e[n]
-;x(t,r,s)}}}then(t,e){const n=new A(E)
+;x(t,r,s)}}}then(t,e){const n=new P(E)
 ;return"pending"===this.status?(null==this._handlers&&(this._handlers=[]),
 this._handlers.push([t,e,n])):"fulfilled"===this.status?S(this.value,t,n):x(this.reason,e,n),
 n}catch(t){return this.then(void 0,t)}finally(t){
 const e=t&&function(e){const n=t()
-;return g(n)?n.then(()=>e):A.resolve(e)
+;return g(n)?n.then(()=>e):P.resolve(e)
 },n=t&&function(e){const n=t()
-;return g(n)?n.then(()=>A.reject(e)):A.reject(e)}
+;return g(n)?n.then(()=>P.reject(e)):P.reject(e)}
 ;return this.then(e,n)}static resolve(t){
-const e=new A(E);return e._resolve(t),e}
-static reject(t){const e=new A(E)
+const e=new P(E);return e._resolve(t),e}
+static reject(t){const e=new P(E)
 ;return e._reject(t),e}get[Symbol.toStringTag](){
 return"Promise"}static get[Symbol.species](){
-return A}static all(t){return function(t,e){
+return P}static all(t){return function(t,e){
 let n,r;e||(e=Promise);const s=new e((t,e)=>{
 n=t,r=e});let i=t.length;const o=[]
 ;return t.forEach((t,e)=>{g(t)?t.then(t=>{
 o[e]=t,0===--i&&n(o)},r):(o[e]=t,0===--i&&n(o))
-}),s}(t,A)}static allSettled(t){
+}),s}(t,P)}static allSettled(t){
 return function(t,e){let n;e||(e=Promise)
 ;const r=new e((t,e)=>{n=t});let s=t.length
 ;const i=[];return t.forEach((t,e)=>{
@@ -194,18 +194,18 @@ g(t)?t.then(t=>{i[e]={status:"fulfilled",value:t
 },0===--s&&n(i)},t=>{i[e]={status:"rejected",
 reason:t},0===--s&&n(i)}):(i[e]={
 status:"fulfilled",value:t},0===--s&&n(i))}),r
-}(t,A)}static any(t){return function(t,e){let n,r
+}(t,P)}static any(t){return function(t,e){let n,r
 ;e||(e=Promise);const s=new e((t,e)=>{n=t,r=e})
 ;let i=t.length;const o=[]
 ;return t.forEach((t,e)=>{g(t)?t.then(n,t=>{
 o[e]=t,0===--i&&r(new AggregateError(o))}):n(t)
-}),s}(t,A)}static race(t){return function(t,e){
+}),s}(t,P)}static race(t){return function(t,e){
 let n,r;e||(e=Promise);const s=new e((t,e)=>{
 n=t,r=e});return t.forEach(t=>{
-g(t)?t.then(n,r):n(t)}),s}(t,A)}}
-const P=function(){};class k{constructor(t){
-if(this._status="pending",t&&t.aborted)this.promise=A.reject(t.reason),
-this.resolve=P,this.reject=P;else{let e,n
+g(t)?t.then(n,r):n(t)}),s}(t,P)}}
+const A=function(){};class k{constructor(t){
+if(this._status="pending",t&&t.aborted)this.promise=P.reject(t.reason),
+this.resolve=A,this.reject=A;else{let e,n
 ;if(this.promise=new Promise(function(t){
 e=t,n=function(e){p(t,e)}}),t){
 const r=t.subscribe(function(t){n(t)})
@@ -230,10 +230,10 @@ this._callbacks.add(t),()=>{var e
 ;this.aborted=!0,this.reason=t,null===(e=this._callbacks)||void 0===e||e.forEach(t=>{
 t.call(this,this.reason)}),this._callbacks=void 0}
 throwIfAborted(){if(this.aborted)throw this.reason
-}}class M{constructor(){this.signal=new O}
+}}class I{constructor(){this.signal=new O}
 abort(t){
 this.signal.aborted||(void 0===t&&((t=new T("Aborted with no reason",t))._internal=!0),
-this.signal.abort(t))}}function F(t,e){
+this.signal.abort(t))}}function M(t,e){
 var n=0,r=null;function s(t,s,i){
 return c(this,void 0,void 0,function(){var o
 ;return l(this,function(c){switch(c.label){case 0:
@@ -254,7 +254,7 @@ return s(t,e,n)});return"number"==typeof i?{
 iterationsAsync:0,iterationsSync:i
 }:null!==i&&"object"==typeof i?i:{
 iterationsAsync:0,iterationsSync:1}}catch(t){
-return s(t,e,n)}}}class I{constructor(t,e){
+return s(t,e,n)}}}class F{constructor(t,e){
 this._branch=null,this.order=t,this.parent=e}
 get branch(){if(!this._branch){
 const t=[this.order];let e=this.parent
@@ -262,15 +262,15 @@ const t=[this.order];let e=this.parent
 ;this._branch=t}return this._branch}}
 function D(t){
 return null!=t&&"object"==typeof t&&"function"==typeof t.then
-}let C,R=[];function J(t){
-R.push(t),C||(C=function(){
+}let C,V=[];function R(t){
+V.push(t),C||(C=function(){
 return c(this,void 0,void 0,function*(){
-for(;R.length>0;){yield 0;const t=R
-;R=[],t.forEach(t=>{try{t()}catch(t){
+for(;V.length>0;){yield 0;const t=V
+;V=[],t.forEach(t=>{try{t()}catch(t){
 console.error("Unhandled promise rejection",t)}})}
-C=null})}())}function N(t,e,n){J(()=>{try{
+C=null})}())}function J(t,e,n){R(()=>{try{
 const r=e?e(t):t;n._resolve(r)}catch(t){
-n._reject(t)}})}function V(t,e,n){J(()=>{if(e)try{
+n._reject(t)}})}function N(t,e,n){R(()=>{if(e)try{
 const r=e(t);n._resolve(r)}catch(t){n._reject(t)
 }else n._reject(t)})}const $=function(){};class G{
 constructor(t){
@@ -287,16 +287,16 @@ D(t)?t.then(this._resolveAsync,this._rejectAsync):this._resolveSync(t)
 }_resolveSync(t){const e=this._handlers
 ;if(this.value=t,null!=e){this._handlers=null
 ;for(let n=0,r=e.length;n<r;n++){const[r,,s]=e[n]
-;N(t,r,s)}}}_reject(t){
+;J(t,r,s)}}}_reject(t){
 "pending"===this.status&&this._rejectAsync(t)}
 _rejectAsync(t){
 this.status="rejected",D(t)?t.then(this._rejectAsync,this._rejectAsync):this._rejectSync(t)
 }_rejectSync(t){const e=this._handlers
 ;if(this.reason=t,null!=e){this._handlers=null
 ;for(let n=0,r=e.length;n<r;n++){const[,r,s]=e[n]
-;V(t,r,s)}}}then(t,e){const n=new G($)
+;N(t,r,s)}}}then(t,e){const n=new G($)
 ;return"pending"===this.status?(null==this._handlers&&(this._handlers=[]),
-this._handlers.push([t,e,n])):"fulfilled"===this.status?N(this.value,t,n):V(this.reason,e,n),
+this._handlers.push([t,e,n])):"fulfilled"===this.status?J(this.value,t,n):N(this.reason,e,n),
 n}catch(t){return this.then(void 0,t)}finally(t){
 const e=t&&function(e){const n=t()
 ;return D(n)?n.then(()=>e):G.resolve(e)
@@ -388,7 +388,7 @@ constructor(){this._queue=new _({lessThanFunc:L})}
 run(t,e,n){return this._run(!1,t,e,n)}
 runTask(t,e,n){return this._run(!0,t,e,n)}
 _run(t,e,n,r){const s=new W(r),i={
-priority:(o=Q++,c=n,null==o?null==c?null:c:new I(o,c)),
+priority:(o=Q++,c=n,null==o?null==c?null:c:new F(o,c)),
 func:e,abortSignal:r,resolve:s.resolve,
 reject:s.reject,readyToRun:!t};var o,c
 ;if(this._queue.add(i),t){const t=this;return{
@@ -452,59 +452,65 @@ return c(this,void 0,void 0,function(){
 var n,r=this;return l(this,function(s){
 switch(s.label){case 0:n=function(){
 var e,n,s,i,a,u,h;return l(this,function(d){
-switch(d.label){case 0:return e=q,n=o(o({},B),{
-seed:null==U?void 0:U.value
-}),s=(R||C)&&Date.now(),R&&s-nt>=R&&(console.log(tt),
-nt=s),I&&tt-st>=I||D&&et-it>=D||C&&s-rt>=C?(st=tt,
-it=et,rt=s,[4,Y(1)]):[3,2];case 1:
+switch(d.label){case 0:return e=L,n=o(o({},Q),{
+seed:q
+}),s=(V||C)&&Date.now(),V&&s-st>=V&&(console.log(nt),st=s),F&&nt-ot>=F||D&&rt-ct>=D||C&&s-it>=C?(ot=nt,
+ct=rt,it=s,[4,Y(1)]):[3,2];case 1:
 d.sent(),d.label=2;case 2:
-if(null==N?void 0:N.aborted)return[2,"continue"]
-;if(ot&&!K.aborted)return[3,10];d.label=3;case 3:
-return d.trys.push([3,6,,9]),g(i=t(n,e,K))?[4,i]:[3,5]
+if(null==J?void 0:J.aborted)return[2,"continue"]
+;if(lt&&!Z.aborted)return[3,10];d.label=3;case 3:
+return d.trys.push([3,6,,9]),g(i=t(n,e,Z))?[4,i]:[3,5]
 ;case 4:i=d.sent(),d.label=5;case 5:
 return i?(a=i.iterationsAsync,u=i.iterationsSync,
-et+=a,tt+=u+a,[3,9]):(Z=!0,Q.abort(),
+rt+=a,nt+=u+a,[3,9]):(et=!0,H.abort(),
 [2,"continue"]);case 6:
 return h=d.sent(),E?[4,f(n,E,j.argsToJson)]:[3,8]
-;case 7:d.sent(),d.label=8;case 8:if(!V)throw h
-;return W={error:h,args:n,index:e},Z=!1,[3,9]
+;case 7:d.sent(),d.label=8;case 8:if(!N)throw h
+;return B={error:h,args:n,index:e},et=!1,[3,9]
 ;case 9:return[3,13];case 10:
-return ot.hold(1)?[3,12]:[4,ot.holdWait(1)]
+return lt.hold(1)?[3,12]:[4,lt.holdWait(1)]
 ;case 11:d.sent(),d.label=12;case 12:
 c(r,void 0,void 0,function(){var r,s,i,o
 ;return l(this,function(c){switch(c.label){case 0:
 return c.trys.push([0,3,6,7]),
-(null==K?void 0:K.aborted)?[2]:g(r=t(n,e,K))?[4,r]:[3,2]
+(null==Z?void 0:Z.aborted)?[2]:g(r=t(n,e,Z))?[4,r]:[3,2]
 ;case 1:r=c.sent(),c.label=2;case 2:
 return r?(s=r.iterationsAsync,i=r.iterationsSync,
-et+=s,tt+=i+s,[3,7]):(Z=!0,Q.abort(),[2]);case 3:
+rt+=s,nt+=i+s,[3,7]):(et=!0,H.abort(),[2]);case 3:
 return o=c.sent(),E?[4,f(n,E,j.argsToJson)]:[3,5]
-;case 4:c.sent(),c.label=5;case 5:if(!V)throw o
-;return W={error:o,args:n,index:e},Z=!1,[3,7]
-;case 6:return ot.release(1),[7];case 7:return[2]}
+;case 4:c.sent(),c.label=5;case 5:if(!N)throw o
+;return B={error:o,args:n,index:e},et=!1,[3,7]
+;case 6:return lt.release(1),[7];case 7:return[2]}
 })}),d.label=13;case 13:return[2]}})},s.label=1
 ;case 1:
-return(null==N?void 0:N.aborted)||!Z&&!function(){
-for(;;){if(q++,U&&U.done)return!1
-;if(null==W||q<W.index){var t=L.next()
-;if(!t.done)return B=t.value,!0}if(!G)return!1
-;if((U=G.next()).done)return!1
-;q=-1,L=e[Symbol.iterator]()}}()?[3,3]:[5,n()]
+return(null==J?void 0:J.aborted)||!et&&!function(){
+for(;;){
+if(N&&L>=0&&(null==B||L<B.index)&&++W<N.repeatsPerVariant)return q=N.getSeed({
+variantIndex:L,cycleIndex:U,repeatIndex:W,
+totalIndex:U*N.repeatsPerVariant+W}),!0
+;if(W=0,L++,N&&U>=N.cycles)return!1
+;if((null==G||L<G)&&(null==B||L<B.index)){
+var t=K.next()
+;if(!t.done)return Q=t.value,N&&(q=N.getSeed({
+variantIndex:L,cycleIndex:U,repeatIndex:W,
+totalIndex:U*N.repeatsPerVariant+W})),!0}
+if(!N)return!1;if(++U>=N.cycles)return!1
+;L=-1,K=e[Symbol.iterator]()}}()?[3,3]:[5,n()]
 ;case 2:return s.sent(),[3,1];case 3:
-return ot?[4,ot.holdWait($)]:[3,5];case 4:
-s.sent(),ot.release($),s.label=5;case 5:
-if(null==H?void 0:H.aborted)throw H.reason
-;return J&&console.log("[test-variants] variants: ".concat(q,", iterations: ").concat(tt,", async: ").concat(et)),
-[4,Y(1)];case 6:return s.sent(),[2,tt]}})})}
-var j,S,x,E,A,P,k,T,z,O,F,I,D,C,R,J,N,V,$,G,U,W,q,B,L,Q,K,H,Z,tt,et,nt,rt,st,it,ot,ct,lt
+return lt?[4,lt.holdWait($)]:[3,5];case 4:
+s.sent(),lt.release($),s.label=5;case 5:
+if(null==tt?void 0:tt.aborted)throw tt.reason
+;return R&&console.log("[test-variants] variants: ".concat(L,", iterations: ").concat(nt,", async: ").concat(rt)),
+[4,Y(1)];case 6:return s.sent(),[2,nt]}})})}
+var j,S,x,E,P,A,k,T,z,O,M,F,D,C,V,R,J,N,$,G,U,W,q,B,L,Q,K,H,Z,tt,et,nt,rt,st,it,ot,ct,lt,at,ut
 ;return l(this,function(o){switch(o.label){case 0:
 return j=n.saveErrorVariants,S=null!==(r=null==j?void 0:j.retriesPerVariant)&&void 0!==r?r:1,
 x=new Date,
 E=j?i.resolve(j.dir,null!==(d=null===(s=j.getFilePath)||void 0===s?void 0:s.call(j,{
 sessionDate:x}))&&void 0!==d?d:h({sessionDate:x
 })):null,j?[4,a(j.dir)]:[3,12];case 1:
-A=o.sent(),o.label=2;case 2:
-o.trys.push([2,10,11,12]),P=function(t){
+P=o.sent(),o.label=2;case 2:
+o.trys.push([2,10,11,12]),A=function(t){
 var e="function"==typeof Symbol&&Symbol.iterator,n=e&&t[e],r=0
 ;if(n)return n.call(t)
 ;if(t&&"number"==typeof t.length)return{
@@ -512,37 +518,37 @@ next:function(){
 return t&&r>=t.length&&(t=void 0),{
 value:t&&t[r++],done:!t}}}
 ;throw new TypeError(e?"Object is not iterable.":"Symbol.iterator is not defined.")
-}(A),k=P.next(),o.label=3;case 3:
+}(P),k=A.next(),o.label=3;case 3:
 return k.done?[3,9]:[4,u(k.value,j.jsonToArgs)]
 ;case 4:T=o.sent(),z=0,o.label=5;case 5:
 return z<S?g(O=t(T,-1,null))?[4,O]:[3,7]:[3,8]
 ;case 6:o.sent(),o.label=7;case 7:return z++,[3,5]
-;case 8:return k=P.next(),[3,3];case 9:
-return[3,12];case 10:return F=o.sent(),ct={error:F
+;case 8:return k=A.next(),[3,3];case 9:
+return[3,12];case 10:return M=o.sent(),at={error:M
 },[3,12];case 11:try{
-k&&!k.done&&(lt=P.return)&&lt.call(P)}finally{
-if(ct)throw ct.error}return[7];case 12:
-return I=null!==(v=n.GC_Iterations)&&void 0!==v?v:1e6,
+k&&!k.done&&(ut=A.return)&&ut.call(A)}finally{
+if(at)throw at.error}return[7];case 12:
+return F=null!==(v=n.GC_Iterations)&&void 0!==v?v:1e6,
 D=null!==(_=n.GC_IterationsAsync)&&void 0!==_?_:1e4,
 C=null!==(y=n.GC_Interval)&&void 0!==y?y:1e3,
-R=null!==(b=n.logInterval)&&void 0!==b?b:5e3,
-J=null===(p=n.logCompleted)||void 0===p||p,
-N=n.abortSignal,V=n.findBestError,$=!0===n.parallel?Math.pow(2,31):!n.parallel||n.parallel<=0?1:n.parallel,
-G=null!==(m=null==V?void 0:V.seeds[Symbol.iterator]())&&void 0!==m?m:null,
-U=null==G?void 0:G.next(),
-W=null,q=-1,B={},L=e[Symbol.iterator](),Q=new M,K=function(...t){
+V=null!==(b=n.logInterval)&&void 0!==b?b:5e3,
+R=null===(p=n.logCompleted)||void 0===p||p,
+J=n.abortSignal,N=n.findBestError,$=!0===n.parallel?Math.pow(2,31):!n.parallel||n.parallel<=0?1:n.parallel,
+G=null!==(m=n.limitVariantsCount)&&void 0!==m?m:null,
+U=0,W=0,q=void 0,B=null,L=-1,
+Q={},K=e[Symbol.iterator](),H=new I,Z=function(...t){
 let e,n;function r(t){e.abort(t)}
 for(let s=0;s<t.length;s++){const i=t[s];if(i){
 if(i.aborted)return i
-;n?(e||(e=new M,n.subscribe(r)),i.subscribe(r)):n=i
-}}return e?e.signal:n||(new M).signal
-}(N,Q.signal),H=K,Z=!1,tt=0,et=0,nt=Date.now(),
-rt=nt,st=tt,it=et,ot=$<=1?null:new X($),[4,w()]
-;case 13:return[2,{iterations:o.sent(),bestError:W
+;n?(e||(e=new I,n.subscribe(r)),i.subscribe(r)):n=i
+}}return e?e.signal:n||(new I).signal
+}(J,H.signal),tt=Z,et=!1,nt=0,rt=0,st=Date.now(),
+it=st,ot=nt,ct=rt,lt=$<=1?null:new X($),[4,w()]
+;case 13:return[2,{iterations:o.sent(),bestError:B
 }]}})})}t.createTestVariants=function(t){
 return function(e){return function(n){
 return c(this,void 0,void 0,function(){var r,s
-;return l(this,function(i){return r=F(t,{
+;return l(this,function(i){return r=M(t,{
 onError:null==n?void 0:n.onError}),s=d({
 argsTemplates:e}),[2,Z(r,s,n)]})})}}
 },t.generateErrorVariantFilePath=h,Object.defineProperty(t,"__esModule",{

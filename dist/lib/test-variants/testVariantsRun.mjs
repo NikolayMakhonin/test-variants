@@ -41,30 +41,55 @@ function testVariantsRun(testRun, variants, options = {}) {
             : !options.parallel || options.parallel <= 0
                 ? 1
                 : options.parallel;
-        const seedsIterator = (_j = findBestError === null || findBestError === void 0 ? void 0 : findBestError.seeds[Symbol.iterator]()) !== null && _j !== void 0 ? _j : null;
-        let seedResult = seedsIterator === null || seedsIterator === void 0 ? void 0 : seedsIterator.next();
+        const limitVariantsCount = (_j = options.limitVariantsCount) !== null && _j !== void 0 ? _j : null;
+        let cycleIndex = 0;
+        let repeatIndex = 0;
+        let seed = void 0;
         let bestError = null;
         let index = -1;
         let args = {};
         let variantsIterator = variants[Symbol.iterator]();
         function nextVariant() {
             while (true) {
-                index++;
-                if (seedResult && seedResult.done) {
-                    return false;
-                }
-                if (bestError == null || index < bestError.index) {
-                    const result = variantsIterator.next();
-                    if (!result.done) {
-                        args = result.value;
+                // Try next repeat for current variant
+                if (findBestError && index >= 0 && (bestError == null || index < bestError.index)) {
+                    repeatIndex++;
+                    if (repeatIndex < findBestError.repeatsPerVariant) {
+                        seed = findBestError.getSeed({
+                            variantIndex: index,
+                            cycleIndex,
+                            repeatIndex,
+                            totalIndex: cycleIndex * findBestError.repeatsPerVariant + repeatIndex,
+                        });
                         return true;
                     }
                 }
-                if (!seedsIterator) {
+                repeatIndex = 0;
+                index++;
+                if (findBestError && cycleIndex >= findBestError.cycles) {
                     return false;
                 }
-                seedResult = seedsIterator.next();
-                if (seedResult.done) {
+                if ((limitVariantsCount == null || index < limitVariantsCount)
+                    && (bestError == null || index < bestError.index)) {
+                    const result = variantsIterator.next();
+                    if (!result.done) {
+                        args = result.value;
+                        if (findBestError) {
+                            seed = findBestError.getSeed({
+                                variantIndex: index,
+                                cycleIndex,
+                                repeatIndex,
+                                totalIndex: cycleIndex * findBestError.repeatsPerVariant + repeatIndex,
+                            });
+                        }
+                        return true;
+                    }
+                }
+                if (!findBestError) {
+                    return false;
+                }
+                cycleIndex++;
+                if (cycleIndex >= findBestError.cycles) {
                     return false;
                 }
                 index = -1;
@@ -93,7 +118,7 @@ function testVariantsRun(testRun, variants, options = {}) {
             return __awaiter(this, void 0, void 0, function* () {
                 while (!(abortSignalExternal === null || abortSignalExternal === void 0 ? void 0 : abortSignalExternal.aborted) && (debug || nextVariant())) {
                     const _index = index;
-                    const _args = Object.assign(Object.assign({}, args), { seed: seedResult === null || seedResult === void 0 ? void 0 : seedResult.value });
+                    const _args = Object.assign(Object.assign({}, args), { seed });
                     const now = (logInterval || GC_Interval) && Date.now();
                     if (logInterval && now - prevLogTime >= logInterval) {
                         // the log is required to prevent the karma browserNoActivityTimeout
