@@ -115,6 +115,21 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
 
   function nextVariant() {
     while (true) {
+      // Try next repeat for current variant
+      if (findBestError && index >= 0 && (bestError == null || index < bestError.index)) {
+        repeatIndex++
+        if (repeatIndex < findBestError.repeatsPerVariant) {
+          seed = findBestError.getSeed({
+            variantIndex: index,
+            cycleIndex,
+            repeatIndex,
+            totalIndex  : cycleIndex * findBestError.repeatsPerVariant + repeatIndex,
+          })
+          return true
+        }
+      }
+      repeatIndex = 0
+
       index++
       if (findBestError && cycleIndex >= findBestError.cycles) {
         return false
@@ -132,7 +147,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
               variantIndex: index,
               cycleIndex,
               repeatIndex,
-              totalIndex: cycleIndex * findBestError.repeatsPerVariant + repeatIndex,
+              totalIndex  : cycleIndex * findBestError.repeatsPerVariant + repeatIndex,
             })
           }
           return true

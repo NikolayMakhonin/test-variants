@@ -21,6 +21,7 @@ export {
   type TestVariantsTestRunResult,
 } from 'src/test-variants/testVariantsCreateTestRun'
 export {
+  type GetSeedParams,
   type TestVariantsFindBestErrorOptions,
   type TestVariantsRunOptions,
   type TestVariantsBestError,

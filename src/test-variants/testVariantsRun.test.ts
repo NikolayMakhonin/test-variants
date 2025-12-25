@@ -6,7 +6,7 @@ describe('test-variants > testVariantsRun', function () {
   this.timeout(10 * 60 * 1000)
 
   it('findBestError', async function () {
-    const seeds = Array.from({length: 10}).map((_, i) => i)
+    const cycles = 10
     const variantsCount = 1000
     const variants = Array.from({length: variantsCount}).map((_, i) => ({i}))
 
@@ -29,7 +29,9 @@ describe('test-variants > testVariantsRun', function () {
 
       const result = await testVariantsRun(testRun, variants, {
         findBestError: {
-          seeds,
+          getSeed: ({cycleIndex}) => cycleIndex,
+          cycles,
+          repeatsPerVariant: 1,
         },
         logCompleted: false,
       })
