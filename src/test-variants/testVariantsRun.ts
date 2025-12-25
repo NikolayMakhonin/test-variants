@@ -7,8 +7,26 @@ import {Obj, type SaveErrorVariantsOptions} from 'src/test-variants/types'
 import {generateErrorVariantFilePath, parseErrorVariantFile, readErrorVariantFiles, saveErrorVariantFile} from 'src/test-variants/saveErrorVariants'
 import * as path from 'path'
 
+/** Parameters passed to getSeed function for generating test seeds */
+export type GetSeedParams = {
+  /** Index of current variant/parameter-combination being tested */
+  variantIndex: number,
+  /** Index of current cycle - full pass through all variants (0..cycles-1) */
+  cycleIndex: number,
+  /** Index of repeat for current variant within this cycle (0..repeatsPerVariant-1) */
+  repeatIndex: number,
+  /** Total index across all cycles: cycleIndex × repeatsPerVariant + repeatIndex */
+  totalIndex: number,
+}
+
+/** Options for finding the earliest failing variant across multiple test runs */
 export type TestVariantsFindBestErrorOptions = {
-  seeds: Iterable<any>
+  /** Function to generate seed based on current iteration state */
+  getSeed: (params: GetSeedParams) => any,
+  /** Number of full passes through all variants */
+  cycles: number,
+  /** Number of repeat tests per variant within each cycle */
+  repeatsPerVariant: number,
 }
 
 export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
@@ -27,6 +45,8 @@ export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
   findBestError?: null | TestVariantsFindBestErrorOptions,
   /** Save error-causing args to files and replay them before normal iteration */
   saveErrorVariants?: null | SaveErrorVariantsOptions<Args, SavedArgs>,
+  /** Tests only first N variants, ignores the rest. If null or not specified, tests all variants */
+  limitVariantsCount?: null | number,
 }
 
 export type TestVariantsBestError<Args extends Obj> = {
@@ -83,8 +103,10 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
       ? 1
       : options.parallel
 
-  const seedsIterator = findBestError?.seeds[Symbol.iterator]() ?? null
-  let seedResult: any = seedsIterator?.next()
+  const limitVariantsCount = options.limitVariantsCount ?? null
+  let cycleIndex = 0
+  let repeatIndex = 0
+  let seed: any = void 0
   let bestError: TestVariantsBestError<Args> | null = null
 
   let index = -1
@@ -94,24 +116,35 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   function nextVariant() {
     while (true) {
       index++
-      if (seedResult && seedResult.done) {
+      if (findBestError && cycleIndex >= findBestError.cycles) {
         return false
       }
 
-      if (bestError == null || index < bestError.index) {
+      if (
+        (limitVariantsCount == null || index < limitVariantsCount)
+        && (bestError == null || index < bestError.index)
+      ) {
         const result = variantsIterator.next()
         if (!result.done) {
           args = result.value
+          if (findBestError) {
+            seed = findBestError.getSeed({
+              variantIndex: index,
+              cycleIndex,
+              repeatIndex,
+              totalIndex: cycleIndex * findBestError.repeatsPerVariant + repeatIndex,
+            })
+          }
           return true
         }
       }
 
-      if (!seedsIterator) {
+      if (!findBestError) {
         return false
       }
 
-      seedResult = seedsIterator.next()
-      if (seedResult.done) {
+      cycleIndex++
+      if (cycleIndex >= findBestError.cycles) {
         return false
       }
 
@@ -145,7 +178,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   async function next(): Promise<number> {
     while (!abortSignalExternal?.aborted && (debug || nextVariant())) {
       const _index = index
-      const _args = {...args, seed: seedResult?.value}
+      const _args = {...args, seed}
 
       const now = (logInterval || GC_Interval) && Date.now()
 
