@@ -29,7 +29,7 @@ describe('test-variants > testVariantsRun', function () {
 
       const result = await testVariantsRun(testRun, variants, {
         findBestError: {
-          getSeed: ({cycleIndex}) => cycleIndex,
+          getSeed          : ({cycleIndex}) => cycleIndex,
           cycles,
           repeatsPerVariant: 1,
         },
