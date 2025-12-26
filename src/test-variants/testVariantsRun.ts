@@ -7,6 +7,19 @@ import {Obj, type SaveErrorVariantsOptions} from 'src/test-variants/types'
 import {generateErrorVariantFilePath, parseErrorVariantFile, readErrorVariantFiles, saveErrorVariantFile} from 'src/test-variants/saveErrorVariants'
 import * as path from 'path'
 
+function formatDuration(ms: number): string {
+  const seconds = ms / 1000
+  if (seconds < 60) {
+    return `${seconds.toFixed(1)}s`
+  }
+  const minutes = seconds / 60
+  if (minutes < 60) {
+    return `${minutes.toFixed(1)}m`
+  }
+  const hours = minutes / 60
+  return `${hours.toFixed(1)}h`
+}
+
 /** Parameters passed to getSeed function for generating test seeds */
 export type GetSeedParams = {
   /** Index of current variant/parameter-combination being tested */
@@ -105,8 +118,11 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
 
   const limitVariantsCount = options.limitVariantsCount ?? null
   let prevCycleVariantsCount: null | number = null
+  let prevCycleDuration: null | number = null
   let cycleIndex = 0
   let repeatIndex = 0
+  const startTime = Date.now()
+  let cycleStartTime = startTime
   let seed: any = void 0
   let bestError: TestVariantsBestError<Args> | null = null
 
@@ -173,8 +189,10 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
       }
 
       prevCycleVariantsCount = index
+      prevCycleDuration = Date.now() - cycleStartTime
 
       cycleIndex++
+      cycleStartTime = Date.now()
       if (cycleIndex >= findBestError.cycles) {
         return false
       }
@@ -216,22 +234,41 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
       if (logInterval && now - prevLogTime >= logInterval) {
         // the log is required to prevent the karma browserNoActivityTimeout
         let log = ''
+        const cycleElapsed = now - cycleStartTime
+        const totalElapsed = now - startTime
         if (findBestError) {
           log += `cycle: ${cycleIndex}, variant: ${index}`
-          if (cycleIndex > 0) {
-            let max = getLimitVariantsCount()
-            if (max != null) {
-              if (prevCycleVariantsCount != null && prevCycleVariantsCount < max) {
-                max = prevCycleVariantsCount
-              }
-              log += `/${max}`
+          let max = getLimitVariantsCount()
+          if (max != null) {
+            if (prevCycleVariantsCount != null && prevCycleVariantsCount < max) {
+              max = prevCycleVariantsCount
             }
+          }
+          if (max != null && index > 0) {
+            let estimatedCycleTime: number
+            if (
+              prevCycleDuration != null && prevCycleVariantsCount != null
+              && index < prevCycleVariantsCount && cycleElapsed < prevCycleDuration
+            ) {
+              const adjustedDuration = prevCycleDuration - cycleElapsed
+              const adjustedCount = prevCycleVariantsCount - index
+              const speedForRemaining = adjustedDuration / adjustedCount
+              const remainingTime = (max - index) * speedForRemaining
+              estimatedCycleTime = cycleElapsed + remainingTime
+            }
+            else {
+              estimatedCycleTime = cycleElapsed * max / index
+            }
+            log += `/${max} (${formatDuration(cycleElapsed)}/${formatDuration(estimatedCycleTime)})`
+          }
+          else {
+            log += ` (${formatDuration(cycleElapsed)})`
           }
         }
         else {
-          log += `variant: ${index}`
+          log += `variant: ${index} (${formatDuration(cycleElapsed)})`
         }
-        log += `, total: ${iterations}`
+        log += `, total: ${iterations} (${formatDuration(totalElapsed)})`
         console.log(log)
         prevLogTime = now
       }
