@@ -1,6 +1,6 @@
 {
   "name": "@flemist/test-variants",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "Runs a test function with all possible combinations of its parameters.",
   "main": "dist/lib/index.cjs",
   "module": "dist/lib/index.mjs",

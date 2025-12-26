@@ -104,6 +104,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
       : options.parallel
 
   const limitVariantsCount = options.limitVariantsCount ?? null
+  let prevCycleVariantsCount: null | number = null
   let cycleIndex = 0
   let repeatIndex = 0
   let seed: any = void 0
@@ -171,6 +172,8 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
         return false
       }
 
+      prevCycleVariantsCount = index
+
       cycleIndex++
       if (cycleIndex >= findBestError.cycles) {
         return false
@@ -215,9 +218,14 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
         let log = ''
         if (findBestError) {
           log += `cycle: ${cycleIndex}, variant: ${index}`
-          const _limitVariantsCount = getLimitVariantsCount()
-          if (_limitVariantsCount != null) {
-            log += `/${_limitVariantsCount}`
+          if (cycleIndex > 0) {
+            let max = getLimitVariantsCount()
+            if (max != null) {
+              if (prevCycleVariantsCount != null && prevCycleVariantsCount < max) {
+                max = prevCycleVariantsCount
+              }
+              log += `/${max}`
+            }
           }
         }
         else {
