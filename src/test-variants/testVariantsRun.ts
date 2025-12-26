@@ -112,6 +112,19 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   let index = -1
   let args: Args = {} as any
   let variantsIterator = variants[Symbol.iterator]()
+  
+  function getLimitVariantsCount() {
+    if (limitVariantsCount != null && bestError != null) {
+      return Math.min(limitVariantsCount, bestError.index)
+    }
+    if (limitVariantsCount != null) {
+      return limitVariantsCount
+    }
+    if (bestError != null) {
+      return bestError.index
+    }
+    return null
+  }
 
   function nextVariant() {
     while (true) {
@@ -135,9 +148,9 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
         return false
       }
 
+      const _limitVariantsCount = getLimitVariantsCount()
       if (
-        (limitVariantsCount == null || index < limitVariantsCount)
-        && (bestError == null || index < bestError.index)
+        _limitVariantsCount == null || index < _limitVariantsCount
       ) {
         const result = variantsIterator.next()
         if (!result.done) {
@@ -201,7 +214,11 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
         // the log is required to prevent the karma browserNoActivityTimeout
         let log = ''
         if (findBestError) {
-          log += `cycle: ${cycleIndex}, variant: ${index}/${limitVariantsCount}`
+          log += `cycle: ${cycleIndex}, variant: ${index}`
+          const _limitVariantsCount = getLimitVariantsCount()
+          if (_limitVariantsCount != null) {
+            log += `/${_limitVariantsCount}`
+          }
         }
         else {
           log += `variant: ${index}`
