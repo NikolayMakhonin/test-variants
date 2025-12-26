@@ -199,7 +199,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
 
       if (logInterval && now - prevLogTime >= logInterval) {
         // the log is required to prevent the karma browserNoActivityTimeout
-        console.log(iterations)
+        console.log(`variant: ${index}; total: ${iterations};`)
         prevLogTime = now
       }
 
