@@ -747,6 +747,43 @@ describe('test-variants > testVariantsIterator', function () {
     ])
   })
 
+  it('addLimit({args}) extends dynamic template with missing value', async function () {
+    // Template extension works with dynamic templates
+    // Missing value is appended to extraValues and available for all arg combinations
+
+    const iterator = testVariantsIterator({
+      argsTemplates: {
+        a: [false, true],
+        b: ({a}) => a ? [1, 2] : [3, 4], // Dynamic: depends on a
+      },
+      limitArgOnError: true,
+    })
+
+    // With a=false, b template is [3, 4]
+    // b=10 is NOT in template - should be extended
+    iterator.addLimit({args: {a: false, b: 10}, error: new Error('file1')})
+
+    iterator.start()
+    const results: any[] = []
+    let args: any
+    while ((args = iterator.next()) != null) {
+      results.push({...args})
+    }
+
+    // After extension: b template for a=false is [3, 4, 10]
+    // argLimits: [0, 2] (a at index 0, b=10 at index 2)
+    // a <= 0 means only a=false
+    // b <= 2 means b in [3, 4, 10] (indexes 0, 1, 2)
+    // Iteration stops before reaching [0, 2] (the error position)
+    // Results: [3, 4] (indexes 0, 1)
+
+    assert.strictEqual(results.length, 2)
+    assert.deepStrictEqual(results, [
+      {a: false, b: 3},
+      {a: false, b: 4},
+    ])
+  })
+
   it('addLimit({args}) lexicographic comparison - accepts smaller and replaces', async function () {
     // New error is accepted if lexicographically smaller
     const iterator = testVariantsIterator({
