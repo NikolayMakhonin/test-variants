@@ -166,22 +166,16 @@ function advanceVariant<Args extends Obj>(
     const valueIndex = state.indexes[keyIndex] + 1
     const maxIndex = getMaxIndex(state, keyIndex)
     if (valueIndex < maxIndex) {
-      const key = keys[keyIndex]
-      const value = state.argValues[keyIndex][valueIndex]
       state.indexes[keyIndex] = valueIndex
-      state.args[key] = value
+      state.args[keys[keyIndex]] = state.argValues[keyIndex][valueIndex]
       for (keyIndex++; keyIndex < keysCount; keyIndex++) {
-        const keyVariants = calcTemplateValues(templates, state.args, keyIndex)
-        const argLimit = state.argLimits[keyIndex]
-        const keyMaxIndex = argLimit != null ? argLimit + 1 : keyVariants.length
-        if (keyVariants.length === 0 || keyMaxIndex <= 0) {
+        state.argValues[keyIndex] = calcTemplateValues(templates, state.args, keyIndex)
+        const keyMaxIndex = getMaxIndex(state, keyIndex)
+        if (keyMaxIndex <= 0) {
           break
         }
         state.indexes[keyIndex] = 0
-        state.argValues[keyIndex] = keyVariants
-        const key = keys[keyIndex]
-        const value = keyVariants[0]
-        state.args[key] = value
+        state.args[keys[keyIndex]] = state.argValues[keyIndex][0]
       }
       if (keyIndex >= keysCount) {
         return true
@@ -270,11 +264,8 @@ function calcArgsIndexes<Args extends Obj>(
 ): number[] | null {
   const indexes: number[] = []
   for (let i = 0; i < keysCount; i++) {
-    const key = keys[i]
-    const value = limitArgs[key]
-    // Use limitArgs for dynamic template calculation
     const values = calcTemplateValues(templates, limitArgs, i)
-    const valueIndex = findLastIndex(values, value, equals)
+    const valueIndex = findLastIndex(values, limitArgs[keys[i]], equals)
     if (valueIndex < 0) {
       return null
     }
@@ -331,12 +322,10 @@ function updateArgLimits<Args extends Obj>(
   for (let i = 0; i < keysCount; i++) {
     const valueIndex = newIndexes[i]
     if (typeof limitArgOnError === 'function') {
-      const key = keys[i]
-      const values = calcTemplateValues(templates, limitArgs, i)
       const shouldLimit = limitArgOnError({
-        name         : key as string,
+        name         : keys[i] as string,
         valueIndex,
-        values,
+        values       : calcTemplateValues(templates, limitArgs, i),
         maxValueIndex: state.argLimits[i],
       })
       if (!shouldLimit) {
@@ -349,9 +338,8 @@ function updateArgLimits<Args extends Obj>(
 
   state.pendingLimits = state.pendingLimits.filter(pending => {
     for (let i = 0; i < keysCount; i++) {
-      const value = pending.args[keys[i]]
       const values = calcTemplateValues(templates, pending.args, i)
-      const valueIndex = findLastIndex(values, value, equals)
+      const valueIndex = findLastIndex(values, pending.args[keys[i]], equals)
       const argLimit = state.argLimits[i]
       if (argLimit != null && valueIndex > argLimit) {
         return false
@@ -392,7 +380,7 @@ function processPendingLimits<Args extends Obj>(
 
 /** Create limit object with optional error */
 function createLimit<Args>(args: Args, error?: unknown): TestVariantsIteratorLimit<Args> {
-  return typeof error !== 'undefined' ? {args, error} : {args}
+  return error !== undefined ? {args, error} : {args}
 }
 
 /** Creates test variants iterator with limiting capabilities */
@@ -501,8 +489,9 @@ export function testVariantsIterator<Args extends Obj>(
           limitArgOnError,
         )
         if (updated) {
-          state.limit = createLimit(opts.args, opts.error)
-          state.pendingLimits.push(createLimit(opts.args, opts.error))
+          const limit = createLimit(opts.args, opts.error)
+          state.limit = limit
+          state.pendingLimits.push(limit)
         }
         else if (!limitArgOnError) {
           state.pendingLimits.push(createLimit(opts.args, opts.error))
