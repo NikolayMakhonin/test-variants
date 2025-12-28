@@ -559,4 +559,162 @@ describe('test-variants > testVariantsIterator', function () {
       {a: 3, b: 'x'},
     ])
   })
+
+  it('addLimit({args}) lexicographic comparison - rejects larger combinations', async function () {
+    // Bug: per-arg min() was used instead of lexicographic comparison
+    // This caused later (larger) files to incorrectly update some argLimits
+    //
+    // Correct behavior:
+    // - Compare entire combination lexicographically
+    // - Only update if new combination is strictly smaller
+    // - If larger, reject entirely (don't update any argLimits)
+
+    const iterator = testVariantsIterator({
+      argsTemplates: {
+        a: [0, 1, 2, 3],
+        b: [0, 1, 2, 3],
+      },
+      limitArgOnError: true,
+    })
+
+    // File 1: a=0, b=2 (indexes: [0, 2])
+    iterator.addLimit({args: {a: 0, b: 2}, error: new Error('file1')})
+
+    // File 2: a=3, b=1 (indexes: [3, 1])
+    // Compare: [3, 1] vs [0, 2] -> 3 > 0, file2 is LARGER
+    // With broken per-arg min(): would set b=min(2,1)=1 - WRONG!
+    // With correct lexicographic: reject entirely because 3 > 0
+    iterator.addLimit({args: {a: 3, b: 1}, error: new Error('file2')})
+
+    iterator.start()
+    const results: any[] = []
+    let args: any
+    while ((args = iterator.next()) != null) {
+      results.push({...args})
+    }
+
+    // argLimits should be from file1 only: [null, 2]
+    // File2 should NOT have affected anything
+    // b < 2 means b in [0, 1]
+    // Total valid: 4 (a values) * 2 (b values) = 8 variants
+
+    assert.strictEqual(results.length, 8)
+    // Verify file2's argLimits were NOT applied (b=1 would give only 4 variants)
+  })
+
+  it('addLimit({args}) lexicographic comparison - accepts smaller combinations', async function () {
+    const iterator = testVariantsIterator({
+      argsTemplates: {
+        a: [0, 1, 2, 3],
+        b: [0, 1, 2, 3],
+        c: [false, true],
+      },
+      limitArgOnError: true,
+    })
+
+    // File 1: a=0, b=2, c=false (indexes: [0, 2, 0])
+    iterator.addLimit({args: {a: 0, b: 2, c: false}, error: new Error('file1')})
+
+    // File 2: a=0, b=1, c=true (indexes: [0, 1, 1])
+    // Compare: [0, 1, 1] vs [0, 2, 0] -> a equal, 1 < 2, file2 is SMALLER
+    // Should replace file1's argLimits
+    iterator.addLimit({args: {a: 0, b: 1, c: true}, error: new Error('file2')})
+
+    iterator.start()
+    const results: any[] = []
+    let args: any
+    while ((args = iterator.next()) != null) {
+      results.push({...args})
+    }
+
+    // argLimits should be from file2: [null, 1, 1]
+    // b < 1 means b in [0]
+    // c < 1 means c in [false]
+    // Total valid: 4 * 1 * 1 = 4 variants
+
+    assert.strictEqual(results.length, 4)
+    assert.deepStrictEqual(results.map(r => ({a: r.a, b: r.b, c: r.c})), [
+      {a: 0, b: 0, c: false},
+      {a: 1, b: 0, c: false},
+      {a: 2, b: 0, c: false},
+      {a: 3, b: 0, c: false},
+    ])
+  })
+
+  it('addLimit({args}) tracks index-0 args for lexicographic comparison', async function () {
+    // Bug: args at index 0 were skipped, leaving argLimits[i] = null
+    // This broke lexicographic comparison for later files
+    //
+    // Correct behavior:
+    // - Index-0 args are tracked for comparison (as position [0, ...])
+    // - But argLimits[i] stays null (can't limit further, 0 is already minimum)
+    // - Later files with higher indexes at that position should be rejected
+
+    const iterator = testVariantsIterator({
+      argsTemplates: {
+        a: [0, 1, 2, 3],
+        b: [0, 1, 2, 3],
+      },
+      limitArgOnError: true,
+    })
+
+    // File 1: a=0, b=2 (indexes: [0, 2])
+    // a is at index 0 - should be tracked but argLimits[a] stays null
+    iterator.addLimit({args: {a: 0, b: 2}, error: new Error('file1')})
+
+    // File 2: a=1, b=0 (indexes: [1, 0])
+    // Compare: [1, 0] vs [0, 2] -> 1 > 0, file2 is LARGER
+    // Even though b=0 < b=2, the overall combination is larger!
+    // Should reject file2 entirely
+    iterator.addLimit({args: {a: 1, b: 0}, error: new Error('file2')})
+
+    iterator.start()
+    const results: any[] = []
+    let args: any
+    while ((args = iterator.next()) != null) {
+      results.push({...args})
+    }
+
+    // argLimits should be from file1: [null, 2]
+    // a has no limit (was at index 0), b < 2
+    // Total valid: 4 * 2 = 8 variants
+
+    assert.strictEqual(results.length, 8)
+    // Verify file2's b=0 was NOT used (would give only 4 variants with b=0)
+  })
+
+  it('addLimit({args}) uses limitArgs for dynamic template calculation', async function () {
+    // Bug: calcTemplateValues used state.args (empty) instead of limitArgs
+    // This caused wrong indexes for dynamic templates
+
+    const iterator = testVariantsIterator({
+      argsTemplates: {
+        a: [false, true],
+        b: ({a}) => a ? [1, 2] : [3, 4, 5], // Dynamic: depends on a
+      },
+      limitArgOnError: true,
+    })
+
+    // With a=false, b template is [3, 4, 5]
+    // b=4 is at index 1 in [3, 4, 5]
+    iterator.addLimit({args: {a: false, b: 4}, error: new Error('file1')})
+
+    iterator.start()
+    const results: any[] = []
+    let args: any
+    while ((args = iterator.next()) != null) {
+      results.push({...args})
+    }
+
+    // argLimits: [null (a at 0), 1 (b at 1)]
+    // With a=false: b in [3] (index 0 < 1)
+    // With a=true: b in [1] (index 0 < 1)
+    // Total: 2 variants
+
+    assert.strictEqual(results.length, 2)
+    assert.deepStrictEqual(results, [
+      {a: false, b: 3},
+      {a: true, b: 1},
+    ])
+  })
 })
