@@ -384,7 +384,7 @@ describe('test-variants > testVariantsIterator', function () {
     assert.strictEqual(iterator.count, 4) // No limit applied
   })
 
-  it('addLimit({args}) discards if value not in static template', async function () {
+  it('addLimit({args}) extends template with missing value', async function () {
     const iterator = testVariantsIterator({
       argsTemplates: {
         a: [1, 2],
@@ -392,17 +392,25 @@ describe('test-variants > testVariantsIterator', function () {
       },
     })
 
-    // Value 'z' not in template - should be discarded
+    // Value 'z' not in template - template should be extended with 'z'
     iterator.addLimit({args: {a: 1, b: 'z'}})
 
     iterator.start()
-    iterator.next()
-    iterator.next()
-    iterator.next()
-    iterator.next()
-    const result = iterator.next()
-    assert.strictEqual(result, null)
-    assert.strictEqual(iterator.count, 4) // No limit applied
+    // After template extension: a=[1,2], b=['x','y','z']
+    // Total variants: 2 * 3 = 6
+    // Limit args {a:1, b:'z'} = indexes [0, 2]
+    // Pending limit should apply when position [0, 2] is reached
+    const results: any[] = []
+    let result: any
+    while ((result = iterator.next()) !== null) {
+      results.push(result)
+    }
+    // Limit at [0, 2] means count = 2 (index 0 is {a:1,b:'x'}, index 1 is {a:1,b:'y'})
+    assert.strictEqual(iterator.count, 2)
+    assert.deepStrictEqual(results, [
+      {a: 1, b: 'x'},
+      {a: 1, b: 'y'},
+    ])
   })
 
   it('addLimit({args}) with seed key is ignored in validation', async function () {
@@ -426,7 +434,7 @@ describe('test-variants > testVariantsIterator', function () {
     assert.deepStrictEqual(iterator.limit?.args, {a: 1, b: 'y', seed: 'test-seed'})
   })
 
-  it('addLimit({args, index}) always applies index even if args invalid', async function () {
+  it('addLimit({args, index}) applies both index and limit with template extension', async function () {
     const iterator = testVariantsIterator({
       argsTemplates: {
         a: [1, 2],
@@ -434,11 +442,11 @@ describe('test-variants > testVariantsIterator', function () {
       },
     })
 
-    // Invalid args (value 'z' not in template) but valid index
+    // Value 'z' not in template - template extended, both index and limit applied
     iterator.addLimit({args: {a: 1, b: 'z'}, index: 2})
 
     assert.strictEqual(iterator.count, 2) // Index applied
-    assert.strictEqual(iterator.limit, null) // But limit not set (args invalid)
+    assert.deepStrictEqual(iterator.limit?.args, {a: 1, b: 'z'}) // Limit set after template extension
   })
 
   it('multiple pending limits apply at different positions', async function () {
@@ -982,7 +990,6 @@ describe('test-variants > testVariantsIterator', function () {
     }
 
     assert.strictEqual((iterator.limit?.error as Error).message, 'error1')
-    const countAfterError1 = iterator.count
 
     // Continue iteration to find a "later" variant that is lexicographically smaller
     // [0, 0, 1, 1] is lexicographically smaller than [0, 0, 3, 3] (at position 2: 1 < 3)

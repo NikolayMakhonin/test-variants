@@ -105,6 +105,8 @@ type IteratorState<Args extends Obj> = {
   argValues: any[][]
   /** Per-arg max value index limits; null means no limit for that arg */
   argLimits: (number | null)[]
+  /** Extra values per arg from saved variants (appended to template values) */
+  extraValues: (any[] | null)[]
   index: number
   cycleIndex: number
   repeatIndex: number
@@ -115,17 +117,64 @@ type IteratorState<Args extends Obj> = {
   pendingLimits: PendingLimit<Args>[]
 }
 
-/** Calculate template values for given key index */
+/** Calculate template values for given key index, including extra values from saved variants */
 function calcTemplateValues<Args extends Obj>(
+  state: IteratorState<Args>,
   templates: TestVariantsTemplate<Args, any>[],
   args: Args,
   keyIndex: number,
 ): any[] {
   const template = templates[keyIndex]
+  let values: any[]
   if (typeof template === 'function') {
-    return template(args)
+    values = template(args)
   }
-  return template
+  else {
+    values = template
+  }
+  // Append extra values from saved variants
+  const extra = state.extraValues[keyIndex]
+  if (extra && extra.length > 0) {
+    values = [...values, ...extra]
+  }
+  return values
+}
+
+/** Extend template with missing value from saved args */
+function extendTemplateWithValue<Args extends Obj>(
+  state: IteratorState<Args>,
+  templates: TestVariantsTemplate<Args, any>[],
+  args: Args,
+  keys: (keyof Args)[],
+  keyIndex: number,
+  equals?: null | ((a: any, b: any) => boolean),
+): void {
+  const values = calcTemplateValues(state, templates, args, keyIndex)
+  const value = args[keys[keyIndex]]
+  if (findValueIndex(values, value, equals) >= 0) {
+    return // Already exists
+  }
+  if (state.extraValues[keyIndex] == null) {
+    state.extraValues[keyIndex] = []
+  }
+  // Avoid duplicates in extraValues
+  if (findValueIndex(state.extraValues[keyIndex], value, equals) < 0) {
+    state.extraValues[keyIndex].push(value)
+  }
+}
+
+/** Extend templates with all missing values from saved args */
+function extendTemplatesForArgs<Args extends Obj>(
+  state: IteratorState<Args>,
+  savedArgs: Args,
+  templates: TestVariantsTemplate<Args, any>[],
+  keys: (keyof Args)[],
+  keysCount: number,
+  equals?: null | ((a: any, b: any) => boolean),
+): void {
+  for (let i = 0; i < keysCount; i++) {
+    extendTemplateWithValue(state, templates, savedArgs, keys, i, equals)
+  }
 }
 
 /** Reset iterator state for new cycle */
@@ -141,7 +190,7 @@ function resetIteratorState<Args extends Obj>(
     state.argValues[i] = []
   }
   if (keysCount > 0) {
-    state.argValues[0] = calcTemplateValues(templates, state.args, 0)
+    state.argValues[0] = calcTemplateValues(state, templates, state.args, 0)
   }
 }
 
@@ -175,7 +224,7 @@ function advanceVariant<Args extends Obj>(
       state.args[keys[keyIndex]] = state.argValues[keyIndex][valueIndex]
       // Reset subsequent keys; keyIndex is intentionally shared with outer loop
       for (keyIndex++; keyIndex < keysCount; keyIndex++) {
-        state.argValues[keyIndex] = calcTemplateValues(templates, state.args, keyIndex)
+        state.argValues[keyIndex] = calcTemplateValues(state, templates, state.args, keyIndex)
         const keyMaxIndex = getMaxIndex(state, keyIndex)
         if (keyMaxIndex <= 0) {
           break
@@ -204,26 +253,6 @@ function validateArgsKeys<Args extends Obj>(
   for (const key of savedKeys) {
     if (!keySet.has(key)) {
       return false
-    }
-  }
-  return true
-}
-
-/** For static templates, verify arg value exists in template values */
-function validateStaticArgsValues<Args extends Obj>(
-  savedArgs: Args,
-  templates: TestVariantsTemplate<Args, any>[],
-  keys: (keyof Args)[],
-  keysCount: number,
-  equals?: null | ((a: any, b: any) => boolean),
-): boolean {
-  for (let i = 0; i < keysCount; i++) {
-    const template = templates[i]
-    if (typeof template !== 'function') {
-      const value = savedArgs[keys[i]]
-      if (findValueIndex(template, value, equals) < 0) {
-        return false
-      }
     }
   }
   return true
@@ -262,6 +291,7 @@ function isPositionReached<Args extends Obj>(
 
 /** Calculate indexes for given args; returns null if any value not found */
 function calcArgIndexes<Args extends Obj>(
+  state: IteratorState<Args>,
   limitArgs: Args,
   templates: TestVariantsTemplate<Args, any>[],
   keys: (keyof Args)[],
@@ -270,7 +300,7 @@ function calcArgIndexes<Args extends Obj>(
 ): number[] | null {
   const indexes: number[] = []
   for (let i = 0; i < keysCount; i++) {
-    const values = calcTemplateValues(templates, limitArgs, i)
+    const values = calcTemplateValues(state, templates, limitArgs, i)
     const valueIndex = findValueIndex(values, limitArgs[keys[i]], equals)
     if (valueIndex < 0) {
       return null
@@ -312,7 +342,7 @@ function filterPendingLimits<Args extends Obj>(
       if (argLimit == null) {
         continue
       }
-      const values = calcTemplateValues(templates, pending.args, i)
+      const values = calcTemplateValues(state, templates, pending.args, i)
       const valueIndex = findValueIndex(values, pending.args[keys[i]], equals)
       if (valueIndex > argLimit) {
         return false
@@ -337,13 +367,13 @@ function updateArgLimits<Args extends Obj>(
     return false
   }
 
-  const newIndexes = calcArgIndexes(limitArgs, templates, keys, keysCount, equals)
+  const newIndexes = calcArgIndexes(state, limitArgs, templates, keys, keysCount, equals)
   if (!newIndexes) {
     return false
   }
 
   if (oldLimitArgs) {
-    const currentIndexes = calcArgIndexes(oldLimitArgs, templates, keys, keysCount, equals)
+    const currentIndexes = calcArgIndexes(state, oldLimitArgs, templates, keys, keysCount, equals)
     if (currentIndexes && compareLexicographic(newIndexes, currentIndexes) >= 0) {
       return false
     }
@@ -355,7 +385,7 @@ function updateArgLimits<Args extends Obj>(
       const shouldLimit = limitArgOnError({
         name         : keys[i] as string,
         valueIndex,
-        values       : calcTemplateValues(templates, limitArgs, i),
+        values       : calcTemplateValues(state, templates, limitArgs, i),
         maxValueIndex: state.argLimits[i],
       })
       if (!shouldLimit) {
@@ -433,10 +463,12 @@ export function testVariantsIterator<Args extends Obj>(
   const indexes: number[] = []
   const argValues: any[][] = []
   const argLimits: (number | null)[] = []
+  const extraValues: (any[] | null)[] = []
   for (let i = 0; i < keysCount; i++) {
     indexes[i] = -1
     argValues[i] = []
     argLimits[i] = null
+    extraValues[i] = null
   }
 
   const state: IteratorState<Args> = {
@@ -444,6 +476,7 @@ export function testVariantsIterator<Args extends Obj>(
     indexes,
     argValues,
     argLimits,
+    extraValues,
     index        : -1,
     cycleIndex   : -1,
     repeatIndex  : 0,
@@ -531,9 +564,8 @@ export function testVariantsIterator<Args extends Obj>(
         if (!validateArgsKeys(options.args, keySet, keysCount)) {
           return
         }
-        if (!validateStaticArgsValues(options.args, templates, keys, keysCount, equals)) {
-          return
-        }
+        // Extend templates with missing values from saved args
+        extendTemplatesForArgs(state, options.args, templates, keys, keysCount, equals)
         const oldLimitArgs = state.limit?.args ?? null
         const updated = updateArgLimits(
           state,
@@ -565,9 +597,8 @@ export function testVariantsIterator<Args extends Obj>(
         if (!validateArgsKeys(options.args, keySet, keysCount)) {
           return
         }
-        if (!validateStaticArgsValues(options.args, templates, keys, keysCount, equals)) {
-          return
-        }
+        // Extend templates with missing values from saved args
+        extendTemplatesForArgs(state, options.args, templates, keys, keysCount, equals)
         if (isEarliest) {
           const oldLimitArgs = state.limit?.args ?? null
           state.limit = createLimit(options.args, options.error)

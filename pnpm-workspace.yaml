@@ -1,4 +1,5 @@
 onlyBuiltDependencies:
+  - '@flemist/mcp-project-tools'
   - core-js
   - core-js-pure
   - rdtsc
