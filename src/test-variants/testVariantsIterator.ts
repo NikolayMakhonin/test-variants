@@ -291,8 +291,12 @@ function compareLexicographic(a: number[], b: number[]): number {
   for (let i = 0; i < len; i++) {
     const ai = a[i] ?? 0
     const bi = b[i] ?? 0
-    if (ai < bi) return -1
-    if (ai > bi) return 1
+    if (ai < bi) {
+      return -1
+    }
+    if (ai > bi) {
+      return 1
+    }
   }
   return 0
 }
@@ -487,7 +491,14 @@ export function testVariantsIterator<Args extends Obj>(
         }
         const oldLimitArgs = state.limit?.args ?? null
         const updated = updateArgLimits(
-          state, opts.args, oldLimitArgs, templates, keys, keysCount, equals, limitArgOnError,
+          state,
+          opts.args,
+          oldLimitArgs,
+          templates,
+          keys,
+          keysCount,
+          equals,
+          limitArgOnError,
         )
         if (updated) {
           state.limit = createLimit(opts.args, opts.error)
