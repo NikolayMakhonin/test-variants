@@ -5,7 +5,7 @@ import {type IPool, Pool} from '@flemist/time-limits'
 import {garbageCollect} from 'src/garbage-collect/garbageCollect'
 import {Obj, type SaveErrorVariantsOptions} from 'src/test-variants/types'
 import {generateErrorVariantFilePath, parseErrorVariantFile, readErrorVariantFiles, saveErrorVariantFile} from 'src/test-variants/saveErrorVariants'
-import {TestVariantsIterator, type GetSeedParams} from './testVariantsIterator'
+import {TestVariantsIterator, type GetSeedParams, type LimitArgOnError} from './testVariantsIterator'
 import * as path from 'path'
 
 function formatDuration(ms: number): string {
@@ -29,6 +29,10 @@ export type TestVariantsFindBestErrorOptions = {
   getSeed?: null | ((params: GetSeedParams) => any),
   /** Number of repeat tests per variant within each cycle (passed to iterator) */
   repeatsPerVariant?: null | number,
+  /** Custom equality for comparing arg values when finding indexes */
+  equals?: null | ((a: any, b: any) => boolean),
+  /** Limit per-arg indexes on error; boolean enables/disables, function for custom per-arg logic */
+  limitArgOnError?: null | boolean | LimitArgOnError,
 }
 
 export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {

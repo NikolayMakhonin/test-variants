@@ -33,6 +33,8 @@ export function createTestVariants<Args extends Obj>(
         argsTemplates    : args as any,
         getSeed          : options?.findBestError?.getSeed,
         repeatsPerVariant: options?.findBestError?.repeatsPerVariant,
+        equals           : options?.findBestError?.equals,
+        limitArgOnError  : options?.findBestError?.limitArgOnError,
       })
 
       return testVariantsRun(testRun, variants, options)
