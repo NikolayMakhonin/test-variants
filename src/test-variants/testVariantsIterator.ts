@@ -416,7 +416,7 @@ export function testVariantsIterator<Args extends Obj>(
         return
       }
 
-      // addLimit({args}) or addLimit({args, error}) - pending limit
+      // addLimit({args}) or addLimit({args, error}) - pending limit + immediate per-arg limits
       if (hasArgs && !hasIndex) {
         // Validate args keys match iterator's arg names
         if (!validateArgsKeys(_options.args, keysSet, keysCount)) {
@@ -426,7 +426,9 @@ export function testVariantsIterator<Args extends Obj>(
         if (!validateStaticArgsValues(_options.args, templates, keys, keysCount, equals)) {
           return // Discard - unreproducible (value not in template)
         }
-        // Store as pending limit
+        // Apply per-arg limits immediately for static templates
+        updateArgLimits(state, _options.args, templates, keys, keysCount, equals, limitArgOnError)
+        // Store as pending limit for count/position-based limiting
         const pending: PendingLimit<Args> = typeof _options.error !== 'undefined'
           ? {args: _options.args, error: _options.error}
           : {args: _options.args}
