@@ -17,6 +17,8 @@ export type SaveErrorVariantsOptions<Args, SavedArgs = Args> = {
   argsToJson?: null | ((args: Args) => string | SavedArgs)
   /** Transform parsed JSON back to args */
   jsonToArgs?: null | ((json: SavedArgs) => Args)
+  /** Use saved errors to set findBestError limits instead of throwing on replay */
+  useToFindBestError?: null | boolean
 }
 
 /*

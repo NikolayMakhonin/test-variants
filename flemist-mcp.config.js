@@ -25,6 +25,11 @@ const config = {
         },
         {
           rule  : 'allow',
+          note  : 'Run mocha tests (mocha --bail src/dir/**/file.test.js)',
+          regexp: '^pnpm exec mocha --bail\\b',
+        },
+        {
+          rule  : 'allow',
           note  : 'Check TypeScript types (tsc --noEmit src/dir/**/file.ts)',
           regexp: '^pnpm exec tsc --noEmit\\b',
         },

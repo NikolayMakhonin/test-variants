@@ -21,7 +21,6 @@ export {
   type TestVariantsTestRunResult,
 } from 'src/test-variants/testVariantsCreateTestRun'
 export {
-  type GetSeedParams,
   type TestVariantsFindBestErrorOptions,
   type TestVariantsRunOptions,
   type TestVariantsBestError,
@@ -32,3 +31,13 @@ export {
   type TestVariantsCall,
   createTestVariants,
 } from './test-variants/createTestVariants'
+export {
+  type GetSeedParams,
+  type LimitArgOnErrorOptions,
+  type LimitArgOnError,
+  type TestVariantsIteratorOptions,
+  type TestVariantsIteratorLimit,
+  type AddLimitOptions,
+  type TestVariantsIterator,
+  testVariantsIterator,
+} from 'src/test-variants/testVariantsIterator'

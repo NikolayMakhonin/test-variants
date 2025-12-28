@@ -5,6 +5,7 @@ import {type IPool, Pool} from '@flemist/time-limits'
 import {garbageCollect} from 'src/garbage-collect/garbageCollect'
 import {Obj, type SaveErrorVariantsOptions} from 'src/test-variants/types'
 import {generateErrorVariantFilePath, parseErrorVariantFile, readErrorVariantFiles, saveErrorVariantFile} from 'src/test-variants/saveErrorVariants'
+import {TestVariantsIterator, type GetSeedParams} from './testVariantsIterator'
 import * as path from 'path'
 
 function formatDuration(ms: number): string {
@@ -20,26 +21,14 @@ function formatDuration(ms: number): string {
   return `${hours.toFixed(1)}h`
 }
 
-/** Parameters passed to getSeed function for generating test seeds */
-export type GetSeedParams = {
-  /** Index of current variant/parameter-combination being tested */
-  variantIndex: number,
-  /** Index of current cycle - full pass through all variants (0..cycles-1) */
-  cycleIndex: number,
-  /** Index of repeat for current variant within this cycle (0..repeatsPerVariant-1) */
-  repeatIndex: number,
-  /** Total index across all cycles: cycleIndex × repeatsPerVariant + repeatIndex */
-  totalIndex: number,
-}
-
 /** Options for finding the earliest failing variant across multiple test runs */
 export type TestVariantsFindBestErrorOptions = {
-  /** Function to generate seed based on current iteration state */
-  getSeed: (params: GetSeedParams) => any,
   /** Number of full passes through all variants */
   cycles: number,
-  /** Number of repeat tests per variant within each cycle */
-  repeatsPerVariant: number,
+  /** Function to generate seed based on current iteration state (passed to iterator) */
+  getSeed?: null | ((params: GetSeedParams) => any),
+  /** Number of repeat tests per variant within each cycle (passed to iterator) */
+  repeatsPerVariant?: null | number,
 }
 
 export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
@@ -75,11 +64,12 @@ export type TestVariantsRunResult<Arg extends Obj> = {
 
 export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   testRun: TestVariantsTestRun<Args>,
-  variants: Iterable<Args>,
+  variants: TestVariantsIterator<Args>,
   options: TestVariantsRunOptions<Args, SavedArgs> = {},
 ): Promise<TestVariantsRunResult<Args>> {
   const saveErrorVariants = options.saveErrorVariants
   const retriesPerVariant = saveErrorVariants?.retriesPerVariant ?? 1
+  const useToFindBestError = saveErrorVariants?.useToFindBestError
   const sessionDate = new Date()
   const errorVariantFilePath = saveErrorVariants
     ? path.resolve(
@@ -88,20 +78,6 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     )
     : null
 
-  // Replay phase: run previously saved error variants before normal iteration
-  if (saveErrorVariants) {
-    const files = await readErrorVariantFiles(saveErrorVariants.dir)
-    for (const filePath of files) {
-      const args = await parseErrorVariantFile<Args, SavedArgs>(filePath, saveErrorVariants.jsonToArgs)
-      for (let retry = 0; retry < retriesPerVariant; retry++) {
-        const promiseOrResult = testRun(args, -1, null as any)
-        if (isPromiseLike(promiseOrResult)) {
-          await promiseOrResult
-        }
-      }
-    }
-  }
-
   const GC_Iterations = options.GC_Iterations ?? 1000000
   const GC_IterationsAsync = options.GC_IterationsAsync ?? 10000
   const GC_Interval = options.GC_Interval ?? 1000
@@ -109,6 +85,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   const logCompleted = options.logCompleted ?? true
   const abortSignalExternal = options.abortSignal
   const findBestError = options.findBestError
+  const cycles = findBestError?.cycles ?? 1
 
   const parallel = options.parallel === true
     ? 2 ** 31
@@ -116,91 +93,45 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
       ? 1
       : options.parallel
 
-  const limitVariantsCount = options.limitVariantsCount ?? null
+  // Apply initial limits
+  if (options.limitVariantsCount != null) {
+    variants.addLimit({index: options.limitVariantsCount})
+  }
+
+  // Replay phase: run previously saved error variants before normal iteration
+  if (saveErrorVariants) {
+    const files = await readErrorVariantFiles(saveErrorVariants.dir)
+    for (const filePath of files) {
+      const args = await parseErrorVariantFile<Args, SavedArgs>(filePath, saveErrorVariants.jsonToArgs)
+      let errorOccurred = false
+      for (let retry = 0; retry < retriesPerVariant; retry++) {
+        try {
+          const promiseOrResult = testRun(args, -1, null as any)
+          if (isPromiseLike(promiseOrResult)) {
+            await promiseOrResult
+          }
+        }
+        catch (error) {
+          if (useToFindBestError && findBestError) {
+            // Store as pending limit for findBestError cycle
+            variants.addLimit({args, error})
+            errorOccurred = true
+            break // Exit retry loop, continue to next file
+          }
+          else {
+            throw error
+          }
+        }
+      }
+      // If no error occurred during replays, the saved variant is no longer reproducible
+      // (templates may have changed) - silently skip
+    }
+  }
+
   let prevCycleVariantsCount: null | number = null
   let prevCycleDuration: null | number = null
-  let cycleIndex = 0
-  let repeatIndex = 0
   const startTime = Date.now()
   let cycleStartTime = startTime
-  let seed: any = void 0
-  let bestError: TestVariantsBestError<Args> | null = null
-
-  let index = -1
-  let args: Args = {} as any
-  let variantsIterator = variants[Symbol.iterator]()
-  
-  function getLimitVariantsCount() {
-    if (limitVariantsCount != null && bestError != null) {
-      return Math.min(limitVariantsCount, bestError.index)
-    }
-    if (limitVariantsCount != null) {
-      return limitVariantsCount
-    }
-    if (bestError != null) {
-      return bestError.index
-    }
-    return null
-  }
-
-  function nextVariant() {
-    while (true) {
-      // Try next repeat for current variant
-      if (findBestError && index >= 0 && (bestError == null || index < bestError.index)) {
-        repeatIndex++
-        if (repeatIndex < findBestError.repeatsPerVariant) {
-          seed = findBestError.getSeed({
-            variantIndex: index,
-            cycleIndex,
-            repeatIndex,
-            totalIndex  : cycleIndex * findBestError.repeatsPerVariant + repeatIndex,
-          })
-          return true
-        }
-      }
-      repeatIndex = 0
-
-      index++
-      if (findBestError && cycleIndex >= findBestError.cycles) {
-        return false
-      }
-
-      const _limitVariantsCount = getLimitVariantsCount()
-      if (
-        _limitVariantsCount == null || index < _limitVariantsCount
-      ) {
-        const result = variantsIterator.next()
-        if (!result.done) {
-          args = result.value
-          if (findBestError) {
-            seed = findBestError.getSeed({
-              variantIndex: index,
-              cycleIndex,
-              repeatIndex,
-              totalIndex  : cycleIndex * findBestError.repeatsPerVariant + repeatIndex,
-            })
-          }
-          return true
-        }
-      }
-
-      if (!findBestError) {
-        return false
-      }
-
-      prevCycleVariantsCount = index
-      prevCycleDuration = Date.now() - cycleStartTime
-
-      cycleIndex++
-      cycleStartTime = Date.now()
-      if (cycleIndex >= findBestError.cycles) {
-        return false
-      }
-
-      index = -1
-      variantsIterator = variants[Symbol.iterator]()
-    }
-  }
 
   const abortControllerParallel = new AbortControllerFast()
   const abortSignalParallel = combineAbortSignals(abortSignalExternal, abortControllerParallel.signal)
@@ -220,14 +151,16 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
 
   function onCompleted() {
     if (logCompleted) {
-      console.log(`[test-variants] variants: ${index}, iterations: ${iterations}, async: ${iterationsAsync}`)
+      console.log(`[test-variants] variants: ${variants.index}, iterations: ${iterations}, async: ${iterationsAsync}`)
     }
   }
 
-  async function next(): Promise<number> {
-    while (!abortSignalExternal?.aborted && (debug || nextVariant())) {
-      const _index = index
-      const _args = {...args, seed}
+  // Main iteration using iterator
+  for (variants.start(); variants.cycleIndex < cycles; variants.start()) {
+    let args: Args | null
+    while (!abortSignalExternal?.aborted && (debug || (args = variants.next()) != null)) {
+      const _index = variants.index
+      const _args = args
 
       const now = (logInterval || GC_Interval) && Date.now()
 
@@ -237,27 +170,27 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
         const cycleElapsed = now - cycleStartTime
         const totalElapsed = now - startTime
         if (findBestError) {
-          log += `cycle: ${cycleIndex}, variant: ${index}`
-          let max = getLimitVariantsCount()
+          log += `cycle: ${variants.cycleIndex}, variant: ${variants.index}`
+          let max = variants.count
           if (max != null) {
             if (prevCycleVariantsCount != null && prevCycleVariantsCount < max) {
               max = prevCycleVariantsCount
             }
           }
-          if (max != null && index > 0) {
+          if (max != null && variants.index > 0) {
             let estimatedCycleTime: number
             if (
               prevCycleDuration != null && prevCycleVariantsCount != null
-              && index < prevCycleVariantsCount && cycleElapsed < prevCycleDuration
+              && variants.index < prevCycleVariantsCount && cycleElapsed < prevCycleDuration
             ) {
               const adjustedDuration = prevCycleDuration - cycleElapsed
-              const adjustedCount = prevCycleVariantsCount - index
+              const adjustedCount = prevCycleVariantsCount - variants.index
               const speedForRemaining = adjustedDuration / adjustedCount
-              const remainingTime = (max - index) * speedForRemaining
+              const remainingTime = (max - variants.index) * speedForRemaining
               estimatedCycleTime = cycleElapsed + remainingTime
             }
             else {
-              estimatedCycleTime = cycleElapsed * max / index
+              estimatedCycleTime = cycleElapsed * max / variants.index
             }
             log += `/${max} (${formatDuration(cycleElapsed)}/${formatDuration(estimatedCycleTime)})`
           }
@@ -266,7 +199,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
           }
         }
         else {
-          log += `variant: ${index} (${formatDuration(cycleElapsed)})`
+          log += `variant: ${variants.index} (${formatDuration(cycleElapsed)})`
         }
         log += `, total: ${iterations} (${formatDuration(totalElapsed)})`
         console.log(log)
@@ -312,11 +245,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
             await saveErrorVariantFile(_args, errorVariantFilePath, saveErrorVariants.argsToJson)
           }
           if (findBestError) {
-            bestError = {
-              error: err,
-              args : _args,
-              index: _index,
-            }
+            variants.addLimit({error: err})
             debug = false
           }
           else {
@@ -356,11 +285,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
               await saveErrorVariantFile(_args, errorVariantFilePath, saveErrorVariants.argsToJson)
             }
             if (findBestError) {
-              bestError = {
-                error: err,
-                args : _args,
-                index: _index,
-              }
+              variants.addLimit({error: err})
               debug = false
             }
             else {
@@ -374,25 +299,35 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
       }
     }
 
-    if (pool) {
-      await pool.holdWait(parallel)
-      void pool.release(parallel)
-    }
-
-    if (abortSignalAll?.aborted) {
-      throw abortSignalAll.reason
-    }
-
-    onCompleted()
-    await garbageCollect(1)
-
-    return iterations
+    // Track cycle metrics for logging
+    prevCycleVariantsCount = variants.count
+    prevCycleDuration = Date.now() - cycleStartTime
+    cycleStartTime = Date.now()
   }
 
-  const result = await next()
+  if (pool) {
+    await pool.holdWait(parallel)
+    void pool.release(parallel)
+  }
+
+  if (abortSignalAll?.aborted) {
+    throw abortSignalAll.reason
+  }
+
+  onCompleted()
+  await garbageCollect(1)
+
+  // Construct bestError from iterator state
+  const bestError: TestVariantsBestError<Args> | null = variants.limit
+    ? {
+      error: variants.limit.error,
+      args : variants.limit.args,
+      index: variants.count,
+    }
+    : null
 
   return {
-    iterations: result,
+    iterations,
     bestError,
   }
 }

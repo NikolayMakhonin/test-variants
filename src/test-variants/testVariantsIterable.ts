@@ -17,6 +17,9 @@ export type TestVariantsIterableOptions<Args extends Obj, ArgsExtra extends Obj>
   argsTemplates: TestVariantsTemplatesExt<Args, ArgsExtra>
 }
 
+/**
+ * @deprecated Use testVariantsIterator instead
+ */
 export function testVariantsIterable<
   Args extends Obj,
   ArgsExtra extends Obj,

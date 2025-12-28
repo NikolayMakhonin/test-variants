@@ -1,7 +1,6 @@
 import {type PromiseOrValue} from '@flemist/async-utils'
 
 import {
-  testVariantsIterable,
   TestVariantsTemplatesExt,
 } from 'src/test-variants/testVariantsIterable'
 import {
@@ -10,6 +9,7 @@ import {
   TestVariantsTest,
 } from 'src/test-variants/testVariantsCreateTestRun'
 import {testVariantsRun, TestVariantsRunOptions, TestVariantsRunResult} from 'src/test-variants/testVariantsRun'
+import {testVariantsIterator} from 'src/test-variants/testVariantsIterator'
 import {Obj} from 'src/test-variants/types'
 
 export type TestVariantsCall<Args extends Obj> = <SavedArgs = Args>(
@@ -29,11 +29,13 @@ export function createTestVariants<Args extends Obj>(
         onError: options?.onError,
       })
 
-      const variants = testVariantsIterable({
-        argsTemplates: args,
+      const variants = testVariantsIterator<Args>({
+        argsTemplates    : args as any,
+        getSeed          : options?.findBestError?.getSeed,
+        repeatsPerVariant: options?.findBestError?.repeatsPerVariant,
       })
 
-      return testVariantsRun(testRun, variants as any, options)
+      return testVariantsRun(testRun, variants, options)
     }
   }
 }

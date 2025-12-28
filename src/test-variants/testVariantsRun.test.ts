@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-shadow */
 import {testVariantsRun} from 'src/test-variants/testVariantsRun'
+import {testVariantsIterator} from 'src/test-variants/testVariantsIterator'
 import {TestVariantsTestRun} from '~/src'
 
 describe('test-variants > testVariantsRun', function () {
@@ -8,11 +9,10 @@ describe('test-variants > testVariantsRun', function () {
   it('findBestError', async function () {
     const cycles = 10
     const variantsCount = 1000
-    const variants = Array.from({length: variantsCount}).map((_, i) => ({i}))
 
     for (let expectedIndex = 0; expectedIndex <= variantsCount; expectedIndex++) {
       // let firstError: any = null
-      const expectedArgs = expectedIndex < variantsCount ? variants[expectedIndex] : null
+      const expectedArgs = expectedIndex < variantsCount ? {i: expectedIndex} : null
 
       const testRun: TestVariantsTestRun<typeof expectedArgs> = (args: { i: number }) => {
         if (
@@ -27,11 +27,17 @@ describe('test-variants > testVariantsRun', function () {
         }
       }
 
+      const variants = testVariantsIterator({
+        argsTemplates: {
+          i: Array.from({length: variantsCount}).map((_, i) => i),
+        },
+        getSeed          : ({cycleIndex}) => cycleIndex,
+        repeatsPerVariant: 1,
+      })
+
       const result = await testVariantsRun(testRun, variants, {
         findBestError: {
-          getSeed          : ({cycleIndex}) => cycleIndex,
           cycles,
-          repeatsPerVariant: 1,
         },
         logCompleted: false,
       })
