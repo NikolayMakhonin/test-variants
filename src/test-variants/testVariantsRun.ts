@@ -336,11 +336,13 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   await garbageCollect(1)
 
   // Construct bestError from iterator state
+  // When includeErrorVariant is true, count is error_index + 1, so compute actual error index
+  const includeErrorVariant = findBestError?.includeErrorVariant
   const bestError: TestVariantsBestError<Args> | null = variants.limit
     ? {
       error: variants.limit.error,
       args : variants.limit.args,
-      index: variants.count,
+      index: includeErrorVariant ? (variants.count ?? 1) - 1 : (variants.count ?? 0),
     }
     : null
 

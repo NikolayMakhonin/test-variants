@@ -486,10 +486,11 @@ describe('test-variants > testVariantsIterator', function () {
     assert.strictEqual(result, null)
     assert.strictEqual(iterator.count, 4)
 
-    // Start new cycle - argLimits persist
+    // Start new cycle - argLimits persist, pendingLimit applies at error position
     // a <= 1 means a in [1, 2] (indexes 0, 1)
     // b <= 1 means b in ['x', 'y'] (indexes 0, 1)
-    // Total: 2 * 2 = 4 variants, but count=4 limits iteration
+    // Total: 2 * 2 = 4 variants, error at {a:2, b:'y'} is index 3 in constrained space
+    // With includeErrorVariant: false (default), error variant is excluded
     iterator.start()
     const results: any[] = []
     let args: any
@@ -501,7 +502,7 @@ describe('test-variants > testVariantsIterator', function () {
       {a: 1, b: 'x'},
       {a: 1, b: 'y'},
       {a: 2, b: 'x'},
-      {a: 2, b: 'y'},
+      // {a: 2, b: 'y'} excluded - error variant
     ])
   })
 
@@ -953,5 +954,337 @@ describe('test-variants > testVariantsIterator', function () {
       {a: 1, b: 0},
       {a: 1, b: 1}, // Error variant IS included
     ])
+  })
+
+  it('addLimit() updates argLimits when lexicographically smaller error found at later index', async function () {
+    // This tests the scenario where findBestError finds a lexicographically smaller error
+    // at a later variant index (due to different seeds producing different error patterns)
+    const iterator = testVariantsIterator({
+      argsTemplates: {
+        a: [0, 1, 2, 3],
+        b: [0, 1, 2, 3],
+        c: [0, 1, 2, 3],
+        d: [0, 1, 2, 3],
+      },
+      limitArgOnError: true,
+    })
+
+    iterator.start()
+
+    // Simulate: first error found at position with indexes [0, 0, 3, 3]
+    // Total variants with these limits: 1 * 1 * 4 * 4 = 16
+    let args: any
+    while ((args = iterator.next()) != null) {
+      if (args.a === 0 && args.b === 0 && args.c === 3 && args.d === 3) {
+        iterator.addLimit({error: new Error('error1')})
+        break
+      }
+    }
+
+    assert.strictEqual((iterator.limit?.error as Error).message, 'error1')
+    const countAfterError1 = iterator.count
+
+    // Continue iteration to find a "later" variant that is lexicographically smaller
+    // [0, 0, 1, 1] is lexicographically smaller than [0, 0, 3, 3] (at position 2: 1 < 3)
+    // But [0, 0, 1, 1] was already passed! So we simulate a new cycle where this error occurs
+    iterator.start()
+    while ((args = iterator.next()) != null) {
+      if (args.a === 0 && args.b === 0 && args.c === 1 && args.d === 1) {
+        iterator.addLimit({error: new Error('error2')})
+        break
+      }
+    }
+
+    // error2 should win because [0, 0, 1, 1] < [0, 0, 3, 3] lexicographically
+    assert.strictEqual((iterator.limit?.error as Error).message, 'error2')
+
+    // Start new cycle and count variants
+    iterator.start()
+    let count = 0
+    while (iterator.next() != null) {
+      count++
+    }
+
+    // argLimits from error2: [0, 0, 1, 1] (INCLUSIVE)
+    // a <= 0, b <= 0, c <= 1, d <= 1 means 1 * 1 * 2 * 2 = 4 variants
+    // Minus error variant = 3
+    assert.strictEqual(count, 3)
+  })
+
+  it('sequential error reduction like real findBestError scenario', async function () {
+    // Simulates the user's real scenario:
+    // 1. First error with 18432 variants
+    // 2. Second error (lexicographically smaller) should reduce to 4608
+    // 3. Third error should reduce to 2304
+    //
+    // Using smaller numbers for test performance:
+    // Template: a[3], b[2], c[4], d[4], e[4], f[4]
+    // Full space: 3 * 2 * 4 * 4 * 4 * 4 = 1536
+
+    const iterator = testVariantsIterator({
+      argsTemplates: {
+        a: [0, 1, 2], // 3 values
+        b: [0, 1], // 2 values
+        c: [0, 1, 2, 3], // 4 values
+        d: [0, 1, 2, 3], // 4 values
+        e: [0, 1, 2, 3], // 4 values
+        f: [0, 1, 2, 3], // 4 values
+      },
+      limitArgOnError: true,
+    })
+
+    // Error 1: [0, 0, 0, 3, 3, 3]
+    // Limits: 1 * 1 * 1 * 4 * 4 * 4 = 64
+    iterator.addLimit({args: {
+      a: 0, b: 0, c: 0, d: 3, e: 3, f: 3,
+    },
+    error: new Error('error1')})
+
+    iterator.start()
+    let count1 = 0
+    while (iterator.next() != null) {
+      count1++
+    }
+    assert.strictEqual(count1, 63) // 64 - 1 error variant
+    assert.strictEqual((iterator.limit?.error as Error).message, 'error1')
+
+    // Error 2: [0, 0, 0, 3, 1, 1] - lexicographically smaller at position 4 (1 < 3)
+    // Limits: 1 * 1 * 1 * 4 * 2 * 2 = 16
+    iterator.addLimit({args: {
+      a: 0, b: 0, c: 0, d: 3, e: 1, f: 1,
+    },
+    error: new Error('error2')})
+
+    iterator.start()
+    let count2 = 0
+    while (iterator.next() != null) {
+      count2++
+    }
+    // Should be 16 - 1 = 15, NOT 63!
+    assert.strictEqual(count2, 15)
+    assert.strictEqual((iterator.limit?.error as Error).message, 'error2')
+
+    // Error 3: [0, 0, 0, 1, 1, 1] - lexicographically smaller at position 3 (1 < 3)
+    // Limits: 1 * 1 * 1 * 2 * 2 * 2 = 8
+    iterator.addLimit({args: {
+      a: 0, b: 0, c: 0, d: 1, e: 1, f: 1,
+    },
+    error: new Error('error3')})
+
+    iterator.start()
+    let count3 = 0
+    while (iterator.next() != null) {
+      count3++
+    }
+    // Should be 8 - 1 = 7
+    assert.strictEqual(count3, 7)
+    assert.strictEqual((iterator.limit?.error as Error).message, 'error3')
+  })
+
+  it('real findBestError scenario with saved error files and sequential reduction', async function () {
+    // Replicates the user's real-world bug scenario:
+    // 1. Three saved error files loaded via addLimit({args})
+    // 2. File 2 wins lexicographically and becomes the initial limit
+    // 3. Initial variants: 18432
+    // 4. First new error reduces injectorFactoriesMax (4→2) and dependencyCountMax (4→2)
+    //    Expected: 18432 / 4 = 4608
+    // 5. Second new error reduces injectionsMax (2→1)
+    //    Expected: 4608 / 2 = 2304
+
+    const iterator = testVariantsIterator({
+      argsTemplates: {
+        returnReadableResolved: [false, true, null],
+        dependencyFactory     : [false, true],
+        returnObservable      : ({dependencyFactory}) => {
+          return dependencyFactory ? [true] : [false, true]
+        },
+        injectorInjectionsMax  : [0, 1, 2, 3],
+        injectorValueStoresMax : [0, 1, 2, 3],
+        valueStoresMax         : [0, 1, 2, 3],
+        changesPerIterationMax : [0, 1],
+        dependencyValueStore   : [false, true],
+        dependencyObservable   : [false, true],
+        useInjectorDefault     : [false, true, null],
+        injectorsMax           : [1, 2, 3],
+        injectorDependenciesMax: [0, 1, 2, 3],
+        injectionsMax          : [1, 2, 3],
+        factoriesMax           : [0, 1, 2, 3],
+        injectorFactoriesMax   : [0, 1, 2, 3],
+        dependencyCountMax     : [0, 1, 2, 3],
+        checksPerIterationMax  : [1],
+        iterations             : [1, 2, 10],
+      },
+      limitArgOnError: true,
+    })
+
+    // Load three saved error files via addLimit({args})
+    // File 1 args
+    iterator.addLimit({
+      args: {
+        returnReadableResolved : false,
+        dependencyFactory      : false,
+        returnObservable       : false,
+        injectorInjectionsMax  : 3,
+        injectorValueStoresMax : 1,
+        valueStoresMax         : 2,
+        changesPerIterationMax : 1,
+        dependencyValueStore   : true,
+        dependencyObservable   : true,
+        useInjectorDefault     : false,
+        injectorsMax           : 3,
+        injectorDependenciesMax: 3,
+        injectionsMax          : 2,
+        factoriesMax           : 3,
+        injectorFactoriesMax   : 2,
+        dependencyCountMax     : 1,
+        checksPerIterationMax  : 1,
+        iterations             : 10,
+      },
+      error: new Error('error1'),
+    })
+
+    // File 2 args - lexicographically smallest at injectorInjectionsMax (0 < 3)
+    iterator.addLimit({
+      args: {
+        returnReadableResolved : false,
+        dependencyFactory      : false,
+        returnObservable       : false,
+        injectorInjectionsMax  : 0,
+        injectorValueStoresMax : 1,
+        valueStoresMax         : 0,
+        changesPerIterationMax : 1,
+        dependencyValueStore   : false,
+        dependencyObservable   : true,
+        useInjectorDefault     : false,
+        injectorsMax           : 3,
+        injectorDependenciesMax: 1,
+        injectionsMax          : 2,
+        factoriesMax           : 3,
+        injectorFactoriesMax   : 3,
+        dependencyCountMax     : 3,
+        checksPerIterationMax  : 1,
+        iterations             : 10,
+      },
+      error: new Error('error2'),
+    })
+
+    // File 3 args
+    iterator.addLimit({
+      args: {
+        returnReadableResolved : false,
+        dependencyFactory      : false,
+        returnObservable       : false,
+        injectorInjectionsMax  : 0,
+        injectorValueStoresMax : 2,
+        valueStoresMax         : 3,
+        changesPerIterationMax : 1,
+        dependencyValueStore   : false,
+        dependencyObservable   : true,
+        useInjectorDefault     : false,
+        injectorsMax           : 3,
+        injectorDependenciesMax: 1,
+        injectionsMax          : 1,
+        factoriesMax           : 3,
+        injectorFactoriesMax   : 3,
+        dependencyCountMax     : 1,
+        checksPerIterationMax  : 1,
+        iterations             : 10,
+      },
+      error: new Error('error3'),
+    })
+
+    // File 2 should be the limit (lexicographically smallest)
+    assert.strictEqual((iterator.limit?.error as Error).message, 'error2')
+
+    // Count initial variants with file 2's limits
+    // argLimits from file 2:
+    // - 1-value args: returnReadableResolved, dependencyFactory, returnObservable,
+    //   injectorInjectionsMax, valueStoresMax, dependencyValueStore, useInjectorDefault,
+    //   checksPerIterationMax
+    // - 2-value args: injectorValueStoresMax, changesPerIterationMax, dependencyObservable,
+    //   injectorDependenciesMax, injectionsMax
+    // - 3-value args: injectorsMax, iterations
+    // - 4-value args: factoriesMax, injectorFactoriesMax, dependencyCountMax
+    // Total: 2^5 * 3^2 * 4^3 = 32 * 9 * 64 = 18432
+    iterator.start()
+    let count1 = 0
+    while (iterator.next() != null) {
+      count1++
+    }
+    // 18432 - 1 (error variant excluded)
+    assert.strictEqual(count1, 18431)
+
+    // Simulate findBestError: first new error with smaller injectorFactoriesMax and dependencyCountMax
+    // injectorFactoriesMax: 3→1 (indexes 0,1,2,3 → 0,1) = 4→2 values
+    // dependencyCountMax: 3→1 (indexes 0,1,2,3 → 0,1) = 4→2 values
+    // Reduction: 4/2 * 4/2 = 4x smaller
+    iterator.addLimit({
+      args: {
+        returnReadableResolved : false,
+        dependencyFactory      : false,
+        returnObservable       : false,
+        injectorInjectionsMax  : 0,
+        injectorValueStoresMax : 1,
+        valueStoresMax         : 0,
+        changesPerIterationMax : 1,
+        dependencyValueStore   : false,
+        dependencyObservable   : true,
+        useInjectorDefault     : false,
+        injectorsMax           : 3,
+        injectorDependenciesMax: 1,
+        injectionsMax          : 2,
+        factoriesMax           : 3,
+        injectorFactoriesMax   : 1, // Reduced from 3 to 1
+        dependencyCountMax     : 1, // Reduced from 3 to 1
+        checksPerIterationMax  : 1,
+        iterations             : 10,
+      },
+      error: new Error('error4'),
+    })
+
+    iterator.start()
+    let count2 = 0
+    while (iterator.next() != null) {
+      count2++
+    }
+    // 18432 / 4 - 1 = 4608 - 1 = 4607
+    assert.strictEqual(count2, 4607)
+    assert.strictEqual((iterator.limit?.error as Error).message, 'error4')
+
+    // Second new error with smaller injectionsMax
+    // injectionsMax: 2→1 (value 2→1 in [1,2,3], index 1→0) = 2→1 values
+    // Reduction: 2x smaller
+    iterator.addLimit({
+      args: {
+        returnReadableResolved : false,
+        dependencyFactory      : false,
+        returnObservable       : false,
+        injectorInjectionsMax  : 0,
+        injectorValueStoresMax : 1,
+        valueStoresMax         : 0,
+        changesPerIterationMax : 1,
+        dependencyValueStore   : false,
+        dependencyObservable   : true,
+        useInjectorDefault     : false,
+        injectorsMax           : 3,
+        injectorDependenciesMax: 1,
+        injectionsMax          : 1, // Reduced from 2 to 1
+        factoriesMax           : 3,
+        injectorFactoriesMax   : 1,
+        dependencyCountMax     : 1,
+        checksPerIterationMax  : 1,
+        iterations             : 10,
+      },
+      error: new Error('error5'),
+    })
+
+    iterator.start()
+    let count3 = 0
+    while (iterator.next() != null) {
+      count3++
+    }
+    // 4608 / 2 - 1 = 2304 - 1 = 2303
+    assert.strictEqual(count3, 2303)
+    assert.strictEqual((iterator.limit?.error as Error).message, 'error5')
   })
 })

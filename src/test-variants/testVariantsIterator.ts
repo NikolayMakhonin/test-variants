@@ -488,11 +488,32 @@ export function testVariantsIterator<Args extends Obj>(
         if (state.index < 0) {
           throw new Error('[testVariantsIterator] addLimit() requires at least one next() call')
         }
-        if (state.count == null || state.index < state.count) {
-          const oldLimitArgs = state.limit?.args ?? null
+        const oldLimitArgs = state.limit?.args ?? null
+        const isEarlierIndex = state.count == null || state.index < state.count
+        const updated = updateArgLimits(
+          state,
+          state.args,
+          oldLimitArgs,
+          templates,
+          keys,
+          keysCount,
+          equals,
+          limitArgOnError,
+        )
+
+        if (updated) {
+          // Lexicographically smaller - update limit and add pending for next cycle
+          const limit = createLimit(state.currentArgs, options?.error)
+          state.limit = limit
+          state.pendingLimits.push(limit)
+          if (isEarlierIndex) {
+            state.count = includeErrorVariant ? state.index + 1 : state.index
+          }
+        }
+        else if (isEarlierIndex) {
+          // Earlier index but not lexicographically smaller (or limitArgOnError disabled)
           state.count = includeErrorVariant ? state.index + 1 : state.index
           state.limit = createLimit(state.currentArgs, options?.error)
-          updateArgLimits(state, state.args, oldLimitArgs, templates, keys, keysCount, equals, limitArgOnError)
         }
         return
       }
