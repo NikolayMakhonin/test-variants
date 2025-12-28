@@ -75,13 +75,13 @@ export {
   type TestVariantsTemplates,
 }
 
-/** Find last index of value in array; returns -1 if not found */
+/** Find index of value in array; returns -1 if not found */
 function findValueIndex<T>(
   values: T[],
   value: T,
   equals?: null | ((a: T, b: T) => boolean),
 ): number {
-  for (let i = values.length - 1; i >= 0; i--) {
+  for (let i = 0; i < values.length; i++) {
     if (equals ? equals(values[i], value) : values[i] === value) {
       return i
     }
