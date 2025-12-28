@@ -233,14 +233,15 @@ function validateStaticArgsValues<Args extends Obj>(
   return true
 }
 
-/** Compare current position vs pending args position; returns -1 if current < pending, 0 if equal, 1 if current > pending */
-function comparePositions<Args extends Obj>(
+/** Check if current position >= pending args position; returns false if current < pending or all args skipped */
+function isPositionReached<Args extends Obj>(
   state: IteratorState<Args>,
   pendingArgs: Args,
   keys: (keyof Args)[],
   keysCount: number,
   equals?: null | ((a: any, b: any) => boolean),
-): number {
+): boolean {
+  let anyCompared = false
   for (let i = 0; i < keysCount; i++) {
     const currentValueIndex = state.indexes[i]
     const pendingValue = pendingArgs[keys[i]]
@@ -251,14 +252,16 @@ function comparePositions<Args extends Obj>(
       continue
     }
 
+    anyCompared = true
     if (currentValueIndex < pendingValueIndex) {
-      return -1
+      return false
     }
     if (currentValueIndex > pendingValueIndex) {
-      return 1
+      return true
     }
   }
-  return 0
+  // All compared args are equal - position reached; or all args skipped - keep pending
+  return anyCompared
 }
 
 /** Update per-arg limits from args values */
@@ -320,8 +323,7 @@ function processPendingLimits<Args extends Obj>(
   let applied = false
   for (let i = state.pendingLimits.length - 1; i >= 0; i--) {
     const pending = state.pendingLimits[i]
-    const cmp = comparePositions(state, pending.args, keys, keysCount, equals)
-    if (cmp >= 0) {
+    if (isPositionReached(state, pending.args, keys, keysCount, equals)) {
       // Current position >= pending position: apply limit
       if (state.count == null || state.index < state.count) {
         state.count = state.index
@@ -465,60 +467,58 @@ export function testVariantsIterator<Args extends Obj>(
       if (!state.started) {
         throw new Error('[testVariantsIterator] start() must be called before next()')
       }
-      while (true) {
-        // Try next repeat for current variant
-        if (state.index >= 0 && state.repeatIndex + 1 < repeatsPerVariant) {
-          // Check if current variant is still within limit
-          if (state.count == null || state.index < state.count) {
-            state.repeatIndex++
-            if (getSeed) {
-              const seed = getSeed({
-                variantIndex: state.index,
-                cycleIndex  : state.cycleIndex,
-                repeatIndex : state.repeatIndex,
-              })
-              state.currentArgs = {...state.args, seed} as Args
-            }
-            else {
-              state.currentArgs = {...state.args}
-            }
-            return state.currentArgs
+      // Try next repeat for current variant
+      if (state.index >= 0 && state.repeatIndex + 1 < repeatsPerVariant) {
+        // Check if current variant is still within limit
+        if (state.count == null || state.index < state.count) {
+          state.repeatIndex++
+          if (getSeed) {
+            const seed = getSeed({
+              variantIndex: state.index,
+              cycleIndex  : state.cycleIndex,
+              repeatIndex : state.repeatIndex,
+            })
+            state.currentArgs = {...state.args, seed} as Args
           }
-        }
-
-        // Move to next variant
-        state.repeatIndex = 0
-        if (!advanceVariant(state, templates, keys, keysCount)) {
-          // First complete cycle sets count to total variant count
-          if (state.count == null) {
-            state.count = state.index + 1
+          else {
+            state.currentArgs = {...state.args}
           }
-          return null
+          return state.currentArgs
         }
-        state.index++
-
-        // Process pending limits at new position
-        if (state.pendingLimits.length > 0) {
-          processPendingLimits(state, templates, keys, keysCount, equals, limitArgOnError)
-        }
-
-        // Check count limit (may have been updated by pending limit)
-        if (state.count != null && state.index >= state.count) {
-          return null
-        }
-        if (getSeed) {
-          const seed = getSeed({
-            variantIndex: state.index,
-            cycleIndex  : state.cycleIndex,
-            repeatIndex : state.repeatIndex,
-          })
-          state.currentArgs = {...state.args, seed} as Args
-        }
-        else {
-          state.currentArgs = {...state.args}
-        }
-        return state.currentArgs
       }
+
+      // Move to next variant
+      state.repeatIndex = 0
+      if (!advanceVariant(state, templates, keys, keysCount)) {
+        // First complete cycle sets count to total variant count
+        if (state.count == null) {
+          state.count = state.index + 1
+        }
+        return null
+      }
+      state.index++
+
+      // Process pending limits at new position
+      if (state.pendingLimits.length > 0) {
+        processPendingLimits(state, templates, keys, keysCount, equals, limitArgOnError)
+      }
+
+      // Check count limit (may have been updated by pending limit)
+      if (state.count != null && state.index >= state.count) {
+        return null
+      }
+      if (getSeed) {
+        const seed = getSeed({
+          variantIndex: state.index,
+          cycleIndex  : state.cycleIndex,
+          repeatIndex : state.repeatIndex,
+        })
+        state.currentArgs = {...state.args, seed} as Args
+      }
+      else {
+        state.currentArgs = {...state.args}
+      }
+      return state.currentArgs
     },
   }
 

@@ -103,7 +103,6 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     const files = await readErrorVariantFiles(saveErrorVariants.dir)
     for (const filePath of files) {
       const args = await parseErrorVariantFile<Args, SavedArgs>(filePath, saveErrorVariants.jsonToArgs)
-      let errorOccurred = false
       for (let retry = 0; retry < retriesPerVariant; retry++) {
         try {
           const promiseOrResult = testRun(args, -1, null as any)
@@ -115,7 +114,6 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
           if (useToFindBestError && findBestError) {
             // Store as pending limit for findBestError cycle
             variants.addLimit({args, error})
-            errorOccurred = true
             break // Exit retry loop, continue to next file
           }
           else {
@@ -156,7 +154,8 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   }
 
   // Main iteration using iterator
-  for (variants.start(); variants.cycleIndex < cycles; variants.start()) {
+  variants.start()
+  while (variants.cycleIndex < cycles) {
     let args: Args | null
     while (!abortSignalExternal?.aborted && (debug || (args = variants.next()) != null)) {
       const _index = variants.index
@@ -303,6 +302,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     prevCycleVariantsCount = variants.count
     prevCycleDuration = Date.now() - cycleStartTime
     cycleStartTime = Date.now()
+    variants.start()
   }
 
   if (pool) {
