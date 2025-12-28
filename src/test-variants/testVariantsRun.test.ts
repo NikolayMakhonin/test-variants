@@ -38,6 +38,7 @@ describe('test-variants > testVariantsRun', function () {
       const result = await testVariantsRun(testRun, variants, {
         findBestError: {
           cycles,
+          dontThrowIfError: true,
         },
         logCompleted: false,
       })

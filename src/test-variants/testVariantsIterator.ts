@@ -29,11 +29,11 @@ export type LimitArgOnError = (options: LimitArgOnErrorOptions) => boolean
 /** Options for creating test variants iterator */
 export type TestVariantsIteratorOptions<Args extends Obj> = {
   argsTemplates: TestVariantsTemplates<Args>
-  /** Custom equality for comparing arg values when finding indexes */
+  /** Custom equality for comparing arg values */
   equals?: null | ((a: any, b: any) => boolean)
   /** Limit per-arg indexes on error; boolean enables/disables, function for custom per-arg logic */
   limitArgOnError?: null | boolean | LimitArgOnError
-  /** Seed generator for findBestError; if provided, seed is added to args returned by next() */
+  /** Generates seed for reproducible randomized testing; seed is added to args */
   getSeed?: null | ((params: GetSeedParams) => any)
   /** Number of repeat tests per variant within each cycle */
   repeatsPerVariant?: null | number
@@ -56,15 +56,15 @@ export type AddLimitOptions<Args> = {
 export type TestVariantsIterator<Args extends Obj> = {
   /** Current variant index; -1 before first next() */
   readonly index: number
-  /** Current cycle index; -1 before first start(), 0 after first start(), incremented by each start() call */
+  /** Current cycle index; starts at 0 after first start() */
   readonly cycleIndex: number
-  /** Limit or max count; variants with index >= count not yielded; null initially, set when first next() returns null or via addLimit({index}) */
+  /** Maximum variant count; variants with index >= count are not yielded */
   readonly count: number | null
-  /** Last applied limit's args and error; null if no limit applied yet or limit was index-only */
+  /** Last applied limit's args and error; null if no args-based limit applied */
   readonly limit: TestVariantsIteratorLimit<Args> | null
-  /** Add or tighten limit based on args and/or index */
+  /** Add or tighten limit */
   addLimit(options?: null | AddLimitOptions<Args>): void
-  /** Reset to beginning of iteration; increments cycleIndex */
+  /** Reset to beginning of iteration for next cycle */
   start(): void
   /** Get next variant or null when done */
   next(): Args | null

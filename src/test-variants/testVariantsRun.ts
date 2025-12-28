@@ -25,14 +25,16 @@ function formatDuration(ms: number): string {
 export type TestVariantsFindBestErrorOptions = {
   /** Number of full passes through all variants */
   cycles: number,
-  /** Function to generate seed based on current iteration state (passed to iterator) */
+  /** Generates seed for reproducible randomized testing; seed is added to args */
   getSeed?: null | ((params: GetSeedParams) => any),
-  /** Number of repeat tests per variant within each cycle (passed to iterator) */
+  /** Number of repeat tests per variant within each cycle */
   repeatsPerVariant?: null | number,
   /** Custom equality for comparing arg values when finding indexes */
   equals?: null | ((a: any, b: any) => boolean),
   /** Limit per-arg indexes on error; boolean enables/disables, function for custom per-arg logic */
   limitArgOnError?: null | boolean | LimitArgOnError,
+  /** Return found error instead of throwing after all cycles complete */
+  dontThrowIfError?: null | boolean,
 }
 
 export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
@@ -53,6 +55,8 @@ export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
   saveErrorVariants?: null | SaveErrorVariantsOptions<Args, SavedArgs>,
   /** Tests only first N variants, ignores the rest. If null or not specified, tests all variants */
   limitVariantsCount?: null | number,
+  /** Maximum test run duration in milliseconds; when exceeded, iteration stops and current results are returned */
+  limitTime?: null | number,
 }
 
 export type TestVariantsBestError<Args extends Obj> = {
@@ -90,6 +94,8 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   const abortSignalExternal = options.abortSignal
   const findBestError = options.findBestError
   const cycles = findBestError?.cycles ?? 1
+  const dontThrowIfError = findBestError?.dontThrowIfError
+  const limitTime = options.limitTime
 
   const parallel = options.parallel === true
     ? 2 ** 31
@@ -158,14 +164,20 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   }
 
   // Main iteration using iterator
+  let timeLimitExceeded = false
   variants.start()
-  while (variants.cycleIndex < cycles) {
+  while (variants.cycleIndex < cycles && !timeLimitExceeded) {
     let args: Args | null
     while (!abortSignalExternal?.aborted && (debug || (args = variants.next()) != null)) {
       const _index = variants.index
       const _args = args
 
-      const now = (logInterval || GC_Interval) && Date.now()
+      const now = (logInterval || GC_Interval || limitTime) && Date.now()
+
+      if (limitTime && now - startTime >= limitTime) {
+        timeLimitExceeded = true
+        break
+      }
 
       if (logInterval && now - prevLogTime >= logInterval) {
         // the log is required to prevent the karma browserNoActivityTimeout
@@ -329,6 +341,10 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
       index: variants.count,
     }
     : null
+
+  if (bestError && !dontThrowIfError) {
+    throw bestError.error
+  }
 
   return {
     iterations,
