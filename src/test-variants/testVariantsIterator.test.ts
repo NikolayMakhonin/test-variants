@@ -774,66 +774,66 @@ describe('test-variants > testVariantsIterator', function () {
 
   it('lexicographic comparison with 3 error files', async function () {
     const file1Args = {
-      returnReadableResolved: false,
-      dependencyFactory     : false,
-      returnObservable      : false,
-      injectorInjectionsMax : 3,
-      injectorValueStoresMax: 1,
-      valueStoresMax        : 2,
-      changesPerIterationMax: 1,
-      dependencyValueStore  : true,
-      dependencyObservable  : true,
-      useInjectorDefault    : false,
-      injectorsMax          : 3,
+      returnReadableResolved : false,
+      dependencyFactory      : false,
+      returnObservable       : false,
+      injectorInjectionsMax  : 3,
+      injectorValueStoresMax : 1,
+      valueStoresMax         : 2,
+      changesPerIterationMax : 1,
+      dependencyValueStore   : true,
+      dependencyObservable   : true,
+      useInjectorDefault     : false,
+      injectorsMax           : 3,
       injectorDependenciesMax: 3,
-      injectionsMax         : 2,
-      factoriesMax          : 3,
-      injectorFactoriesMax  : 2,
-      dependencyCountMax    : 1,
-      checksPerIterationMax : 1,
-      iterations            : 10,
+      injectionsMax          : 2,
+      factoriesMax           : 3,
+      injectorFactoriesMax   : 2,
+      dependencyCountMax     : 1,
+      checksPerIterationMax  : 1,
+      iterations             : 10,
     }
 
     const file2Args = {
-      returnReadableResolved: false,
-      dependencyFactory     : false,
-      returnObservable      : false,
-      injectorInjectionsMax : 0,
-      injectorValueStoresMax: 1,
-      valueStoresMax        : 0,
-      changesPerIterationMax: 1,
-      dependencyValueStore  : false,
-      dependencyObservable  : true,
-      useInjectorDefault    : false,
-      injectorsMax          : 3,
+      returnReadableResolved : false,
+      dependencyFactory      : false,
+      returnObservable       : false,
+      injectorInjectionsMax  : 0,
+      injectorValueStoresMax : 1,
+      valueStoresMax         : 0,
+      changesPerIterationMax : 1,
+      dependencyValueStore   : false,
+      dependencyObservable   : true,
+      useInjectorDefault     : false,
+      injectorsMax           : 3,
       injectorDependenciesMax: 1,
-      injectionsMax         : 2,
-      factoriesMax          : 3,
-      injectorFactoriesMax  : 3,
-      dependencyCountMax    : 3,
-      checksPerIterationMax : 1,
-      iterations            : 10,
+      injectionsMax          : 2,
+      factoriesMax           : 3,
+      injectorFactoriesMax   : 3,
+      dependencyCountMax     : 3,
+      checksPerIterationMax  : 1,
+      iterations             : 10,
     }
 
     const file3Args = {
-      returnReadableResolved: false,
-      dependencyFactory     : false,
-      returnObservable      : false,
-      injectorInjectionsMax : 0,
-      injectorValueStoresMax: 2,
-      valueStoresMax        : 3,
-      changesPerIterationMax: 1,
-      dependencyValueStore  : false,
-      dependencyObservable  : true,
-      useInjectorDefault    : false,
-      injectorsMax          : 3,
+      returnReadableResolved : false,
+      dependencyFactory      : false,
+      returnObservable       : false,
+      injectorInjectionsMax  : 0,
+      injectorValueStoresMax : 2,
+      valueStoresMax         : 3,
+      changesPerIterationMax : 1,
+      dependencyValueStore   : false,
+      dependencyObservable   : true,
+      useInjectorDefault     : false,
+      injectorsMax           : 3,
       injectorDependenciesMax: 1,
-      injectionsMax         : 1,
-      factoriesMax          : 3,
-      injectorFactoriesMax  : 3,
-      dependencyCountMax    : 1,
-      checksPerIterationMax : 1,
-      iterations            : 10,
+      injectionsMax          : 1,
+      factoriesMax           : 3,
+      injectorFactoriesMax   : 3,
+      dependencyCountMax     : 1,
+      checksPerIterationMax  : 1,
+      iterations             : 10,
     }
 
     const iterator = testVariantsIterator({
@@ -843,21 +843,21 @@ describe('test-variants > testVariantsIterator', function () {
         returnObservable      : ({dependencyFactory}) => {
           return dependencyFactory ? [true] : [false, true]
         },
-        injectorInjectionsMax : [0, 1, 2, 3],
-        injectorValueStoresMax: [0, 1, 2, 3],
-        valueStoresMax        : [0, 1, 2, 3],
-        changesPerIterationMax: [0, 1],
-        dependencyValueStore  : [false, true],
-        dependencyObservable  : [false, true],
-        useInjectorDefault    : [false, true, null],
-        injectorsMax          : [1, 2, 3],
+        injectorInjectionsMax  : [0, 1, 2, 3],
+        injectorValueStoresMax : [0, 1, 2, 3],
+        valueStoresMax         : [0, 1, 2, 3],
+        changesPerIterationMax : [0, 1],
+        dependencyValueStore   : [false, true],
+        dependencyObservable   : [false, true],
+        useInjectorDefault     : [false, true, null],
+        injectorsMax           : [1, 2, 3],
         injectorDependenciesMax: [0, 1, 2, 3],
-        injectionsMax         : [1, 2, 3],
-        factoriesMax          : [0, 1, 2, 3],
-        injectorFactoriesMax  : [0, 1, 2, 3],
-        dependencyCountMax    : [0, 1, 2, 3],
-        checksPerIterationMax : [1],
-        iterations            : [1, 2, 10],
+        injectionsMax          : [1, 2, 3],
+        factoriesMax           : [0, 1, 2, 3],
+        injectorFactoriesMax   : [0, 1, 2, 3],
+        dependencyCountMax     : [0, 1, 2, 3],
+        checksPerIterationMax  : [1],
+        iterations             : [1, 2, 10],
       },
       limitArgOnError: true,
     })
@@ -886,5 +886,72 @@ describe('test-variants > testVariantsIterator', function () {
     // 1×1×1×1×2×1×2×1×2×1×3×2×2×4×4×4×1×3 = 18432
     // Minus error variant = 18431
     assert.strictEqual(count, 18431)
+  })
+
+  it('includeErrorVariant includes error variant in iteration', async function () {
+    const iterator = testVariantsIterator({
+      argsTemplates: {
+        a: [0, 1, 2],
+        b: [0, 1, 2],
+      },
+      limitArgOnError    : true,
+      includeErrorVariant: true,
+    })
+
+    // Error at [1, 1]
+    iterator.addLimit({args: {a: 1, b: 1}, error: new Error('error')})
+
+    iterator.start()
+    const results: any[] = []
+    let args: any
+    while ((args = iterator.next()) != null) {
+      results.push({...args})
+    }
+
+    // argLimits: [1, 1] (INCLUSIVE)
+    // a <= 1, b <= 1 means indexes 0, 1 for each
+    // Total: 2 * 2 = 4, WITH error variant included
+    assert.strictEqual(results.length, 4)
+    assert.deepStrictEqual(results, [
+      {a: 0, b: 0},
+      {a: 0, b: 1},
+      {a: 1, b: 0},
+      {a: 1, b: 1}, // Error variant IS included
+    ])
+  })
+
+  it('includeErrorVariant with addLimit() during iteration', async function () {
+    const iterator = testVariantsIterator({
+      argsTemplates: {
+        a: [0, 1, 2],
+        b: [0, 1, 2],
+      },
+      limitArgOnError    : true,
+      includeErrorVariant: true,
+    })
+
+    iterator.start()
+    const results: any[] = []
+    let args: any
+    while ((args = iterator.next()) != null) {
+      results.push({...args})
+      // Trigger error at {a: 1, b: 1}
+      if (args.a === 1 && args.b === 1) {
+        iterator.addLimit({error: new Error('error')})
+      }
+    }
+
+    // argLimits [1, 1] affect FUTURE variants only
+    // Past variants (0,2) already iterated before addLimit() called
+    // With includeErrorVariant: true, error variant (1,1) is included
+    // Variants: (0,0), (0,1), (0,2), (1,0), (1,1) = 5
+    assert.strictEqual(results.length, 5)
+    assert.deepStrictEqual(results, [
+      {a: 0, b: 0},
+      {a: 0, b: 1},
+      {a: 0, b: 2}, // Past variant, already iterated
+      {a: 1, b: 0},
+      {a: 1, b: 1}, // Error variant IS included
+    ])
   })
 })

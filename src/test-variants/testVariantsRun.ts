@@ -33,6 +33,8 @@ export type TestVariantsFindBestErrorOptions = {
   equals?: null | ((a: any, b: any) => boolean),
   /** Limit per-arg indexes on error; boolean enables/disables, function for custom per-arg logic */
   limitArgOnError?: null | boolean | LimitArgOnError,
+  /** When true, error variant is included in iteration (for debugging); default false excludes it */
+  includeErrorVariant?: null | boolean,
   /** Return found error instead of throwing after all cycles complete */
   dontThrowIfError?: null | boolean,
 }

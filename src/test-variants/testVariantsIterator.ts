@@ -33,6 +33,8 @@ export type TestVariantsIteratorOptions<Args extends Obj> = {
   equals?: null | ((a: any, b: any) => boolean)
   /** Limit per-arg indexes on error; boolean enables/disables, function for custom per-arg logic */
   limitArgOnError?: null | boolean | LimitArgOnError
+  /** When true, error variant is included in iteration (for debugging); default false excludes it */
+  includeErrorVariant?: null | boolean
   /** Generates seed for reproducible randomized testing; seed is added to args */
   getSeed?: null | ((params: GetSeedParams) => any)
   /** Number of repeat tests per variant within each cycle */
@@ -351,9 +353,9 @@ function updateArgLimits<Args extends Obj>(
     const valueIndex = newIndexes[i]
     if (typeof limitArgOnError === 'function') {
       const shouldLimit = limitArgOnError({
-        name: keys[i] as string,
+        name         : keys[i] as string,
         valueIndex,
-        values: calcTemplateValues(templates, limitArgs, i),
+        values       : calcTemplateValues(templates, limitArgs, i),
         maxValueIndex: state.argLimits[i],
       })
       if (!shouldLimit) {
@@ -377,6 +379,7 @@ function processPendingLimits<Args extends Obj>(
   keysCount: number,
   equals?: null | ((a: any, b: any) => boolean),
   limitArgOnError?: null | boolean | LimitArgOnError,
+  includeErrorVariant?: null | boolean,
 ): boolean {
   const reached: PendingLimit<Args>[] = []
   const remaining: PendingLimit<Args>[] = []
@@ -400,7 +403,7 @@ function processPendingLimits<Args extends Obj>(
   const pending = reached[reached.length - 1]
   if (state.count == null || state.index < state.count) {
     const oldLimitArgs = state.limit?.args ?? null
-    state.count = state.index
+    state.count = includeErrorVariant ? state.index + 1 : state.index
     state.limit = createLimit(pending.args, pending.error)
     updateArgLimits(state, pending.args, oldLimitArgs, templates, keys, keysCount, equals, limitArgOnError)
     return true
@@ -418,7 +421,9 @@ function createLimit<Args>(args: Args, error?: unknown): TestVariantsIteratorLim
 export function testVariantsIterator<Args extends Obj>(
   options: TestVariantsIteratorOptions<Args>,
 ): TestVariantsIterator<Args> {
-  const {argsTemplates, getSeed, repeatsPerVariant = 1, equals, limitArgOnError} = options
+  const {
+    argsTemplates, getSeed, repeatsPerVariant = 1, equals, limitArgOnError, includeErrorVariant,
+  } = options
   const keys = Object.keys(argsTemplates) as (keyof Args)[]
   const templates: TestVariantsTemplate<Args, any>[] = Object.values(argsTemplates)
   const keysCount = keys.length
@@ -435,17 +440,17 @@ export function testVariantsIterator<Args extends Obj>(
   }
 
   const state: IteratorState<Args> = {
-    args: {} as Args,
+    args         : {} as Args,
     indexes,
     argValues,
     argLimits,
-    index: -1,
-    cycleIndex: -1,
-    repeatIndex: 0,
-    count: null,
-    limit: null,
-    started: false,
-    currentArgs: null,
+    index        : -1,
+    cycleIndex   : -1,
+    repeatIndex  : 0,
+    count        : null,
+    limit        : null,
+    started      : false,
+    currentArgs  : null,
     pendingLimits: [],
   }
 
@@ -453,8 +458,8 @@ export function testVariantsIterator<Args extends Obj>(
     if (getSeed) {
       const seed = getSeed({
         variantIndex: state.index,
-        cycleIndex: state.cycleIndex,
-        repeatIndex: state.repeatIndex,
+        cycleIndex  : state.cycleIndex,
+        repeatIndex : state.repeatIndex,
       })
       return {...state.args, seed} as Args
     }
@@ -485,7 +490,7 @@ export function testVariantsIterator<Args extends Obj>(
         }
         if (state.count == null || state.index < state.count) {
           const oldLimitArgs = state.limit?.args ?? null
-          state.count = state.index
+          state.count = includeErrorVariant ? state.index + 1 : state.index
           state.limit = createLimit(state.currentArgs, options?.error)
           updateArgLimits(state, state.args, oldLimitArgs, templates, keys, keysCount, equals, limitArgOnError)
         }
@@ -580,7 +585,7 @@ export function testVariantsIterator<Args extends Obj>(
 
       // Process pending limits at new position
       if (state.pendingLimits.length > 0) {
-        processPendingLimits(state, templates, keys, keysCount, equals, limitArgOnError)
+        processPendingLimits(state, templates, keys, keysCount, equals, limitArgOnError, includeErrorVariant)
       }
 
       // Check count limit
