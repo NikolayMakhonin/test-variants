@@ -151,14 +151,18 @@ function resetIteratorState<Args extends Obj>(
   }
 }
 
-/** Get effective max index for an arg (considering argLimit) */
+/** Get effective max index for an arg (considering argLimit)
+ * argLimit is INCLUSIVE upper bound; returns EXCLUSIVE upper bound for iteration
+ */
 function getMaxIndex(state: IteratorState<any>, keyIndex: number): number {
   const valuesLen = state.argValues[keyIndex].length
   const argLimit = state.argLimits[keyIndex]
   if (argLimit == null) {
     return valuesLen
   }
-  return argLimit < valuesLen ? argLimit : valuesLen
+  // argLimit is INCLUSIVE: allow indexes 0..argLimit
+  // Return exclusive upper bound: argLimit + 1
+  return Math.min(argLimit + 1, valuesLen)
 }
 
 /** Advance to next variant in cartesian product; returns true if successful */
@@ -178,7 +182,9 @@ function advanceVariant<Args extends Obj>(
       state.args[key] = value
       for (keyIndex++; keyIndex < keysCount; keyIndex++) {
         const keyVariants = calcTemplateValues(templates, state.args, keyIndex)
-        const keyMaxIndex = state.argLimits[keyIndex] ?? keyVariants.length
+        // argLimit is INCLUSIVE upper bound; convert to exclusive for length check
+        const argLimit = state.argLimits[keyIndex]
+        const keyMaxIndex = argLimit != null ? argLimit + 1 : keyVariants.length
         if (keyVariants.length === 0 || keyMaxIndex <= 0) {
           break
         }
@@ -288,18 +294,16 @@ function calcArgsIndexes<Args extends Obj>(
   return indexes
 }
 
-/** Compare two index arrays lexicographically; returns -1 if a < b, 0 if equal, 1 if a > b */
+/** Compare indexes lexicographically (like numbers: 1999 < 2000)
+ * Returns: -1 if a < b, 0 if a == b, 1 if a > b
+ */
 function compareLexicographic(a: number[], b: number[]): number {
   const len = Math.max(a.length, b.length)
   for (let i = 0; i < len; i++) {
     const ai = a[i] ?? 0
     const bi = b[i] ?? 0
-    if (ai < bi) {
-      return -1
-    }
-    if (ai > bi) {
-      return 1
-    }
+    if (ai < bi) return -1
+    if (ai > bi) return 1
   }
   return 0
 }
@@ -329,9 +333,8 @@ function updateArgLimits<Args extends Obj>(
   if (oldLimitArgs) {
     const currentIndexes = calcArgsIndexes(oldLimitArgs, templates, keys, keysCount, equals)
     if (currentIndexes) {
-      const cmp = compareLexicographic(newIndexes, currentIndexes)
-      if (cmp >= 0) {
-        // New is larger or equal - reject entirely
+      if (compareLexicographic(newIndexes, currentIndexes) >= 0) {
+        // New is not lexicographically smaller - reject entirely
         return false
       }
     }
@@ -357,8 +360,8 @@ function updateArgLimits<Args extends Obj>(
       }
     }
 
-    // Set argLimit: index 0 can't be limited further, store null
-    state.argLimits[i] = valueIndex > 0 ? valueIndex : null
+    // Store INCLUSIVE upper bound; index 0 is valid limit (restricts to 1 value)
+    state.argLimits[i] = valueIndex
   }
 
   // Filter out pending limits that are now excluded by argLimits
@@ -368,7 +371,8 @@ function updateArgLimits<Args extends Obj>(
       const values = calcTemplateValues(templates, pending.args, i)
       const valueIndex = findLastIndex(values, value, equals)
       const argLimit = state.argLimits[i]
-      if (argLimit != null && valueIndex >= argLimit) {
+      // argLimit is INCLUSIVE upper bound; filter if pending exceeds
+      if (argLimit != null && valueIndex > argLimit) {
         return false // Pending position is excluded by argLimits
       }
     }
@@ -512,7 +516,11 @@ export function testVariantsIterator<Args extends Obj>(
           state.limit = typeof _options.error !== 'undefined'
             ? {args: _options.args, error: _options.error}
             : {args: _options.args}
-          // Pending limit at this position is now filtered by argLimits, don't add
+          // Add to pending limits so error variant is excluded when reached during iteration
+          const pending: PendingLimit<Args> = typeof _options.error !== 'undefined'
+            ? {args: _options.args, error: _options.error}
+            : {args: _options.args}
+          state.pendingLimits.push(pending)
         }
         else if (!limitArgOnError) {
           // No argLimits filtering - add pending limit for position-based stopping
