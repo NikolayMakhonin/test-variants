@@ -168,24 +168,18 @@ function advanceVariant<Args extends Obj>(
     if (valueIndex < maxIndex) {
       state.indexes[keyIndex] = valueIndex
       state.args[keys[keyIndex]] = state.argValues[keyIndex][valueIndex]
-
-      // Reset all subsequent keys to first value
-      let nextIndex = keyIndex + 1
-      for (; nextIndex < keysCount; nextIndex++) {
-        state.argValues[nextIndex] = calcTemplateValues(templates, state.args, nextIndex)
-        const nextMaxIndex = getMaxIndex(state, nextIndex)
-        if (nextMaxIndex <= 0) {
+      for (keyIndex++; keyIndex < keysCount; keyIndex++) {
+        state.argValues[keyIndex] = calcTemplateValues(templates, state.args, keyIndex)
+        const keyMaxIndex = getMaxIndex(state, keyIndex)
+        if (keyMaxIndex <= 0) {
           break
         }
-        state.indexes[nextIndex] = 0
-        state.args[keys[nextIndex]] = state.argValues[nextIndex][0]
+        state.indexes[keyIndex] = 0
+        state.args[keys[keyIndex]] = state.argValues[keyIndex][0]
       }
-
-      if (nextIndex >= keysCount) {
+      if (keyIndex >= keysCount) {
         return true
       }
-      // Reset failed at nextIndex; continue outer loop from there
-      keyIndex = nextIndex
     }
   }
   return false
@@ -399,7 +393,7 @@ function processPendingLimits<Args extends Obj>(
 
 /** Create limit object with optional error */
 function createLimit<Args>(args: Args, error?: unknown): TestVariantsIteratorLimit<Args> {
-  return error !== undefined ? {args, error} : {args}
+  return error !== void 0 ? {args, error} : {args}
 }
 
 /** Creates test variants iterator with limiting capabilities */
