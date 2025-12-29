@@ -21,6 +21,40 @@ function formatDuration(ms: number): string {
   return `${hours.toFixed(1)}h`
 }
 
+function formatBytes(bytes: number): string {
+  const gb = bytes / (1024 * 1024 * 1024)
+  if (gb >= 1) {
+    return gb >= 10 ? `${Math.round(gb)}GB` : `${gb.toFixed(1)}GB`
+  }
+  const mb = bytes / (1024 * 1024)
+  if (mb >= 10) {
+    return `${Math.round(mb)}MB`
+  }
+  return `${mb.toFixed(1)}MB`
+}
+
+function getMemoryUsage(): number | null {
+  // Node.js
+  if (typeof process !== 'undefined' && process.memoryUsage) {
+    try {
+      return process.memoryUsage().heapUsed
+    }
+    catch {
+      // ignore
+    }
+  }
+  // Browser (Chrome only, non-standard)
+  if (typeof performance !== 'undefined' && (performance as any).memory) {
+    try {
+      return (performance as any).memory.usedJSHeapSize
+    }
+    catch {
+      // ignore
+    }
+  }
+  return null
+}
+
 /** Options for finding the earliest failing variant across multiple test runs */
 export type TestVariantsFindBestErrorOptions = {
   /** Number of full passes through all variants */
@@ -147,10 +181,16 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   const abortSignalParallel = combineAbortSignals(abortSignalExternal, abortControllerParallel.signal)
   const abortSignalAll = abortSignalParallel
 
+  const startMemory = getMemoryUsage()
+  if (logInterval && startMemory != null) {
+    console.log(`[test-variants] start, memory: ${formatBytes(startMemory)}`)
+  }
+
   let debug = false
   let iterations = 0
   let iterationsAsync = 0
   let prevLogTime = Date.now()
+  let prevLogMemory = startMemory
   let prevGC_Time = prevLogTime
   let prevGC_Iterations = iterations
   let prevGC_IterationsAsync = iterationsAsync
@@ -161,7 +201,15 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
 
   function onCompleted() {
     if (logCompleted) {
-      console.log(`[test-variants] variants: ${variants.index}, iterations: ${iterations}, async: ${iterationsAsync}`)
+      let log = `[test-variants] variants: ${variants.index}, iterations: ${iterations}, async: ${iterationsAsync}`
+      if (startMemory != null) {
+        const endMemory = getMemoryUsage()
+        if (endMemory != null) {
+          const diff = endMemory - startMemory
+          log += `, memory: ${formatBytes(endMemory)} (${diff >= 0 ? '+' : '-'}${formatBytes(diff)})`
+        }
+      }
+      console.log(log)
     }
   }
 
@@ -219,6 +267,14 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
           log += `variant: ${variants.index} (${formatDuration(cycleElapsed)})`
         }
         log += `, total: ${iterations} (${formatDuration(totalElapsed)})`
+        if (prevLogMemory != null) {
+          const memory = getMemoryUsage()
+          if (memory != null) {
+            const diff = memory - prevLogMemory
+            log += `, memory: ${formatBytes(memory)} (${diff >= 0 ? '+' : '-'}${formatBytes(diff)})`
+            prevLogMemory = memory
+          }
+        }
         console.log(log)
         prevLogTime = now
       }
