@@ -362,12 +362,15 @@ function updateArgLimits<Args extends Obj>(
   keysCount: number,
   equals?: null | ((a: any, b: any) => boolean),
   limitArgOnError?: null | boolean | LimitArgOnError,
+  precomputedIndexes?: number[] | null,
 ): boolean {
   if (!limitArgOnError) {
     return false
   }
 
-  const newIndexes = calcArgIndexes(state, limitArgs, templates, keys, keysCount, equals)
+  // Use precomputed indexes if provided (from state.indexes during iteration),
+  // otherwise calculate from args (for saved error variants where we need to find indexes)
+  const newIndexes = precomputedIndexes ?? calcArgIndexes(state, limitArgs, templates, keys, keysCount, equals)
   if (!newIndexes) {
     return false
   }
@@ -523,6 +526,8 @@ export function testVariantsIterator<Args extends Obj>(
         }
         const oldLimitArgs = state.limit?.args ?? null
         const isEarlierIndex = state.count == null || state.index < state.count
+        // Pass state.indexes directly to avoid recalculating indexes via calcArgIndexes
+        // This fixes the bug where dynamic templates create new object instances that fail === comparison
         const updated = updateArgLimits(
           state,
           state.args,
@@ -532,6 +537,7 @@ export function testVariantsIterator<Args extends Obj>(
           keysCount,
           equals,
           limitArgOnError,
+          state.indexes,
         )
 
         if (updated) {
