@@ -47,8 +47,16 @@ export async function parseErrorVariantFile<Args extends Obj, SavedArgs>(
 }
 
 /** Generates default error variant file path: YYYY-MM-DD_HH-mm-ss.json (UTC) */
-export function generateErrorVariantFilePath(options: GenerateErrorVariantFilePathOptions): string {
-  return options.sessionDate.toISOString().substring(0, 19).replace('T', '_').replaceAll(':', '-') + '.json'
+export function generateErrorVariantFilePath(
+  options: GenerateErrorVariantFilePathOptions,
+): string {
+  const hash = Math.random().toString(36).substring(2, 8)
+  return options.sessionDate.toISOString()
+    .substring(0, 19)
+    .replace('T', '_')
+    .replaceAll(':', '-')
+    + '_' + hash
+    + '.json'
 }
 
 /** Saves error-causing args to a JSON file, overwrites if file exists */
