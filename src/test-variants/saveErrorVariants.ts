@@ -50,7 +50,7 @@ export async function parseErrorVariantFile<Args extends Obj, SavedArgs>(
 export function generateErrorVariantFilePath(
   options: GenerateErrorVariantFilePathOptions,
 ): string {
-  const hash = Math.random().toString(36).substring(2, 8)
+  const hash = Math.random().toString(36).substring(2)
   return options.sessionDate.toISOString()
     .substring(0, 19)
     .replace('T', '_')
