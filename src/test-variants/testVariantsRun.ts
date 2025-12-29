@@ -203,10 +203,10 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     if (logCompleted) {
       let log = `[test-variants] variants: ${variants.index}, iterations: ${iterations}, async: ${iterationsAsync}`
       if (startMemory != null) {
-        const endMemory = getMemoryUsage()
-        if (endMemory != null) {
-          const diff = endMemory - startMemory
-          log += `, memory: ${formatBytes(endMemory)} (${diff >= 0 ? '+' : ''}${formatBytes(diff)})`
+        const memory = getMemoryUsage()
+        if (memory != null) {
+          const diff = memory - startMemory
+          log += `, memory: ${formatBytes(memory)} (${diff >= 0 ? '+' : ''}${formatBytes(diff)})`
         }
       }
       console.log(log)
