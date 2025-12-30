@@ -116,7 +116,7 @@ type StressTestArgs = {
   forwardModeCyclesMax: number
   iterationMode: 'forward' | 'backward' | 'random' | null
   withEquals: boolean | null
-  parallel: number | null
+  parallel: number | boolean | null
   seed: number
 }
 
@@ -126,7 +126,7 @@ type StressTestArgs = {
 
 const LIMIT_ARG_OPTIONS: readonly (false | true | 'func')[] = [false, true, 'func']
 const ITERATION_MODES: readonly ('forward' | 'backward' | 'random')[] = ['forward', 'backward', 'random']
-const PARALLEL_OPTIONS: readonly number[] = [1, 4, 8]
+const PARALLEL_OPTIONS: readonly (number | boolean)[] = [false, 1, 4, 8, true]
 
 // endregion
 
@@ -512,6 +512,25 @@ function verifyDynamicArgs(
   }
 }
 
+/** Compute args at given index using cartesian product indexing */
+function computeArgsAtIndex(
+  template: Template,
+  argKeys: string[],
+  index: number,
+): Record<string, TemplateValue> {
+  const argsCount = argKeys.length
+  const args: Record<string, TemplateValue> = {}
+  let remaining = index
+  for (let i = argsCount - 1; i >= 0; i--) {
+    const key = argKeys[i]
+    const values = template[key] as TemplateArray
+    const valueIndex = remaining % values.length
+    args[key] = values[valueIndex]
+    remaining = Math.floor(remaining / values.length)
+  }
+  return args
+}
+
 /** Compute how many times error variant will be called due to duplicate values in static template
  * Error variant is first matched by index, then subsequent duplicates are matched by value.
  * So we count: 1 (initial match) + duplicates that appear AFTER errorIndex
@@ -527,22 +546,13 @@ function computeErrorVariantCallCount(
     return 0
   }
 
-  // Compute args at errorIndex using cartesian product indexing
-  const errorArgs: Record<string, TemplateValue> = {}
-  let remaining = errorIndex
-  for (let i = argsCount - 1; i >= 0; i--) {
-    const key = argKeys[i]
-    const values = template[key] as TemplateArray
-    const valueIndex = remaining % values.length
-    errorArgs[key] = values[valueIndex]
-    remaining = Math.floor(remaining / values.length)
-  }
+  const errorArgs = computeArgsAtIndex(template, argKeys, errorIndex)
 
   // Count variants at or after errorIndex that match error args
   let count = 0
   for (let variantIndex = errorIndex; variantIndex < totalVariantsCount; variantIndex++) {
     let matches = true
-    remaining = variantIndex
+    let remaining = variantIndex
     for (let i = argsCount - 1; i >= 0; i--) {
       const key = argKeys[i]
       const values = template[key] as TemplateArray
@@ -768,9 +778,15 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   // region Tracking State
 
   let callCount = 0
-  let errorVariantArgs: TestArgs | null = null
   let errorAttempts = 0
   const retriesToError = randomInt(rnd, 0, options.retriesToErrorMax + 1)
+
+  // Precompute errorVariantArgs for static templates to ensure correct behavior in parallel mode
+  // For dynamic templates, errorVariantArgs remains null and is set on first encounter
+  let errorVariantArgs: TestArgs | null = null
+  if (errorIndex !== null && !hasDynamicArgs && argsCount > 0) {
+    errorVariantArgs = computeArgsAtIndex(template, argKeys, errorIndex) as TestArgs
+  }
 
   // endregion
 
@@ -1096,11 +1112,11 @@ describe('test-variants > createTestVariants variants', function () {
       argsCountMax        : [1, 2, 3],
       valuesPerArgMax     : [1, 2],
       valuesCountMax      : [1, 5],
-      // Parallel: 1 = no parallelism (sequential), 4/8 = concurrent execution, null = random
-      parallel            : [1, 4, null],
+      // Parallel: false/1 = sequential, 4/8 = concurrent, true = max parallel, null = random
+      parallel            : [false, 1, 4, 8, true, null],
     })({
       // limitVariantsCount: 127_000,
-      limitTime    : 120 * 1000,
+      limitTime    : 10 * 60 * 1000,
       getSeed      : getRandomSeed,
       cycles       : 10000,
       findBestError: {
