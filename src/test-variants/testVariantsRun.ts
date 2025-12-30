@@ -342,7 +342,8 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
             await saveErrorVariantFile(_args, errorVariantFilePath, saveErrorVariants.argsToJson)
           }
           if (findBestError) {
-            variants.addLimit({error: err})
+            // Pass captured _args explicitly - state.args may differ in parallel mode
+            variants.addLimit({args: _args, error: err})
             debug = false
           }
           else {
@@ -382,11 +383,13 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
               await saveErrorVariantFile(_args, errorVariantFilePath, saveErrorVariants.argsToJson)
             }
             if (findBestError) {
-              variants.addLimit({error: err})
+              // Pass captured _args explicitly - iterator has moved in parallel mode
+              variants.addLimit({args: _args, error: err})
               debug = false
             }
-            else {
-              throw err
+            // Store error and abort to throw after pool drains
+            else if (!abortControllerParallel.signal.aborted) {
+              abortControllerParallel.abort(err)
             }
           }
           finally {

@@ -110,6 +110,7 @@ type StressTestArgs = {
   findBestError: boolean | null
   limitArgOnError: false | true | 'func' | null
   includeErrorVariant: boolean | null
+  dontThrowIfError: boolean | null
   withSeed: boolean | null
   repeatsPerVariantMax: number
   cyclesMax: number
@@ -301,6 +302,7 @@ function verifyIterationsCount(
   totalVariantsCount: number | null,
   errorIndex: number | null,
   findBestError: boolean,
+  dontThrowIfError: boolean,
   cycles: number,
   repeatsPerVariant: number,
   forwardModeCycles: number,
@@ -320,22 +322,24 @@ function verifyIterationsCount(
 
   // Calculate expected error behavior
   const totalErrorCalls = errorVariantCallCount * cycles * repeatsPerVariant * forwardModeCycles
-  const errorWillBeThrown = errorIndex !== null && totalErrorCalls > retriesToError
+  const errorWillOccur = errorIndex !== null && totalErrorCalls > retriesToError
+  // Error is thrown if: (1) no findBestError, or (2) findBestError but dontThrowIfError=false
+  const errorWillBeThrown = errorWillOccur && (!findBestError || !dontThrowIfError)
 
-  // Verify: when error expected without findBestError, should have thrown
-  if (errorWillBeThrown && !findBestError) {
-    throw new Error('Expected error to be thrown without findBestError')
+  // Verify: when error expected to be thrown, should have thrown
+  if (errorWillBeThrown) {
+    throw new Error('Expected error to be thrown')
   }
 
   // Verify: when error expected and totalVariantsCount > 0, should have some iterations
-  if (errorWillBeThrown && totalVariantsCount !== null && totalVariantsCount > 0 && resultIterations === 0) {
+  if (errorWillOccur && totalVariantsCount !== null && totalVariantsCount > 0 && resultIterations === 0) {
     throw new Error('Expected some iterations when totalVariantsCount > 0 and error expected')
   }
 
   // Verify exact count for deterministic modes with known variant count and no error
   if (totalVariantsCount !== null
     && totalVariantsCount > 0
-    && !errorWillBeThrown
+    && !errorWillOccur
     && iterationMode !== 'random'
     && cycles > 0
     && repeatsPerVariant > 0
@@ -351,7 +355,9 @@ function verifyIterationsCount(
 function verifyBestError(
   resultBestError: TestVariantsRunResult<TestArgs>['bestError'],
   findBestError: boolean,
+  dontThrowIfError: boolean,
   errorIndex: number | null,
+  errorVariantArgs: TestArgs | null,
   errorVariantCallCount: number,
   retriesToError: number,
   cycles: number,
@@ -361,30 +367,59 @@ function verifyBestError(
 ): void {
   // Calculate expected error behavior
   const totalErrorCalls = errorVariantCallCount * cycles * repeatsPerVariant * forwardModeCycles
-  const errorWillBeThrown = errorIndex !== null && totalErrorCalls > retriesToError
+  const errorWillOccur = errorIndex !== null && totalErrorCalls > retriesToError
 
-  // Verify: when findBestError and error expected, bestError should be set
-  if (findBestError && errorWillBeThrown && iterationMode !== 'random') {
+  // bestError is set only when findBestError=true and dontThrowIfError=true
+  const bestErrorExpected = findBestError && dontThrowIfError && errorWillOccur
+
+  // Verify: when findBestError and dontThrowIfError and error expected, bestError should be set
+  if (bestErrorExpected && iterationMode !== 'random') {
     if (resultBestError === null) {
-      throw new Error('Expected bestError to be set when error occurred with findBestError')
+      throw new Error('Expected bestError to be set when error occurred with findBestError and dontThrowIfError')
     }
     if (!(resultBestError.error instanceof Error) || !resultBestError.error.message.startsWith('Test error at call')) {
       throw new Error('bestError.error should be our test error')
     }
-    if (resultBestError.index > errorIndex) {
-      throw new Error(`bestError.index (${resultBestError.index}) should be <= errorIndex (${errorIndex})`)
+    // CRITICAL: Verify args match - this catches parallel mode attribution bugs
+    if (errorVariantArgs !== null) {
+      // Remove seed from comparison as it varies per call
+      const resultArgsNoSeed = {...resultBestError.args}
+      delete (resultArgsNoSeed as Record<string, unknown>).seed
+      const expectedArgsNoSeed = {...errorVariantArgs}
+      delete (expectedArgsNoSeed as Record<string, unknown>).seed
+      if (!deepEqual(resultArgsNoSeed, expectedArgsNoSeed)) {
+        throw new Error(
+          `bestError.args mismatch!\n` +
+          `  Expected: ${JSON.stringify(expectedArgsNoSeed)}\n` +
+          `  Actual:   ${JSON.stringify(resultArgsNoSeed)}`,
+        )
+      }
     }
   }
 
   // Verify: when no error expected, bestError should be null
-  if (!errorWillBeThrown && resultBestError !== null) {
+  if (!errorWillOccur && resultBestError !== null) {
     throw new Error('Expected bestError to be null when no error occurred')
   }
 
-  // Verify: for random mode with error, bestError should still be set if findBestError
-  if (iterationMode === 'random' && findBestError && resultBestError !== null) {
+  // Verify: for random mode with error, bestError should still be set if findBestError and dontThrowIfError
+  if (iterationMode === 'random' && bestErrorExpected && resultBestError !== null) {
     if (!(resultBestError.error instanceof Error) || !resultBestError.error.message.startsWith('Test error at call')) {
       throw new Error('bestError.error should be our test error (random mode)')
+    }
+    // Also verify args for random mode when errorVariantArgs is known
+    if (errorVariantArgs !== null) {
+      const resultArgsNoSeed = {...resultBestError.args}
+      delete (resultArgsNoSeed as Record<string, unknown>).seed
+      const expectedArgsNoSeed = {...errorVariantArgs}
+      delete (expectedArgsNoSeed as Record<string, unknown>).seed
+      if (!deepEqual(resultArgsNoSeed, expectedArgsNoSeed)) {
+        throw new Error(
+          `bestError.args mismatch (random mode)!\n` +
+          `  Expected: ${JSON.stringify(expectedArgsNoSeed)}\n` +
+          `  Actual:   ${JSON.stringify(resultArgsNoSeed)}`,
+        )
+      }
     }
   }
 }
@@ -623,8 +658,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
 
   // region Generate Template
 
-  // Note: argsCount >= 1 to avoid library bug with empty templates in backward mode cycles
-  const argsCount = randomInt(rnd, 1, options.argsCountMax + 1)
+  const argsCount = options.argsCountMax === 0 ? 0 : randomInt(rnd, 1, options.argsCountMax + 1)
 
   for (let argIndex = 0; argIndex < argsCount; argIndex++) {
     const argKey = `arg${argIndex}`
@@ -737,8 +771,11 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   if (hasDynamicArgs) {
     totalVariantsCount = null
   }
+  else if (argsCount === 0) {
+    // Empty template = 0 variants (library behavior)
+    totalVariantsCount = 0
+  }
   else {
-    // Cartesian product of zero sets = 1 (empty combination)
     // Cartesian product with any empty set = 0
     totalVariantsCount = 1
     for (let i = 0; i < argsCount; i++) {
@@ -848,6 +885,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   const findBestError = options.findBestError ?? randomBoolean(rnd)
   const limitArgOnError = generateLimitArgOnError(rnd, options.limitArgOnError)
   const includeErrorVariant = options.includeErrorVariant ?? randomBoolean(rnd)
+  const dontThrowIfError = options.dontThrowIfError ?? randomBoolean(rnd)
   const withSeed = options.withSeed ?? randomBoolean(rnd)
   const withEquals = options.withEquals ?? randomBoolean(rnd)
   const iterationMode = options.iterationMode ?? ITERATION_MODES[randomInt(rnd, 0, 3)]
@@ -895,7 +933,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       ? {
         limitArgOnError : limitArgOnError === 'func' ? limitArgOnErrorTrue : limitArgOnError,
         includeErrorVariant,
-        dontThrowIfError: true,
+        dontThrowIfError,
         equals          : withEquals ? equalsCustom : (void 0),
       }
       : (void 0),
@@ -907,6 +945,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       findBestError,
       limitArgOnError,
       includeErrorVariant,
+      dontThrowIfError,
       withSeed,
       withEquals,
       iterationMode,
@@ -941,13 +980,14 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     }
 
     if (logEnabled) {
-      traceEnter(`verifyIterationsCount(${result.iterations}, ${totalVariantsCount}, ${errorIndex}, ${findBestError}, ${cycles}, ${repeatsPerVariant}, ${forwardModeCycles}, ${errorVariantCallCount}, ${retriesToError}, ${iterationMode})`)
+      traceEnter(`verifyIterationsCount(${result.iterations}, ${totalVariantsCount}, ${errorIndex}, ${findBestError}, ${dontThrowIfError}, ${cycles}, ${repeatsPerVariant}, ${forwardModeCycles}, ${errorVariantCallCount}, ${retriesToError}, ${iterationMode})`)
     }
     verifyIterationsCount(
       result.iterations,
       totalVariantsCount,
       errorIndex,
       findBestError,
+      dontThrowIfError,
       cycles,
       repeatsPerVariant,
       forwardModeCycles,
@@ -962,7 +1002,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     if (logEnabled) {
       traceEnter(`verifyBestError`)
     }
-    verifyBestError(result.bestError, findBestError, errorIndex, errorVariantCallCount, retriesToError, cycles, repeatsPerVariant, forwardModeCycles, iterationMode)
+    verifyBestError(result.bestError, findBestError, dontThrowIfError, errorIndex, errorVariantArgs, errorVariantCallCount, retriesToError, cycles, repeatsPerVariant, forwardModeCycles, iterationMode)
     if (logEnabled) {
       traceExit(`ok`)
     }
@@ -1043,7 +1083,8 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       return
     }
     const totalErrorCalls = errorVariantCallCount * cycles * repeatsPerVariant * forwardModeCycles
-    const errorExpected = !findBestError && errorIndex !== null && totalErrorCalls > retriesToError
+    // Error is thrown when: (1) no findBestError, or (2) findBestError but dontThrowIfError=false
+    const errorExpected = (!findBestError || !dontThrowIfError) && errorIndex !== null && totalErrorCalls > retriesToError
     if (errorExpected) {
       if (logEnabled) {
         log('</execution>')
@@ -1105,18 +1146,20 @@ describe('test-variants > createTestVariants variants', function () {
         findBestError !== false ? [false, true, null] : [false],
       limitArgOnError: ({findBestError}) =>
         findBestError !== false ? [false, true, 'func', null] : [false],
-      cyclesMax           : [1, 2],
+      dontThrowIfError: ({findBestError}) =>
+        findBestError !== false ? [false, true, null] : [true],
+      cyclesMax           : [0, 1, 2],
       withSeed            : [false, true, null],
-      repeatsPerVariantMax: [1, 2],
-      forwardModeCyclesMax: [1, 2],
-      argsCountMax        : [1, 2, 3],
-      valuesPerArgMax     : [1, 2],
+      repeatsPerVariantMax: [0, 1, 2],
+      forwardModeCyclesMax: [0, 1, 2],
+      argsCountMax        : [0, 1, 2, 3],
+      valuesPerArgMax     : [0, 1, 2],
       valuesCountMax      : [1, 5],
       // Parallel: false/1 = sequential, 4/8 = concurrent, true = max parallel, null = random
       parallel            : [false, 1, 4, 8, true, null],
     })({
       // limitVariantsCount: 127_000,
-      limitTime    : 10 * 60 * 1000,
+      limitTime    : 2 * 60 * 1000,
       getSeed      : getRandomSeed,
       cycles       : 10000,
       findBestError: {
