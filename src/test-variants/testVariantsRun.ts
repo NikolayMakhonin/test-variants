@@ -57,12 +57,6 @@ function getMemoryUsage(): number | null {
 
 /** Options for finding the earliest failing variant across multiple test runs */
 export type TestVariantsFindBestErrorOptions = {
-  /** Number of full passes through all variants */
-  cycles: number,
-  /** Generates seed for reproducible randomized testing; seed is added to args */
-  getSeed?: null | ((params: GetSeedParams) => any),
-  /** Number of repeat tests per variant within each cycle */
-  repeatsPerVariant?: null | number,
   /** Custom equality for comparing arg values when finding indexes */
   equals?: null | ((a: any, b: any) => boolean),
   /** Limit per-arg indexes on error; boolean enables/disables, function for custom per-arg logic */
@@ -86,6 +80,12 @@ export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
   logCompleted?: null | boolean,
   abortSignal?: null | IAbortSignalFast,
   parallel?: null | number | boolean,
+  /** Number of full passes through all variants; default 1 */
+  cycles?: null | number,
+  /** Generates seed for reproducible randomized testing; seed is added to args */
+  getSeed?: null | ((params: GetSeedParams) => any),
+  /** Number of repeat tests per variant within each cycle */
+  repeatsPerVariant?: null | number,
   findBestError?: null | TestVariantsFindBestErrorOptions,
   /** Save error-causing args to files and replay them before normal iteration */
   saveErrorVariants?: null | SaveErrorVariantsOptions<Args, SavedArgs>,
@@ -129,7 +129,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   const logCompleted = options.logCompleted ?? true
   const abortSignalExternal = options.abortSignal
   const findBestError = options.findBestError
-  const cycles = findBestError?.cycles ?? 1
+  const cycles = options.cycles ?? 1
   const dontThrowIfError = findBestError?.dontThrowIfError
   const limitTime = options.limitTime
 

@@ -50,8 +50,8 @@ describe('test-variants > testVariantsRun', function () {
     }
 
     const result = await testVariantsRun(testRun, variants, {
+      cycles,
       findBestError: {
-        cycles,
         dontThrowIfError: true,
       },
       logCompleted: false,
@@ -122,8 +122,8 @@ describe('test-variants > testVariantsRun', function () {
     }
 
     const result = await testVariantsRun(testRun, variants, {
+      cycles,
       findBestError: {
-        cycles,
         dontThrowIfError: true,
       },
       logCompleted: false,
@@ -175,7 +175,7 @@ describe('test-variants > testVariantsRun', function () {
         b: Array.from({length: 100}).map((_, i) => i),
       },
       limitArgOnError: true,
-      getSeed: ({cycleIndex, variantIndex}) => cycleIndex * 10000 + variantIndex,
+      getSeed        : ({cycleIndex, variantIndex}) => cycleIndex * 10000 + variantIndex,
     })
 
     const testRun = (args: { a: number, b: number, seed: number }) => {
@@ -196,8 +196,8 @@ describe('test-variants > testVariantsRun', function () {
     }
 
     const result = await testVariantsRun(testRun, variants, {
+      cycles,
       findBestError: {
-        cycles,
         dontThrowIfError: true,
       },
       logCompleted: false,
@@ -271,8 +271,8 @@ describe('test-variants > testVariantsRun', function () {
     }
 
     const result = await testVariantsRun(testRun, variants, {
+      cycles,
       findBestError: {
-        cycles,
         dontThrowIfError: true,
       },
       logCompleted: false,
@@ -338,8 +338,8 @@ describe('test-variants > testVariantsRun', function () {
     }
 
     const result = await testVariantsRun(testRun, variants, {
+      cycles,
       findBestError: {
-        cycles,
         dontThrowIfError: true,
       },
       logCompleted: false,
@@ -401,8 +401,8 @@ describe('test-variants > testVariantsRun', function () {
       })
 
       const result = await testVariantsRun(testRun, variants, {
+        cycles,
         findBestError: {
-          cycles,
           dontThrowIfError: true,
         },
         logCompleted: false,

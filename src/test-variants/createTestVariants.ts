@@ -31,8 +31,8 @@ export function createTestVariants<Args extends Obj>(
 
       const variants = testVariantsIterator<Args>({
         argsTemplates      : args as any,
-        getSeed            : options?.findBestError?.getSeed,
-        repeatsPerVariant  : options?.findBestError?.repeatsPerVariant,
+        getSeed            : options?.getSeed,
+        repeatsPerVariant  : options?.repeatsPerVariant,
         equals             : options?.findBestError?.equals,
         limitArgOnError    : options?.findBestError?.limitArgOnError,
         includeErrorVariant: options?.findBestError?.includeErrorVariant,
