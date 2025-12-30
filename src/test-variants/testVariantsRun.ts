@@ -6,6 +6,8 @@ import {garbageCollect} from 'src/garbage-collect/garbageCollect'
 import {Obj, type SaveErrorVariantsOptions, type TestVariantsLogOptions} from 'src/test-variants/types'
 import {generateErrorVariantFilePath, parseErrorVariantFile, readErrorVariantFiles, saveErrorVariantFile} from 'src/test-variants/saveErrorVariants'
 import {TestVariantsIterator, type GetSeedParams, type LimitArgOnError, type ModeConfig} from './testVariantsIterator'
+import {fileLock} from 'src/test-variants/fs/fileLock'
+import {deepEqual} from 'src/helpers/deepEqual'
 import * as path from 'path'
 
 const logOptionsDefault: Required<TestVariantsLogOptions> = {
@@ -223,6 +225,25 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     ? null
     : new Pool(parallel)
 
+  // Track last saved error args to prevent duplicate writes
+  let lastSavedLimitArgs: Args | null = null
+
+  // Save current limit args to file if changed since last save
+  async function saveCurrentLimit(): Promise<void> {
+    if (!errorVariantFilePath || !variants.limit) {
+      return
+    }
+    const currentArgs = variants.limit.args
+    if (deepEqual(currentArgs, lastSavedLimitArgs)) {
+      return
+    }
+    lastSavedLimitArgs = {...currentArgs}
+    await fileLock({
+      filePath: errorVariantFilePath,
+      func    : () => saveErrorVariantFile(currentArgs, errorVariantFilePath, saveErrorVariants.argsToJson),
+    })
+  }
+
   function onCompleted() {
     if (logCompleted) {
       let log = `[test-variants] variants: ${variants.index}, iterations: ${iterations}, async: ${iterationsAsync}`
@@ -338,12 +359,10 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
           iterations += _iterationsSync + _iterationsAsync
         }
         catch (err) {
-          if (errorVariantFilePath) {
-            await saveErrorVariantFile(_args, errorVariantFilePath, saveErrorVariants.argsToJson)
-          }
           if (findBestError) {
             // Pass captured _args explicitly - state.args may differ in parallel mode
             variants.addLimit({args: _args, error: err})
+            await saveCurrentLimit()
             debug = false
           }
           else {
@@ -379,17 +398,16 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
             iterations += _iterationsSync + _iterationsAsync
           }
           catch (err) {
-            if (errorVariantFilePath) {
-              await saveErrorVariantFile(_args, errorVariantFilePath, saveErrorVariants.argsToJson)
-            }
             if (findBestError) {
               // Pass captured _args explicitly - iterator has moved in parallel mode
               variants.addLimit({args: _args, error: err})
+              void saveCurrentLimit()
               debug = false
               // Abort current cycle after first error - next cycle will use new limits
               // This prevents in-flight parallel tests from continuing to error and spam logs
+              // Use explicit null reason to distinguish from real errors
               if (!abortControllerParallel.signal.aborted) {
-                abortControllerParallel.abort()
+                abortControllerParallel.abort(null)
               }
             }
             // Store error and abort to throw after pool drains
@@ -416,8 +434,9 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     void pool.release(parallel)
   }
 
-  // Only throw if abort has an error reason (not flow control abort for findBestError)
-  if (abortSignalAll?.aborted && abortSignalAll.reason !== undefined) {
+  // Only throw if abort has a real error reason (not flow control abort for findBestError)
+  // Flow control abort uses null reason; real errors use Error instances
+  if (abortSignalAll?.aborted && abortSignalAll.reason != null) {
     throw abortSignalAll.reason
   }
 

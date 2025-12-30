@@ -60,6 +60,8 @@ import {createTestVariants} from 'src/test-variants/createTestVariants'
 import {objectToString} from 'src/test-variants/format/objectToString'
 import {getRandomSeed, Random} from 'src/test-variants/random/Random'
 import {randomBoolean, randomInt} from 'src/test-variants/random/helpers'
+import {deepClone} from 'src/helpers/deepClone'
+import {deepEqual} from 'src/helpers/deepEqual'
 import type {TestVariantsRunOptions, TestVariantsRunResult} from 'src/test-variants/testVariantsRun'
 import type {ModeConfig} from 'src/test-variants/testVariantsIterator'
 
@@ -162,76 +164,6 @@ type StressTestArgs = {
 const LIMIT_ARG_OPTIONS: readonly (false | true | 'func')[] = [false, true, 'func']
 const ITERATION_MODES: readonly ('forward' | 'backward' | 'random')[] = ['forward', 'backward', 'random']
 const PARALLEL_OPTIONS: readonly (number | boolean)[] = [false, 1, 4, 8, true]
-
-// endregion
-
-// region Deep Clone / Deep Equal
-
-function deepClone<T>(value: T): T {
-  if (value === null || value === (void 0)) {
-    return value
-  }
-  if (typeof value !== 'object') {
-    return value
-  }
-  if (Array.isArray(value)) {
-    const len = value.length
-    const result: unknown[] = []
-    for (let i = 0; i < len; i++) {
-      result[i] = deepClone(value[i])
-    }
-    return result as unknown as T
-  }
-  const result: Record<string, unknown> = {}
-  const keys = Object.keys(value)
-  for (let i = 0, len = keys.length; i < len; i++) {
-    const key = keys[i]
-    result[key] = deepClone((value as Record<string, unknown>)[key])
-  }
-  return result as T
-}
-
-function deepEqual(a: unknown, b: unknown): boolean {
-  if (a === b) {
-    return true
-  }
-  if (a == null || b == null) {
-    return false
-  }
-  if (typeof a !== 'object' || typeof b !== 'object') {
-    return false
-  }
-  const aIsArray = Array.isArray(a)
-  const bIsArray = Array.isArray(b)
-  if (aIsArray !== bIsArray) {
-    return false
-  }
-  if (aIsArray && bIsArray) {
-    const len = a.length
-    if (len !== b.length) {
-      return false
-    }
-    for (let i = 0; i < len; i++) {
-      if (!deepEqual(a[i], b[i])) {
-        return false
-      }
-    }
-    return true
-  }
-  const keysA = Object.keys(a)
-  const keysB = Object.keys(b)
-  const lenA = keysA.length
-  if (lenA !== keysB.length) {
-    return false
-  }
-  for (let i = 0; i < lenA; i++) {
-    const key = keysA[i]
-    if (!deepEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key])) {
-      return false
-    }
-  }
-  return true
-}
 
 // endregion
 
@@ -463,6 +395,7 @@ function verifySeenValues(
   expectedValuesPerArg: Map<string, TemplateArray>,
   argIsDynamic: Map<string, boolean>,
   argKeys: string[],
+  callCount: number,
   actualIterations: number,
   fullCoverage: boolean,
 ): void {
@@ -479,13 +412,15 @@ function verifySeenValues(
       expectedIds.add(typeof v === 'object' ? v?.id : v)
     }
 
-    // Verify: when no iterations, nothing should be seen (all args)
-    if (actualIterations === 0 && seen.size > 0) {
-      throw new Error(`Expected no values for ${key} when actualIterations=0, saw ${seen.size}`)
+    // Verify: when no calls, nothing should be seen (all args)
+    // Use callCount instead of actualIterations because tests that throw errors
+    // populate seenValues but don't increment iterations counter
+    if (callCount === 0 && seen.size > 0) {
+      throw new Error(`Expected no values for ${key} when callCount=0, saw ${seen.size}`)
     }
 
-    // Verify: for static args with iterations, no unexpected values
-    if (!isDynamic && actualIterations > 0) {
+    // Verify: for static args with calls, no unexpected values
+    if (!isDynamic && callCount > 0) {
       for (const seenValue of seen) {
         if (!expectedIds.has(seenValue)) {
           throw new Error(`Unexpected value ${seenValue} seen for ${key}`)
@@ -523,13 +458,21 @@ function verifyCallCount(
     throw new Error(`Expected callCount=0 when totalVariantsCount=0, got ${callCount}`)
   }
 
-  // Verify: when error expected, callCount should be > 0 (error happens during iteration)
-  if (errorIndex !== null && totalVariantsCount !== null && totalVariantsCount > 0 && callCount === 0) {
+  // Verify: when error expected and iterations expected, callCount should be > 0
+  const expectedIterations = (totalVariantsCount ?? 0) * cycles * repeatsPerVariant * forwardModeCycles
+  if (errorIndex !== null && totalVariantsCount !== null && totalVariantsCount > 0 && expectedIterations > 0 && callCount === 0) {
     throw new Error(`Expected callCount > 0 when error expected, got ${callCount}`)
   }
 
   // Verify exact count for deterministic modes with known variant count and no error
-  if (totalVariantsCount !== null && totalVariantsCount > 0 && errorIndex === null && iterationMode !== 'random') {
+  if (totalVariantsCount !== null
+    && totalVariantsCount > 0
+    && errorIndex === null
+    && iterationMode !== 'random'
+    && cycles > 0
+    && repeatsPerVariant > 0
+    && forwardModeCycles > 0
+  ) {
     const expected = totalVariantsCount * cycles * repeatsPerVariant * forwardModeCycles
     if (callCount !== expected) {
       throw new Error(`Expected callCount=${expected}, got ${callCount}`)
@@ -851,11 +794,16 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   let callCount = 0
   let errorAttempts = 0
   const retriesToError = randomInt(rnd, 0, options.retriesToErrorMax + 1)
+  const withSeed = options.withSeed ?? randomBoolean(rnd)
+  const parallel = options.parallel ?? PARALLEL_OPTIONS[randomInt(rnd, 0, PARALLEL_OPTIONS.length)]
+  const isParallel = parallel !== false && parallel !== 1
 
-  // Precompute errorVariantArgs for static templates to ensure correct behavior in parallel mode
+  // Precompute errorVariantArgs for parallel mode only (where callCount-based detection is unreliable)
+  // For sequential mode, use callCount-based detection to respect errorIndex ordering
   // For dynamic templates, errorVariantArgs remains null and is set on first encounter
+  // For templates with seed, don't precompute since args will include seed causing deepEqual mismatch
   let errorVariantArgs: TestArgs | null = null
-  if (errorIndex !== null && !hasDynamicArgs && argsCount > 0) {
+  if (errorIndex !== null && !hasDynamicArgs && argsCount > 0 && !withSeed && isParallel) {
     errorVariantArgs = computeArgsAtIndex(template, argKeys, errorIndex) as TestArgs
   }
 
@@ -920,7 +868,6 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   const limitArgOnError = generateLimitArgOnError(rnd, options.limitArgOnError)
   const includeErrorVariant = options.includeErrorVariant ?? randomBoolean(rnd)
   const dontThrowIfError = options.dontThrowIfError ?? randomBoolean(rnd)
-  const withSeed = options.withSeed ?? randomBoolean(rnd)
   const withEquals = options.withEquals ?? randomBoolean(rnd)
   const iterationMode = options.iterationMode ?? ITERATION_MODES[randomInt(rnd, 0, 3)]
   // cycles=0 means 0 iterations; use at least 1 when findBestError is false to test normally
@@ -953,9 +900,6 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   else {
     modes = [{mode: 'forward', cycles: forwardModeCycles, repeatsPerVariant}]
   }
-
-  // Parallel mode: 1 = no parallelism, >1 = concurrent execution
-  const parallel = options.parallel ?? PARALLEL_OPTIONS[randomInt(rnd, 0, PARALLEL_OPTIONS.length)]
 
   const runOptions: TestVariantsRunOptions<TestArgs> = {
     cycles,
@@ -1057,6 +1001,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       expectedValuesPerArg,
       argIsDynamic,
       argKeys,
+      callCount,
       result.iterations,
       fullCoverage,
     )
@@ -1204,7 +1149,7 @@ describe('test-variants > createTestVariants variants', function () {
         retriesPerVariant: 10,
         // useToFindBestError: true,
       },
-      // parallel: true,
+      parallel: 10,
     })
   })
 })
