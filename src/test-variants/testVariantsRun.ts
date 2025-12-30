@@ -91,6 +91,7 @@ export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
   /** Logging options; null/true uses defaults; false disables all; object for fine-grained control */
   log?: null | boolean | TestVariantsLogOptions,
   abortSignal?: null | IAbortSignalFast,
+  /** true - all in parallel; number - max parallel; false/0/undefined - sequential */
   parallel?: null | number | boolean,
   /** Number of full passes through all variants; default 1 */
   cycles?: null | number,
