@@ -33,6 +33,7 @@ export type SaveErrorVariantsOptions<Args, SavedArgs = Args> = {
   useToFindBestError?: null | boolean
 }
 
+export type TestVariantsTemplate<Args extends Obj, Value> = Value[] | ((args: Args) => Value[])
 /*
 type Func<Args extends Obj> = (args: Args) => any
 
@@ -44,3 +45,6 @@ export type ToArgs<T extends FuncOrArgs> =
 export type ToFunc<T extends FuncOrArgs> =
   T extends Func<any> ? T : Func<T>
 */
+export type TestVariantsTemplates<Args extends Obj> = {
+  [key in keyof Args]: TestVariantsTemplate<Args, Args[key]>
+}

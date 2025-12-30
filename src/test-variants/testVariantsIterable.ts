@@ -1,10 +1,4 @@
-import {Obj} from 'src/test-variants/types'
-
-export type TestVariantsTemplate<Args extends Obj, Value> = Value[] | ((args: Args) => Value[])
-
-export type TestVariantsTemplates<Args extends Obj> = {
-  [key in keyof Args]: TestVariantsTemplate<Args, Args[key]>
-}
+import {Obj, TestVariantsTemplate, TestVariantsTemplates} from 'src/test-variants/types'
 
 export type TestVariantsTemplatesExt<Args extends Obj, ArgsExtra extends Obj> =
   TestVariantsTemplates<{

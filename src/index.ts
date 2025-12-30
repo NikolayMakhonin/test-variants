@@ -8,8 +8,6 @@ export {
   generateErrorVariantFilePath,
 } from 'src/test-variants/saveErrorVariants'
 export {
-  type TestVariantsTemplate,
-  type TestVariantsTemplates,
   type TestVariantsTemplatesExt,
 } from 'src/test-variants/testVariantsIterable'
 export {
@@ -42,3 +40,5 @@ export {
   type TestVariantsIterator,
   testVariantsIterator,
 } from 'src/test-variants/testVariantsIterator'
+export {TestVariantsTemplates} from "src/test-variants/types";
+export {TestVariantsTemplate} from "src/test-variants/types";

@@ -1,5 +1,4 @@
-import type {Obj} from 'src/test-variants/types'
-import type {TestVariantsTemplate, TestVariantsTemplates} from 'src/test-variants/testVariantsIterable'
+import type {Obj, TestVariantsTemplate, TestVariantsTemplates} from 'src/test-variants/types'
 
 /** Parameters passed to getSeed function for generating test seeds */
 export type GetSeedParams = {
@@ -37,8 +36,8 @@ export type TestVariantsIteratorOptions<Args extends Obj> = {
   includeErrorVariant?: null | boolean
   /** Generates seed for reproducible randomized testing; seed is added to args */
   getSeed?: null | ((params: GetSeedParams) => any)
-  /** Number of repeat tests per variant within each cycle */
-  repeatsPerVariant?: null | number
+  /** Iteration phases; each phase runs until its limits are reached, then next phase starts */
+  modes?: null | ModeConfig[]
 }
 
 /** Limit information with args and optional error */
@@ -72,11 +71,6 @@ export type TestVariantsIterator<Args extends Obj> = {
   next(): Args | null
 }
 
-export {
-  type TestVariantsTemplate,
-  type TestVariantsTemplates,
-}
-
 /** Find index of value in array; returns -1 if not found */
 function findValueIndex<T>(
   values: T[],
@@ -97,6 +91,43 @@ type PendingLimit<Args> = {
   error?: unknown
 }
 
+/** Base mode configuration shared by all modes */
+export type BaseModeConfig = {
+  /** Maximum time in ms for this phase */
+  limitTime?: null | number
+  /** Maximum total picks in this phase */
+  limitTotalCount?: null | number
+}
+
+/** Forward mode configuration */
+export type ForwardModeConfig = BaseModeConfig & {
+  mode: 'forward'
+  /** Number of full passes through all variants */
+  cycles?: null | number
+  /** Number of repeat tests per variant */
+  repeatsPerVariant?: null | number
+}
+
+/** Random mode configuration */
+export type RandomModeConfig = BaseModeConfig & {
+  mode: 'random'
+}
+
+/** Mode configuration for iteration phase */
+export type ModeConfig = ForwardModeConfig | RandomModeConfig
+
+/** Runtime state for current mode */
+type ModeState = {
+  /** Index in modes array */
+  index: number
+  /** Number of picks performed in current mode */
+  pickCount: number
+  /** Start time of current mode */
+  startTime: number
+  /** Current cycle within forward mode (0-based) */
+  cycle: number
+}
+
 /** Iterator internal state */
 type IteratorState<Args extends Obj> = {
   args: Args
@@ -115,6 +146,10 @@ type IteratorState<Args extends Obj> = {
   started: boolean
   currentArgs: Args | null
   pendingLimits: PendingLimit<Args>[]
+  /** Mode configurations for iteration phases */
+  modes: ModeConfig[]
+  /** Runtime state for current mode */
+  modeState: ModeState
 }
 
 /** Calculate template values for given key index, including extra values from saved variants */
@@ -177,21 +212,33 @@ function extendTemplatesForArgs<Args extends Obj>(
   }
 }
 
-/** Reset iterator state for new cycle */
-function resetIteratorState<Args extends Obj>(
+/** Reset iteration position to beginning (for internal mode cycles) */
+function resetIterationPosition<Args extends Obj>(
   state: IteratorState<Args>,
   templates: TestVariantsTemplate<Args, any>[],
+  keys: (keyof Args)[],
   keysCount: number,
 ): void {
-  state.index = -1
   state.repeatIndex = 0
   for (let i = 0; i < keysCount; i++) {
     state.indexes[i] = -1
     state.argValues[i] = []
+    delete state.args[keys[i]]
   }
   if (keysCount > 0) {
     state.argValues[0] = calcTemplateValues(state, templates, state.args, 0)
   }
+}
+
+/** Reset iterator state for new external cycle (via start()) */
+function resetIteratorState<Args extends Obj>(
+  state: IteratorState<Args>,
+  templates: TestVariantsTemplate<Args, any>[],
+  keys: (keyof Args)[],
+  keysCount: number,
+): void {
+  state.index = -1
+  resetIterationPosition(state, templates, keys, keysCount)
 }
 
 /** Get effective max index for an arg (considering argLimit)
@@ -223,6 +270,10 @@ function advanceVariant<Args extends Obj>(
       state.indexes[keyIndex] = valueIndex
       state.args[keys[keyIndex]] = state.argValues[keyIndex][valueIndex]
       // Reset subsequent keys; keyIndex is intentionally shared with outer loop
+      // Clear subsequent keys from args before calculating their template values
+      for (let i = keyIndex + 1; i < keysCount; i++) {
+        delete state.args[keys[i]]
+      }
       for (keyIndex++; keyIndex < keysCount; keyIndex++) {
         state.argValues[keyIndex] = calcTemplateValues(state, templates, state.args, keyIndex)
         const keyMaxIndex = getMaxIndex(state, keyIndex)
@@ -238,6 +289,142 @@ function advanceVariant<Args extends Obj>(
     }
   }
   return false
+}
+
+/** Retreat to previous variant (decrement with borrow); returns true if successful */
+function retreatVariant<Args extends Obj>(
+  state: IteratorState<Args>,
+  templates: TestVariantsTemplate<Args, any>[],
+  keys: (keyof Args)[],
+  keysCount: number,
+): boolean {
+  for (let keyIndex = keysCount - 1; keyIndex >= 0; keyIndex--) {
+    const valueIndex = state.indexes[keyIndex] - 1
+    if (valueIndex >= 0) {
+      state.indexes[keyIndex] = valueIndex
+      state.args[keys[keyIndex]] = state.argValues[keyIndex][valueIndex]
+      // Set subsequent keys to their max values
+      for (let i = keyIndex + 1; i < keysCount; i++) {
+        delete state.args[keys[i]]
+      }
+      for (keyIndex++; keyIndex < keysCount; keyIndex++) {
+        state.argValues[keyIndex] = calcTemplateValues(state, templates, state.args, keyIndex)
+        const maxIndex = getMaxIndex(state, keyIndex) - 1
+        if (maxIndex < 0) {
+          break
+        }
+        state.indexes[keyIndex] = maxIndex
+        state.args[keys[keyIndex]] = state.argValues[keyIndex][maxIndex]
+      }
+      if (keyIndex >= keysCount) {
+        return true
+      }
+    }
+  }
+  return false
+}
+
+/** Random pick within limits; returns true if successful */
+function randomPickVariant<Args extends Obj>(
+  state: IteratorState<Args>,
+  templates: TestVariantsTemplate<Args, any>[],
+  keys: (keyof Args)[],
+  keysCount: number,
+  limitArgOnError?: null | boolean | LimitArgOnError,
+): boolean {
+  if (keysCount === 0) {
+    return false
+  }
+
+  // Clear args from previous iteration before calculating template values
+  for (let i = 0; i < keysCount; i++) {
+    delete state.args[keys[i]]
+  }
+
+  // Check if any limits exist
+  let hasLimits = false
+  for (let i = 0; i < keysCount; i++) {
+    if (state.argLimits[i] != null) {
+      hasLimits = true
+      break
+    }
+  }
+
+  // Calculate argValues for first arg (subsequent args calculated during picking)
+  if (keysCount > 0) {
+    state.argValues[0] = calcTemplateValues(state, templates, state.args, 0)
+  }
+
+  if (!hasLimits) {
+    // No limits - pick random from full range
+    for (let i = 0; i < keysCount; i++) {
+      const len = state.argValues[i].length
+      if (len === 0) {
+        return false
+      }
+      state.indexes[i] = Math.floor(Math.random() * len)
+      state.args[keys[i]] = state.argValues[i][state.indexes[i]]
+      // Recalculate subsequent argValues based on new args
+      for (let j = i + 1; j < keysCount; j++) {
+        state.argValues[j] = calcTemplateValues(state, templates, state.args, j)
+      }
+    }
+    return true
+  }
+
+  if (limitArgOnError) {
+    // Per-arg constraint: each index must not exceed its limit
+    for (let i = 0; i < keysCount; i++) {
+      const len = state.argValues[i].length
+      if (len === 0) {
+        return false
+      }
+      const limit = state.argLimits[i]
+      const maxIndex = limit != null ? Math.min(limit, len - 1) : len - 1
+      state.indexes[i] = Math.floor(Math.random() * (maxIndex + 1))
+      state.args[keys[i]] = state.argValues[i][state.indexes[i]]
+      for (let j = i + 1; j < keysCount; j++) {
+        state.argValues[j] = calcTemplateValues(state, templates, state.args, j)
+      }
+    }
+    return true
+  }
+
+  // Combination constraint: must be below max combination lexicographically
+  let belowMax = false
+  for (let i = 0; i < keysCount; i++) {
+    const len = state.argValues[i].length
+    if (len === 0) {
+      return false
+    }
+    const limit = state.argLimits[i]
+    let maxIndex: number
+    if (belowMax) {
+      maxIndex = len - 1
+    }
+    else {
+      maxIndex = limit != null ? Math.min(limit, len - 1) : len - 1
+    }
+    state.indexes[i] = Math.floor(Math.random() * (maxIndex + 1))
+    state.args[keys[i]] = state.argValues[i][state.indexes[i]]
+
+    if (!belowMax && limit != null && state.indexes[i] < limit) {
+      belowMax = true
+    }
+
+    for (let j = i + 1; j < keysCount; j++) {
+      state.argValues[j] = calcTemplateValues(state, templates, state.args, j)
+    }
+  }
+
+  // If landed exactly on max combination, retreat by 1
+  if (!belowMax) {
+    if (!retreatVariant(state, templates, keys, keysCount)) {
+      return false
+    }
+  }
+
+  return true
 }
 
 /** Validate saved args keys match iterator's arg names (ignoring "seed" key) */
@@ -450,13 +637,80 @@ function createLimit<Args>(args: Args, error?: unknown): TestVariantsIteratorLim
   return error !== void 0 ? {args, error} : {args}
 }
 
+/** Default modes: single forward pass */
+const DEFAULT_MODES: ModeConfig[] = [{mode: 'forward'}]
+
+/** Check if current mode has reached its limits */
+function isModeExhausted(modeConfig: ModeConfig, modeState: ModeState): boolean {
+  if (modeConfig.limitTotalCount != null && modeState.pickCount >= modeConfig.limitTotalCount) {
+    return true
+  }
+  if (modeConfig.limitTime != null && Date.now() - modeState.startTime >= modeConfig.limitTime) {
+    return true
+  }
+  return false
+}
+
+/** Get repeatsPerVariant for current mode */
+function getModeRepeatsPerVariant(modeConfig: ModeConfig): number {
+  if (modeConfig.mode === 'forward') {
+    return modeConfig.repeatsPerVariant ?? 1
+  }
+  return 1
+}
+
+/** Get cycles for forward mode */
+function getModeCycles(modeConfig: ModeConfig): number {
+  return modeConfig.mode === 'forward' ? modeConfig.cycles ?? 1 : 1
+}
+
+/** Advance in forward mode handling cycles; returns true if successful */
+function advanceForwardMode<Args extends Obj>(
+  state: IteratorState<Args>,
+  templates: TestVariantsTemplate<Args, any>[],
+  keys: (keyof Args)[],
+  keysCount: number,
+  cycles: number,
+): boolean {
+  if (advanceVariant(state, templates, keys, keysCount)) {
+    return true
+  }
+  // Variants exhausted - check if more cycles remain
+  if (state.modeState.cycle + 1 < cycles) {
+    state.modeState.cycle++
+    resetIterationPosition(state, templates, keys, keysCount)
+    return advanceVariant(state, templates, keys, keysCount)
+  }
+  return false
+}
+
+/** Switch to next mode; resets mode state */
+function switchToNextMode<Args extends Obj>(
+  state: IteratorState<Args>,
+  templates: TestVariantsTemplate<Args, any>[],
+  keys: (keyof Args)[],
+  keysCount: number,
+): void {
+  state.modeState.index++
+  state.modeState.pickCount = 0
+  state.modeState.startTime = Date.now()
+  state.modeState.cycle = 0
+  if (state.modeState.index < state.modes.length) {
+    const nextMode = state.modes[state.modeState.index]
+    if (nextMode.mode === 'forward') {
+      resetIteratorState(state, templates, keys, keysCount)
+    }
+  }
+}
+
 /** Creates test variants iterator with limiting capabilities */
 export function testVariantsIterator<Args extends Obj>(
   options: TestVariantsIteratorOptions<Args>,
 ): TestVariantsIterator<Args> {
   const {
-    argsTemplates, getSeed, repeatsPerVariant = 1, equals, limitArgOnError, includeErrorVariant,
+    argsTemplates, getSeed, equals, limitArgOnError, includeErrorVariant,
   } = options
+  const modes = options.modes ?? DEFAULT_MODES
   const keys = Object.keys(argsTemplates) as (keyof Args)[]
   const templates: TestVariantsTemplate<Args, any>[] = Object.values(argsTemplates)
   const keysCount = keys.length
@@ -488,6 +742,13 @@ export function testVariantsIterator<Args extends Obj>(
     started      : false,
     currentArgs  : null,
     pendingLimits: [],
+    modes,
+    modeState    : {
+      index    : 0,
+      pickCount: 0,
+      startTime: 0,
+      cycle    : 0,
+    },
   }
 
   function buildCurrentArgs(): Args {
@@ -614,7 +875,11 @@ export function testVariantsIterator<Args extends Obj>(
     },
     start() {
       state.cycleIndex++
-      resetIteratorState(state, templates, keysCount)
+      resetIteratorState(state, templates, keys, keysCount)
+      state.modeState.index = 0
+      state.modeState.pickCount = 0
+      state.modeState.startTime = Date.now()
+      state.modeState.cycle = 0
       state.started = true
     },
     next() {
@@ -622,24 +887,52 @@ export function testVariantsIterator<Args extends Obj>(
         throw new Error('[testVariantsIterator] start() must be called before next()')
       }
 
-      // Try next repeat for current variant
-      if (state.index >= 0 && state.repeatIndex + 1 < repeatsPerVariant) {
-        if (state.count == null || state.index < state.count) {
-          state.repeatIndex++
-          state.currentArgs = buildCurrentArgs()
-          return state.currentArgs
-        }
-      }
-
-      // Move to next variant
-      state.repeatIndex = 0
-      if (!advanceVariant(state, templates, keys, keysCount)) {
+      // Check if all modes exhausted
+      if (state.modeState.index >= state.modes.length) {
         if (state.count == null) {
           state.count = state.index + 1
         }
         return null
       }
+
+      const modeConfig = state.modes[state.modeState.index]
+      const repeatsPerVariant = getModeRepeatsPerVariant(modeConfig)
+
+      // Try next repeat for current variant
+      if (state.index >= 0 && state.repeatIndex + 1 < repeatsPerVariant) {
+        if (state.count == null || state.index < state.count) {
+          state.repeatIndex++
+          state.modeState.pickCount++
+          state.currentArgs = buildCurrentArgs()
+          return state.currentArgs
+        }
+      }
+
+      // Check if current mode is exhausted - switch to next mode
+      if (isModeExhausted(modeConfig, state.modeState)) {
+        switchToNextMode(state, templates, keys, keysCount)
+        return this.next()
+      }
+
+      // Move to next variant based on current mode
+      state.repeatIndex = 0
+      let success: boolean
+
+      if (modeConfig.mode === 'random') {
+        success = randomPickVariant(state, templates, keys, keysCount, limitArgOnError)
+      }
+      else {
+        success = advanceForwardMode(state, templates, keys, keysCount, getModeCycles(modeConfig))
+      }
+
+      if (!success) {
+        // Current mode exhausted - switch to next mode
+        switchToNextMode(state, templates, keys, keysCount)
+        return this.next()
+      }
+
       state.index++
+      state.modeState.pickCount++
 
       // Process pending limits at new position
       if (state.pendingLimits.length > 0) {

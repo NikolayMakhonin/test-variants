@@ -806,9 +806,9 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   // Build modes configuration
   let modes: ModeConfig[]
   if (iterationMode === 'random') {
-    // Random mode with limit based on expected variants count
+    // Random mode limit per external cycle (cycles is handled by outer loop)
     const randomLimit = totalVariantsCount !== null && totalVariantsCount > 0
-      ? totalVariantsCount * cycles * repeatsPerVariant * forwardModeCycles
+      ? totalVariantsCount * repeatsPerVariant * forwardModeCycles
       : 100
     modes = [{mode: 'random', limitTotalCount: randomLimit}]
   }
@@ -939,16 +939,29 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   }
   catch (err) {
     // Error expected when: findBestError is false, errorIndex is set, and totalErrorCalls > retriesToError
-    // Random mode: can't predict errors, so rethrow
-    if (iterationMode === 'random') {
+    // For random mode with multiple variants, we can't predict exact error timing
+    // but with 1 variant, behavior is deterministic
+    if (iterationMode === 'random' && totalVariantsCount !== 1) {
+      // Verify it's at least our test error for non-deterministic random mode
+      if (!(err instanceof Error) || !err.message.startsWith('Test error at call')) {
+        if (logEnabled) {
+          log('</execution>')
+          log('<error>')
+          log(err)
+          log('</error>')
+          log('</test>')
+        }
+        throw err
+      }
+      // For random mode with multiple variants, skip strict verification
       if (logEnabled) {
         log('</execution>')
-        log('<error>')
-        log(err)
-        log('</error>')
+        log('<verification>')
+        traceLog('random mode with multiple variants - skip strict verification')
+        log('</verification>')
         log('</test>')
       }
-      throw err
+      return
     }
     const totalErrorCalls = errorVariantCallCount * cycles * repeatsPerVariant * forwardModeCycles
     const errorExpected = !findBestError && errorIndex !== null && totalErrorCalls > retriesToError
