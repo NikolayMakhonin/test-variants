@@ -99,13 +99,22 @@ export type BaseModeConfig = {
   limitTotalCount?: null | number
 }
 
-/** Forward mode configuration */
-export type ForwardModeConfig = BaseModeConfig & {
-  mode: 'forward'
+/** Sequential mode configuration shared by forward and backward modes */
+export type SequentialModeConfig = BaseModeConfig & {
   /** Number of full passes through all variants */
   cycles?: null | number
   /** Number of repeat tests per variant */
   repeatsPerVariant?: null | number
+}
+
+/** Forward mode configuration */
+export type ForwardModeConfig = SequentialModeConfig & {
+  mode: 'forward'
+}
+
+/** Backward mode configuration - iterates from last to first combination within limits */
+export type BackwardModeConfig = SequentialModeConfig & {
+  mode: 'backward'
 }
 
 /** Random mode configuration */
@@ -114,7 +123,7 @@ export type RandomModeConfig = BaseModeConfig & {
 }
 
 /** Mode configuration for iteration phase */
-export type ModeConfig = ForwardModeConfig | RandomModeConfig
+export type ModeConfig = ForwardModeConfig | BackwardModeConfig | RandomModeConfig
 
 /** Runtime state for current mode */
 type ModeState = {
@@ -212,8 +221,8 @@ function extendTemplatesForArgs<Args extends Obj>(
   }
 }
 
-/** Reset iteration position to beginning (for internal mode cycles) */
-function resetIterationPosition<Args extends Obj>(
+/** Reset iteration position to beginning (for forward mode cycles) */
+function resetIterationPositionToStart<Args extends Obj>(
   state: IteratorState<Args>,
   templates: TestVariantsTemplate<Args, any>[],
   keys: (keyof Args)[],
@@ -230,6 +239,30 @@ function resetIterationPosition<Args extends Obj>(
   }
 }
 
+/** Reset iteration position to end (for backward mode); returns true if valid position exists */
+function resetIterationPositionToEnd<Args extends Obj>(
+  state: IteratorState<Args>,
+  templates: TestVariantsTemplate<Args, any>[],
+  keys: (keyof Args)[],
+  keysCount: number,
+): boolean {
+  state.repeatIndex = 0
+  for (let i = 0; i < keysCount; i++) {
+    delete state.args[keys[i]]
+  }
+  // Set each arg to its max value within limits
+  for (let i = 0; i < keysCount; i++) {
+    state.argValues[i] = calcTemplateValues(state, templates, state.args, i)
+    const maxIndex = getMaxIndex(state, i) - 1
+    if (maxIndex < 0) {
+      return false
+    }
+    state.indexes[i] = maxIndex
+    state.args[keys[i]] = state.argValues[i][maxIndex]
+  }
+  return true
+}
+
 /** Reset iterator state for new external cycle (via start()) */
 function resetIteratorState<Args extends Obj>(
   state: IteratorState<Args>,
@@ -238,7 +271,7 @@ function resetIteratorState<Args extends Obj>(
   keysCount: number,
 ): void {
   state.index = -1
-  resetIterationPosition(state, templates, keys, keysCount)
+  resetIterationPositionToStart(state, templates, keys, keysCount)
 }
 
 /** Get effective max index for an arg (considering argLimit)
@@ -653,15 +686,18 @@ function isModeExhausted(modeConfig: ModeConfig, modeState: ModeState): boolean 
 
 /** Get repeatsPerVariant for current mode */
 function getModeRepeatsPerVariant(modeConfig: ModeConfig): number {
-  if (modeConfig.mode === 'forward') {
+  if (modeConfig.mode === 'forward' || modeConfig.mode === 'backward') {
     return modeConfig.repeatsPerVariant ?? 1
   }
   return 1
 }
 
-/** Get cycles for forward mode */
+/** Get cycles for sequential modes (forward/backward) */
 function getModeCycles(modeConfig: ModeConfig): number {
-  return modeConfig.mode === 'forward' ? modeConfig.cycles ?? 1 : 1
+  if (modeConfig.mode === 'forward' || modeConfig.mode === 'backward') {
+    return modeConfig.cycles ?? 1
+  }
+  return 1
 }
 
 /** Advance in forward mode handling cycles; returns true if successful */
@@ -678,8 +714,31 @@ function advanceForwardMode<Args extends Obj>(
   // Variants exhausted - check if more cycles remain
   if (state.modeState.cycle + 1 < cycles) {
     state.modeState.cycle++
-    resetIterationPosition(state, templates, keys, keysCount)
+    resetIterationPositionToStart(state, templates, keys, keysCount)
     return advanceVariant(state, templates, keys, keysCount)
+  }
+  return false
+}
+
+/** Advance in backward mode handling cycles; returns true if successful */
+function advanceBackwardMode<Args extends Obj>(
+  state: IteratorState<Args>,
+  templates: TestVariantsTemplate<Args, any>[],
+  keys: (keyof Args)[],
+  keysCount: number,
+  cycles: number,
+): boolean {
+  // First call in backward mode - initialize to last position
+  if (state.indexes[0] < 0) {
+    return resetIterationPositionToEnd(state, templates, keys, keysCount)
+  }
+  if (retreatVariant(state, templates, keys, keysCount)) {
+    return true
+  }
+  // Variants exhausted - check if more cycles remain
+  if (state.modeState.cycle + 1 < cycles) {
+    state.modeState.cycle++
+    return resetIterationPositionToEnd(state, templates, keys, keysCount)
   }
   return false
 }
@@ -697,7 +756,7 @@ function switchToNextMode<Args extends Obj>(
   state.modeState.cycle = 0
   if (state.modeState.index < state.modes.length) {
     const nextMode = state.modes[state.modeState.index]
-    if (nextMode.mode === 'forward') {
+    if (nextMode.mode === 'forward' || nextMode.mode === 'backward') {
       resetIteratorState(state, templates, keys, keysCount)
     }
   }
@@ -920,6 +979,9 @@ export function testVariantsIterator<Args extends Obj>(
 
       if (modeConfig.mode === 'random') {
         success = randomPickVariant(state, templates, keys, keysCount, limitArgOnError)
+      }
+      else if (modeConfig.mode === 'backward') {
+        success = advanceBackwardMode(state, templates, keys, keysCount, getModeCycles(modeConfig))
       }
       else {
         success = advanceForwardMode(state, templates, keys, keysCount, getModeCycles(modeConfig))

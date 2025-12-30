@@ -1,5 +1,5 @@
 /**
- * # Stress Test Requirements
+ * # Debugging and Coding Work Requirements
  *
  * - Maximize variability and coverage of all possible and impossible test cases
  * - Maximize performance
@@ -16,6 +16,9 @@
  * - Always search for most simple, most effective, most competent, most flexible, and most reliable solutions
  * - During work, improve code, tests, and logs; make code more quality, more compliant with rules, more readable, more split into independent parts, more competent, and more universal
  * - During work, eliminate workarounds and bad code; bring everything to ideal order
+ *
+ * AND READ THE DOCS
+ * FOLLOW ALL DECISION MAPS
  */
 
 import {createTestVariants as createTestVariantsStable} from 'dist/lib/index.mjs'
@@ -111,7 +114,7 @@ type StressTestArgs = {
   repeatsPerVariantMax: number
   cyclesMax: number
   forwardModeCyclesMax: number
-  iterationMode: 'forward' | 'random' | null
+  iterationMode: 'forward' | 'backward' | 'random' | null
   withEquals: boolean | null
   seed: number
 }
@@ -121,6 +124,7 @@ type StressTestArgs = {
 // region Constants
 
 const LIMIT_ARG_OPTIONS: readonly (false | true | 'func')[] = [false, true, 'func']
+const ITERATION_MODES: readonly ('forward' | 'backward' | 'random')[] = ['forward', 'backward', 'random']
 
 // endregion
 
@@ -300,7 +304,7 @@ function verifyIterationsCount(
   forwardModeCycles: number,
   errorVariantCallCount: number,
   retriesToError: number,
-  iterationMode: 'forward' | 'random',
+  iterationMode: 'forward' | 'backward' | 'random',
 ): void {
   if (totalVariantsCount === null) {
     if (resultIterations < 0) {
@@ -314,7 +318,7 @@ function verifyIterationsCount(
     }
     return
   }
-  // Random mode - can't verify exact count, just check non-negative
+  // Random mode - can't verify exact count; forward/backward are deterministic
   if (iterationMode === 'random') {
     if (resultIterations < 0) {
       throw new Error(`Iterations should be >= 0, got ${resultIterations}`)
@@ -352,9 +356,9 @@ function verifyBestError(
   cycles: number,
   repeatsPerVariant: number,
   forwardModeCycles: number,
-  iterationMode: 'forward' | 'random',
+  iterationMode: 'forward' | 'backward' | 'random',
 ): void {
-  // Random mode - skip strict verification
+  // Random mode - skip strict verification; forward/backward are deterministic
   if (iterationMode === 'random') {
     return
   }
@@ -413,12 +417,12 @@ function verifyCallCount(
   cycles: number,
   repeatsPerVariant: number,
   forwardModeCycles: number,
-  iterationMode: 'forward' | 'random',
+  iterationMode: 'forward' | 'backward' | 'random',
 ): void {
   if (totalVariantsCount === null || errorIndex !== null || totalVariantsCount === 0) {
     return
   }
-  // Random mode - skip exact count verification
+  // Random mode - skip exact count verification; forward/backward are deterministic
   if (iterationMode === 'random') {
     return
   }
@@ -787,7 +791,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   const includeErrorVariant = options.includeErrorVariant ?? randomBoolean(rnd)
   const withSeed = options.withSeed ?? randomBoolean(rnd)
   const withEquals = options.withEquals ?? randomBoolean(rnd)
-  const iterationMode = options.iterationMode ?? (randomBoolean(rnd) ? 'forward' : 'random')
+  const iterationMode = options.iterationMode ?? ITERATION_MODES[randomInt(rnd, 0, 3)]
   // cycles=0 means 0 iterations; use at least 1 when findBestError is false to test normally
   const cycles = findBestError
     ? (options.cyclesMax === 0 ? 0 : (options.cyclesMax || 1))
@@ -811,6 +815,9 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       ? totalVariantsCount * repeatsPerVariant * forwardModeCycles
       : 100
     modes = [{mode: 'random', limitTotalCount: randomLimit}]
+  }
+  else if (iterationMode === 'backward') {
+    modes = [{mode: 'backward', cycles: forwardModeCycles, repeatsPerVariant}]
   }
   else {
     modes = [{mode: 'forward', cycles: forwardModeCycles, repeatsPerVariant}]
@@ -1022,7 +1029,7 @@ describe('test-variants > createTestVariants variants', function () {
       withSeed       : [false, true, null],
       limitArgOnError: ({findBestError}) =>
         findBestError !== false ? [false, true, 'func', null] : [false],
-      iterationMode       : ['forward', 'random', null],
+      iterationMode       : ['forward', 'backward', 'random', null],
       repeatsPerVariantMax: [0, 1, 2],
       cyclesMax           : [0, 1, 2],
       forwardModeCyclesMax: [0, 1, 2],
