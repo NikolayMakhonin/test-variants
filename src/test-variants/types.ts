@@ -1,5 +1,17 @@
 export type Obj = Record<string, any>
 
+/** Logging options for test-variants */
+export type TestVariantsLogOptions = {
+  /** Log at test start with memory info; default true */
+  start?: null | boolean
+  /** Progress log interval in ms; false/0 to disable; default 5000 */
+  progressInterval?: null | false | number
+  /** Log on completion; default true */
+  completed?: null | boolean
+  /** Log error details (variant index, args, error); default true */
+  error?: null | boolean
+}
+
 /** Options for generating error variant file path */
 export type GenerateErrorVariantFilePathOptions = {
   sessionDate: Date

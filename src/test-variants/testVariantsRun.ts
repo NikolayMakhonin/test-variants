@@ -3,10 +3,24 @@ import {AbortControllerFast, type IAbortSignalFast} from '@flemist/abort-control
 import {combineAbortSignals, isPromiseLike} from '@flemist/async-utils'
 import {type IPool, Pool} from '@flemist/time-limits'
 import {garbageCollect} from 'src/garbage-collect/garbageCollect'
-import {Obj, type SaveErrorVariantsOptions} from 'src/test-variants/types'
+import {Obj, type SaveErrorVariantsOptions, type TestVariantsLogOptions} from 'src/test-variants/types'
 import {generateErrorVariantFilePath, parseErrorVariantFile, readErrorVariantFiles, saveErrorVariantFile} from 'src/test-variants/saveErrorVariants'
 import {TestVariantsIterator, type GetSeedParams, type LimitArgOnError} from './testVariantsIterator'
 import * as path from 'path'
+
+const logOptionsDefault: Required<TestVariantsLogOptions> = {
+  start           : true,
+  progressInterval: 5000,
+  completed       : true,
+  error           : true,
+}
+
+const logOptionsDisabled: TestVariantsLogOptions = {
+  start           : false,
+  progressInterval: false,
+  completed       : false,
+  error           : false,
+}
 
 function formatDuration(ms: number): string {
   const seconds = ms / 1000
@@ -74,10 +88,8 @@ export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
   GC_IterationsAsync?: null | number,
   /** Wait for garbage collection after time interval, required to prevent the karma browserDisconnectTimeout */
   GC_Interval?: null | number,
-  /** console log current iterations, required to prevent the karma browserNoActivityTimeout */
-  logInterval?: null | number,
-  /** console log iterations on test completed */
-  logCompleted?: null | boolean,
+  /** Logging options; null/true uses defaults; false disables all; object for fine-grained control */
+  log?: null | boolean | TestVariantsLogOptions,
   abortSignal?: null | IAbortSignalFast,
   parallel?: null | number | boolean,
   /** Number of full passes through all variants; default 1 */
@@ -125,8 +137,19 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   const GC_Iterations = options.GC_Iterations ?? 1000000
   const GC_IterationsAsync = options.GC_IterationsAsync ?? 10000
   const GC_Interval = options.GC_Interval ?? 1000
-  const logInterval = options.logInterval ?? 5000
-  const logCompleted = options.logCompleted ?? true
+
+  const log = options.log
+  const logOpts = log === false
+    ? logOptionsDisabled
+    : log === true
+      ? logOptionsDefault
+      : log && typeof log === 'object'
+        ? log
+        : logOptionsDefault
+  const logStart = logOpts.start ?? logOptionsDefault.start
+  const logInterval = logOpts.progressInterval ?? logOptionsDefault.progressInterval
+  const logCompleted = logOpts.completed ?? logOptionsDefault.completed
+
   const abortSignalExternal = options.abortSignal
   const findBestError = options.findBestError
   const cycles = options.cycles ?? 1
@@ -182,7 +205,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   const abortSignalAll = abortSignalParallel
 
   const startMemory = getMemoryUsage()
-  if (logInterval && startMemory != null) {
+  if (logStart && startMemory != null) {
     console.log(`[test-variants] start, memory: ${formatBytes(startMemory)}`)
   }
 

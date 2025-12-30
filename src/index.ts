@@ -1,5 +1,6 @@
 export {
   type Obj,
+  type TestVariantsLogOptions,
   type GenerateErrorVariantFilePathOptions,
   type SaveErrorVariantsOptions,
 } from 'src/test-variants/types'

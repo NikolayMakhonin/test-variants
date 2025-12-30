@@ -54,7 +54,7 @@ describe('test-variants > testVariantsRun', function () {
       findBestError: {
         dontThrowIfError: true,
       },
-      logCompleted: false,
+      log: false,
     })
 
     // Verify error was found
@@ -126,7 +126,7 @@ describe('test-variants > testVariantsRun', function () {
       findBestError: {
         dontThrowIfError: true,
       },
-      logCompleted: false,
+      log: false,
     })
 
     // Verify error was found
@@ -200,7 +200,7 @@ describe('test-variants > testVariantsRun', function () {
       findBestError: {
         dontThrowIfError: true,
       },
-      logCompleted: false,
+      log: false,
     })
 
     // Verify error was found
@@ -275,7 +275,7 @@ describe('test-variants > testVariantsRun', function () {
       findBestError: {
         dontThrowIfError: true,
       },
-      logCompleted: false,
+      log: false,
     })
 
     // Verify error was found
@@ -342,7 +342,7 @@ describe('test-variants > testVariantsRun', function () {
       findBestError: {
         dontThrowIfError: true,
       },
-      logCompleted: false,
+      log: false,
     })
 
     // Verify error was found
@@ -405,7 +405,7 @@ describe('test-variants > testVariantsRun', function () {
         findBestError: {
           dontThrowIfError: true,
         },
-        logCompleted: false,
+        log: false,
       })
 
       // if (firstError) {

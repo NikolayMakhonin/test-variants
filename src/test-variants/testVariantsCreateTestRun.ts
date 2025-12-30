@@ -13,6 +13,7 @@ export type OnErrorCallback<Args extends Obj> = (event: ErrorEvent<Args>) => Pro
 
 export type TestVariantsCreateTestRunOptions<Args extends Obj> = {
   onError?: null | OnErrorCallback<Args>,
+  logError?: null | boolean,
 }
 
 export type TestVariantsTestRunResult = void | {
@@ -33,6 +34,7 @@ export function testVariantsCreateTestRun<Args extends Obj>(
   test: TestVariantsTest<Args>,
   options?: null | TestVariantsCreateTestRunOptions<Args>,
 ): TestVariantsTestRun<Args> {
+  const logError = options?.logError ?? true
   let debugIteration = 0
 
   let errorEvent: ErrorEvent<Args> | null = null
@@ -47,8 +49,10 @@ export function testVariantsCreateTestRun<Args extends Obj>(
       args,
       index: index,
     }
-    console.error(`[test-variants] error variant: ${index}\n${argsToString(args)}`)
-    console.error(error)
+    if (logError) {
+      console.error(`[test-variants] error variant: ${index}\n${argsToString(args)}`)
+      console.error(error)
+    }
 
     // Rerun failed variant 5 times for debug
     const time0 = Date.now()

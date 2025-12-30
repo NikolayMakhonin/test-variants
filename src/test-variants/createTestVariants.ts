@@ -25,8 +25,16 @@ export function createTestVariants<Args extends Obj>(
 ): TestVariantsSetArgs<Args> {
   return function testVariantsArgs(args) {
     return async function testVariantsCall(options) {
+      const log = options?.log
+      const logError = log === false
+        ? false
+        : log && typeof log === 'object'
+          ? log.error ?? true
+          : true
+
       const testRun = testVariantsCreateTestRun<Args>(test, {
         onError: options?.onError,
+        logError,
       })
 
       const variants = testVariantsIterator<Args>({

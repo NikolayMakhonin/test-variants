@@ -698,6 +698,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     cycles,
     repeatsPerVariant,
     getSeed      : withSeed ? getSeedFromRnd : (void 0),
+    log          : logEnabled ? {start: true, progressInterval: 5000, completed: true, error: true} : false,
     findBestError: findBestError
       ? {
         limitArgOnError : limitArgOnError === 'func' ? limitArgOnErrorTrue : limitArgOnError,
@@ -850,7 +851,7 @@ const testVariants = createTestVariantsStable(async (options: StressTestArgs) =>
 
 // region Test Suite
 
-xdescribe('test-variants > createTestVariants variants', function () {
+describe('test-variants > createTestVariants variants', function () {
   this.timeout(7 * 60 * 60 * 1000)
 
   it('variants', async function () {
