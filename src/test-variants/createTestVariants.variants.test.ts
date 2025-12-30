@@ -1173,7 +1173,7 @@ describe('test-variants > createTestVariants variants', function () {
       errorPosition       : ['none', 'first', 'last', null],
     })({
       // limitVariantsCount: 127_000,
-      limitTime    : 2 * 60 * 1000,
+      // limitTime    : 2 * 60 * 1000,
       getSeed      : getRandomSeed,
       cycles       : 10000,
       findBestError: {
