@@ -8,16 +8,21 @@
  *
  * Execute all Decision Maps before any work:
  * - @/ai/project/base/docs/Decision_Map.md
- * - @/ai/project/core/docs/Decision_Map.md
  * - @/ai/project/test-variants/docs/Decision_Map.md
  *
- * Read and apply all relevant documentation before modifying code:
+ * Read and apply all documentation required for TypeScript test files with ultra-performance code:
+ * - @/ai/project/base/docs/rules/common/development.md
  * - @/ai/project/base/docs/rules/docs/documentation.md
+ * - @/ai/project/base/docs/rules/docs/writing-standards.md
  * - @/ai/project/base/docs/rules/common/code.md
  * - @/ai/project/base/docs/rules/common/naming.md
- * - @/ai/project/base/docs/rules/common/development.md
- * - @/ai/project/base/docs/rules/docs/writing-standards.md
- * - etc
+ * - @/ai/project/base/docs/rules/common/logging.md
+ * - @/ai/project/base/docs/rules/code/TypeScript/rules/test.md
+ * - @/ai/project/base/docs/rules/code/TypeScript/rules/ultra-performance.md
+ * - @/ai/project/base/docs/rules/code/test-development/principles.md
+ *
+ * After completing modifications, execute code review:
+ * - @/ai/project/base/docs/rules/common/code-review.md
  *
  * ## Stress Test Philosophy
  *
@@ -38,7 +43,7 @@
  *
  * ## Code Quality Requirements
  *
- * - Maximize performance for millions of iterations
+ * - Maximize performance for millions of iterations using ultra-performance patterns
  * - Maximize cleanliness, simplicity, and code quality
  * - Search for most simple, most effective, most competent, most flexible, and most reliable solutions
  * - Apply discovered solutions systematically to all similar cases
@@ -425,9 +430,9 @@ function verifyBestError(
       delete (expectedArgsNoSeed as Record<string, unknown>).seed
       if (!deepEqual(resultArgsNoSeed, expectedArgsNoSeed)) {
         throw new Error(
-          `bestError.args mismatch!\n` +
-          `  Expected: ${JSON.stringify(expectedArgsNoSeed)}\n` +
-          `  Actual:   ${JSON.stringify(resultArgsNoSeed)}`,
+          `bestError.args mismatch!\n`
+          + `  Expected: ${JSON.stringify(expectedArgsNoSeed)}\n`
+          + `  Actual:   ${JSON.stringify(resultArgsNoSeed)}`,
         )
       }
     }
@@ -451,9 +456,9 @@ function verifyBestError(
       delete (expectedArgsNoSeed as Record<string, unknown>).seed
       if (!deepEqual(resultArgsNoSeed, expectedArgsNoSeed)) {
         throw new Error(
-          `bestError.args mismatch (random mode)!\n` +
-          `  Expected: ${JSON.stringify(expectedArgsNoSeed)}\n` +
-          `  Actual:   ${JSON.stringify(resultArgsNoSeed)}`,
+          `bestError.args mismatch (random mode)!\n`
+          + `  Expected: ${JSON.stringify(expectedArgsNoSeed)}\n`
+          + `  Actual:   ${JSON.stringify(resultArgsNoSeed)}`,
         )
       }
     }
@@ -967,10 +972,10 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     log          : logEnabled ? {start: true, progressInterval: 5000, completed: true, error: true} : false,
     findBestError: findBestError
       ? {
-        limitArgOnError : limitArgOnError === 'func' ? limitArgOnErrorTrue : limitArgOnError,
+        limitArgOnError: limitArgOnError === 'func' ? limitArgOnErrorTrue : limitArgOnError,
         includeErrorVariant,
         dontThrowIfError,
-        equals          : withEquals ? equalsCustom : (void 0),
+        equals         : withEquals ? equalsCustom : (void 0),
       }
       : (void 0),
   }
