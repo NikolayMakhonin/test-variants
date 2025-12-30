@@ -386,6 +386,11 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
               // Pass captured _args explicitly - iterator has moved in parallel mode
               variants.addLimit({args: _args, error: err})
               debug = false
+              // Abort current cycle after first error - next cycle will use new limits
+              // This prevents in-flight parallel tests from continuing to error and spam logs
+              if (!abortControllerParallel.signal.aborted) {
+                abortControllerParallel.abort()
+              }
             }
             // Store error and abort to throw after pool drains
             else if (!abortControllerParallel.signal.aborted) {
@@ -411,7 +416,8 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     void pool.release(parallel)
   }
 
-  if (abortSignalAll?.aborted) {
+  // Only throw if abort has an error reason (not flow control abort for findBestError)
+  if (abortSignalAll?.aborted && abortSignalAll.reason !== undefined) {
     throw abortSignalAll.reason
   }
 
