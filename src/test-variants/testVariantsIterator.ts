@@ -63,6 +63,10 @@ export type TestVariantsIterator<Args extends Obj> = {
   readonly count: number | null
   /** Last applied limit's args and error; null if no args-based limit applied */
   readonly limit: TestVariantsIteratorLimit<Args> | null
+  /** Current mode index in modes array */
+  readonly modeIndex: number
+  /** Current mode configuration; null if no modes */
+  readonly modeConfig: ModeConfig | null
   /** Add or tighten limit */
   addLimit(options?: null | AddLimitOptions<Args>): void
   /** Reset to beginning of iteration for next cycle */
@@ -365,8 +369,9 @@ function randomPickVariant<Args extends Obj>(
   keysCount: number,
   limitArgOnError?: null | boolean | LimitArgOnError,
 ): boolean {
+  // Handle empty template (keysCount=0): always yields the empty variant
   if (keysCount === 0) {
-    return false
+    return true
   }
 
   // Clear args from previous iteration before calculating template values
@@ -675,6 +680,10 @@ const DEFAULT_MODES: ModeConfig[] = [{mode: 'forward'}]
 
 /** Check if current mode has reached its limits */
 function isModeExhausted(modeConfig: ModeConfig, modeState: ModeState): boolean {
+  // Mode with no repeats or no cycles produces no iterations
+  if (getModeRepeatsPerVariant(modeConfig) <= 0 || getModeCycles(modeConfig) <= 0) {
+    return true
+  }
   if (modeConfig.limitTotalCount != null && modeState.pickCount >= modeConfig.limitTotalCount) {
     return true
   }
@@ -708,6 +717,20 @@ function advanceForwardMode<Args extends Obj>(
   keysCount: number,
   cycles: number,
 ): boolean {
+  // Handle empty template (keysCount=0): one variant per cycle
+  if (keysCount === 0) {
+    if (cycles <= 0) {
+      return false
+    }
+    if (state.index < 0) {
+      return true
+    }
+    if (state.modeState.cycle + 1 < cycles) {
+      state.modeState.cycle++
+      return true
+    }
+    return false
+  }
   if (advanceVariant(state, templates, keys, keysCount)) {
     return true
   }
@@ -728,6 +751,20 @@ function advanceBackwardMode<Args extends Obj>(
   keysCount: number,
   cycles: number,
 ): boolean {
+  // Handle empty template (keysCount=0): one variant per cycle
+  if (keysCount === 0) {
+    if (cycles <= 0) {
+      return false
+    }
+    if (state.index < 0) {
+      return true
+    }
+    if (state.modeState.cycle + 1 < cycles) {
+      state.modeState.cycle++
+      return true
+    }
+    return false
+  }
   // First call in backward mode - initialize to last position
   if (state.indexes[0] < 0) {
     return resetIterationPositionToEnd(state, templates, keys, keysCount)
@@ -835,6 +872,12 @@ export function testVariantsIterator<Args extends Obj>(
     get limit() {
       return state.limit
     },
+    get modeIndex() {
+      return state.modeState.index
+    },
+    get modeConfig() {
+      return state.modes[state.modeState.index] ?? null
+    },
     addLimit(options) {
       const hasArgs = options?.args != null
       const hasIndex = options?.index != null
@@ -909,7 +952,13 @@ export function testVariantsIterator<Args extends Obj>(
           state.pendingLimits.push(limit)
         }
         else if (!limitArgOnError) {
-          state.pendingLimits.push(createLimit(options.args, options.error))
+          // When limitArgOnError is false, still set state.limit for error retrieval
+          // and add to pendingLimits for next cycle index limiting
+          const limit = createLimit(options.args, options.error)
+          if (state.limit == null) {
+            state.limit = limit
+          }
+          state.pendingLimits.push(limit)
         }
         return
       }

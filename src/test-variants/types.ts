@@ -10,6 +10,8 @@ export type TestVariantsLogOptions = {
   completed?: null | boolean
   /** Log error details (variant index, args, error); default true */
   error?: null | boolean
+  /** Log mode changes with all parameters; default true */
+  modeChange?: null | boolean
 }
 
 /** Options for generating error variant file path */

@@ -15,6 +15,7 @@ const logOptionsDefault: Required<TestVariantsLogOptions> = {
   progressInterval: 5000,
   completed       : true,
   error           : true,
+  modeChange      : true,
 }
 
 const logOptionsDisabled: TestVariantsLogOptions = {
@@ -22,6 +23,7 @@ const logOptionsDisabled: TestVariantsLogOptions = {
   progressInterval: false,
   completed       : false,
   error           : false,
+  modeChange      : false,
 }
 
 function formatDuration(ms: number): string {
@@ -69,6 +71,28 @@ function getMemoryUsage(): number | null {
     }
   }
   return null
+}
+
+function formatModeConfig(modeConfig: ModeConfig | null, modeIndex: number): string {
+  if (!modeConfig) {
+    return `mode[${modeIndex}]: null`
+  }
+  let result = `mode[${modeIndex}]: ${modeConfig.mode}`
+  if (modeConfig.mode === 'forward' || modeConfig.mode === 'backward') {
+    if (modeConfig.cycles != null) {
+      result += `, cycles=${modeConfig.cycles}`
+    }
+    if (modeConfig.repeatsPerVariant != null) {
+      result += `, repeats=${modeConfig.repeatsPerVariant}`
+    }
+  }
+  if (modeConfig.limitTime != null) {
+    result += `, limitTime=${modeConfig.limitTime}ms`
+  }
+  if (modeConfig.limitTotalCount != null) {
+    result += `, limitCount=${modeConfig.limitTotalCount}`
+  }
+  return result
 }
 
 /** Options for finding the earliest failing variant across multiple test runs */
@@ -152,6 +176,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   const logStart = logOpts.start ?? logOptionsDefault.start
   const logInterval = logOpts.progressInterval ?? logOptionsDefault.progressInterval
   const logCompleted = logOpts.completed ?? logOptionsDefault.completed
+  const logModeChange = logOpts.modeChange ?? logOptionsDefault.modeChange
 
   const abortSignalExternal = options.abortSignal
   const findBestError = options.findBestError
@@ -220,6 +245,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   let prevGC_Time = prevLogTime
   let prevGC_Iterations = iterations
   let prevGC_IterationsAsync = iterationsAsync
+  let prevModeIndex = -1
 
   const pool: IPool = parallel <= 1
     ? null
@@ -266,6 +292,11 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     while (!abortSignalExternal?.aborted && (debug || (args = variants.next()) != null)) {
       const _index = variants.index
       const _args = args
+
+      if (logModeChange && variants.modeIndex !== prevModeIndex) {
+        prevModeIndex = variants.modeIndex
+        console.log(`[test-variants] ${formatModeConfig(variants.modeConfig, variants.modeIndex)}`)
+      }
 
       const now = (logInterval || GC_Interval || limitTime) && Date.now()
 

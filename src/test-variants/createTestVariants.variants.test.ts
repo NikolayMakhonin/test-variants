@@ -557,7 +557,8 @@ function computeErrorVariantCallCount(
 ): number {
   const argsCount = argKeys.length
   if (argsCount === 0) {
-    return 0
+    // Empty template has 1 variant; error variant is called once if errorIndex is 0
+    return errorIndex < totalVariantsCount ? 1 : 0
   }
 
   const errorArgs = computeArgsAtIndex(template, argKeys, errorIndex)
@@ -751,8 +752,9 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     totalVariantsCount = null
   }
   else if (argsCount === 0) {
-    // Empty template = 0 variants (library behavior)
-    totalVariantsCount = 0
+    // Empty template = 1 variant (the empty combination {})
+    // Cartesian product of zero sets is one element (the empty tuple)
+    totalVariantsCount = 1
   }
   else {
     // Cartesian product with any empty set = 0
@@ -837,7 +839,12 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
         isErrorVariant = callCount === errorIndex + 1
       }
       else {
-        isErrorVariant = deepEqual(args, errorVariantArgs)
+        // Exclude seed from comparison as it varies per call
+        const argsNoSeed = {...args}
+        delete (argsNoSeed as Record<string, unknown>).seed
+        const errorArgsNoSeed = {...errorVariantArgs}
+        delete (errorArgsNoSeed as Record<string, unknown>).seed
+        isErrorVariant = deepEqual(argsNoSeed, errorArgsNoSeed)
       }
     }
 
@@ -1095,7 +1102,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   // endregion
 }
 
-const testVariants = createTestVariantsStable(async (options: StressTestArgs) => {
+const testVariants = createTestVariants(async (options: StressTestArgs) => {
   try {
     await executeStressTest(options)
   }
