@@ -402,9 +402,9 @@ function randomPickVariant<Args extends Obj>(
       }
       state.indexes[i] = Math.floor(Math.random() * len)
       state.args[keys[i]] = state.argValues[i][state.indexes[i]]
-      // Recalculate subsequent argValues based on new args
-      for (let j = i + 1; j < keysCount; j++) {
-        state.argValues[j] = calcTemplateValues(state, templates, state.args, j)
+      // Calculate only next argValues; subsequent ones calculated when their turn comes
+      if (i + 1 < keysCount) {
+        state.argValues[i + 1] = calcTemplateValues(state, templates, state.args, i + 1)
       }
     }
     return true
@@ -421,8 +421,9 @@ function randomPickVariant<Args extends Obj>(
       const maxIndex = limit != null ? Math.min(limit, len - 1) : len - 1
       state.indexes[i] = Math.floor(Math.random() * (maxIndex + 1))
       state.args[keys[i]] = state.argValues[i][state.indexes[i]]
-      for (let j = i + 1; j < keysCount; j++) {
-        state.argValues[j] = calcTemplateValues(state, templates, state.args, j)
+      // Calculate only next argValues; subsequent ones calculated when their turn comes
+      if (i + 1 < keysCount) {
+        state.argValues[i + 1] = calcTemplateValues(state, templates, state.args, i + 1)
       }
     }
     return true
@@ -450,8 +451,9 @@ function randomPickVariant<Args extends Obj>(
       belowMax = true
     }
 
-    for (let j = i + 1; j < keysCount; j++) {
-      state.argValues[j] = calcTemplateValues(state, templates, state.args, j)
+    // Calculate only next argValues; subsequent ones calculated when their turn comes
+    if (i + 1 < keysCount) {
+      state.argValues[i + 1] = calcTemplateValues(state, templates, state.args, i + 1)
     }
   }
 

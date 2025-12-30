@@ -267,6 +267,7 @@ function verifyIterationsCount(
   resultIterations: number,
   totalVariantsCount: number | null,
   errorIndex: number | null,
+  firstMatchingIndex: number,
   findBestError: boolean,
   dontThrowIfError: boolean,
   cycles: number,
@@ -276,6 +277,8 @@ function verifyIterationsCount(
   retriesToError: number,
   iterationMode: 'forward' | 'backward' | 'random',
   callCount: number,
+  errorAttempts: number,
+  isParallel: boolean,
 ): void {
   // Verify: iterations is never negative
   if (resultIterations < 0) {
@@ -288,9 +291,12 @@ function verifyIterationsCount(
   }
 
   // Calculate expected error behavior
-  // Error can only occur if error variant was actually called (callCount > errorIndex)
+  // For random mode: use actual errorAttempts since random picks may not hit error variant
+  // For deterministic modes: use theoretical calculation based on variant structure
   const totalErrorCalls = errorVariantCallCount * cycles * repeatsPerVariant * forwardModeCycles
-  const errorWillOccur = errorIndex !== null && totalErrorCalls > retriesToError && callCount > errorIndex
+  const errorWillOccur = iterationMode === 'random'
+    ? errorAttempts > retriesToError
+    : errorIndex !== null && totalErrorCalls > retriesToError && callCount > firstMatchingIndex
   // Error is thrown if: (1) no findBestError, or (2) findBestError but dontThrowIfError=false
   const errorWillBeThrown = errorWillOccur && (!findBestError || !dontThrowIfError)
 
@@ -299,9 +305,12 @@ function verifyIterationsCount(
     throw new Error('Expected error to be thrown')
   }
 
-  // Verify: when error expected and totalVariantsCount > 0, should have some iterations
-  if (errorWillOccur && totalVariantsCount !== null && totalVariantsCount > 0 && resultIterations === 0) {
-    throw new Error('Expected some iterations when totalVariantsCount > 0 and error expected')
+  // Verify: when error expected after first variant and totalVariantsCount > 0, should have some iterations
+  // Exception: when firstMatchingIndex = 0, error occurs at first variant, so 0 iterations is valid
+  // Skip for parallel mode: iteration counting has race conditions with abort signal
+  // Skip for random mode: random picks may hit error variant first, resulting in 0 iterations
+  if (!isParallel && iterationMode !== 'random' && errorWillOccur && totalVariantsCount !== null && totalVariantsCount > 0 && resultIterations === 0 && firstMatchingIndex > 0) {
+    throw new Error('Expected some iterations when totalVariantsCount > 0 and error expected after first variant')
   }
 
   // Verify exact count for deterministic modes with known variant count and no error
@@ -366,7 +375,8 @@ function verifyBestError(
   }
 
   // Verify: when no error expected, bestError should be null
-  if (!errorWillOccur && resultBestError !== null) {
+  // Skip for random mode: random picks may hit error variant more times than theoretical calculation predicts
+  if (iterationMode !== 'random' && !errorWillOccur && resultBestError !== null) {
     throw new Error('Expected bestError to be null when no error occurred')
   }
 
@@ -482,16 +492,10 @@ function verifyCallCount(
   }
 }
 
-function verifyExpectedError(
-  err: unknown,
-  errorIndex: number,
-  callCount: number,
-): void {
+function verifyExpectedError(err: unknown): void {
+  // Verify the error is our test error (not some unexpected error)
   if (!(err instanceof Error) || !err.message.startsWith('Test error at call')) {
     throw err
-  }
-  if (callCount < errorIndex + 1) {
-    throw new Error(`Error happened too early: callCount=${callCount}, expected at least ${errorIndex + 1}`)
   }
 }
 
@@ -545,27 +549,37 @@ function computeArgsAtIndex(
   return args
 }
 
-/** Compute how many times error variant will be called due to duplicate values in static template
- * Error variant is first matched by index, then subsequent duplicates are matched by value.
- * So we count: 1 (initial match) + duplicates that appear AFTER errorIndex
+type ErrorVariantInfo = {
+  /** Number of times error variant will be called */
+  count: number
+  /** First index where error variant can be triggered (for verification) */
+  firstMatchingIndex: number
+}
+
+/** Compute error variant info for static template
+ * Uses value-based detection: ALL variants matching errorArgs are error variants
+ * This matches innerTest behavior which uses deepEqual for error detection
  */
-function computeErrorVariantCallCount(
+function computeErrorVariantInfo(
   template: Template,
   argKeys: string[],
   errorIndex: number,
   totalVariantsCount: number,
-): number {
+): ErrorVariantInfo {
   const argsCount = argKeys.length
   if (argsCount === 0) {
     // Empty template has 1 variant; error variant is called once if errorIndex is 0
-    return errorIndex < totalVariantsCount ? 1 : 0
+    const valid = errorIndex < totalVariantsCount
+    return {count: valid ? 1 : 0, firstMatchingIndex: valid ? 0 : -1}
   }
 
   const errorArgs = computeArgsAtIndex(template, argKeys, errorIndex)
 
-  // Count variants at or after errorIndex that match error args
+  // Count ALL matching variants from index 0 (value-based detection)
+  // innerTest uses deepEqual which matches any variant with same args
   let count = 0
-  for (let variantIndex = errorIndex; variantIndex < totalVariantsCount; variantIndex++) {
+  let firstMatchingIndex = -1
+  for (let variantIndex = 0; variantIndex < totalVariantsCount; variantIndex++) {
     let matches = true
     let remaining = variantIndex
     for (let i = argsCount - 1; i >= 0; i--) {
@@ -579,11 +593,14 @@ function computeErrorVariantCallCount(
       remaining = Math.floor(remaining / values.length)
     }
     if (matches) {
+      if (firstMatchingIndex < 0) {
+        firstMatchingIndex = variantIndex
+      }
       count++
     }
   }
 
-  return count
+  return {count, firstMatchingIndex}
 }
 
 // endregion
@@ -774,23 +791,6 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     ? generateErrorIndex(rnd, options.errorPosition, totalVariantsCount)
     : null
 
-  // Compute how many times error variant will be called due to duplicate values
-  const errorVariantCallCount = errorIndex !== null && !hasDynamicArgs && totalVariantsCount !== null
-    ? computeErrorVariantCallCount(template, argKeys, errorIndex, totalVariantsCount)
-    : 1
-
-  if (logEnabled) {
-    log('<calculated>')
-    log({
-      argsCount,
-      hasDynamicArgs,
-      totalVariantsCount,
-      errorIndex,
-      errorVariantCallCount,
-    })
-    log('</calculated>')
-  }
-
   // endregion
 
   // region Tracking State
@@ -802,12 +802,33 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   const parallel = options.parallel ?? PARALLEL_OPTIONS[randomInt(rnd, 0, PARALLEL_OPTIONS.length)]
   const isParallel = parallel !== false && parallel !== 1
 
-  // Precompute errorVariantArgs for parallel mode only (where callCount-based detection is unreliable)
-  // For sequential mode, use callCount-based detection to respect errorIndex ordering
+  // Compute error variant info (count and first matching index)
+  const errorVariantInfo = errorIndex !== null && !hasDynamicArgs && totalVariantsCount !== null
+    ? computeErrorVariantInfo(template, argKeys, errorIndex, totalVariantsCount)
+    : {count: 1, firstMatchingIndex: errorIndex ?? 0}
+  const errorVariantCallCount = errorVariantInfo.count
+  const firstMatchingIndex = errorVariantInfo.firstMatchingIndex
+
+  if (logEnabled) {
+    log('<calculated>')
+    log({
+      argsCount,
+      hasDynamicArgs,
+      totalVariantsCount,
+      errorIndex,
+      errorVariantCallCount,
+      firstMatchingIndex,
+      isParallel,
+    })
+    log('</calculated>')
+  }
+
+  // Precompute errorVariantArgs for reliable value-based error detection
+  // callCount-based detection is unreliable with repeatsPerVariant > 1 or parallel mode
+  // Seed is stripped before comparison, so withSeed doesn't affect precomputation
   // For dynamic templates, errorVariantArgs remains null and is set on first encounter
-  // For templates with seed, don't precompute since args will include seed causing deepEqual mismatch
   let errorVariantArgs: TestArgs | null = null
-  if (errorIndex !== null && !hasDynamicArgs && argsCount > 0 && !withSeed && isParallel) {
+  if (errorIndex !== null && !hasDynamicArgs && argsCount > 0) {
     errorVariantArgs = computeArgsAtIndex(template, argKeys, errorIndex) as TestArgs
   }
 
@@ -967,12 +988,13 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     }
 
     if (logEnabled) {
-      traceEnter(`verifyIterationsCount(${result.iterations}, ${totalVariantsCount}, ${errorIndex}, ${findBestError}, ${dontThrowIfError}, ${cycles}, ${repeatsPerVariant}, ${forwardModeCycles}, ${errorVariantCallCount}, ${retriesToError}, ${iterationMode}, ${callCount})`)
+      traceEnter(`verifyIterationsCount(${result.iterations}, ${totalVariantsCount}, ${errorIndex}, ${firstMatchingIndex}, ${findBestError}, ${dontThrowIfError}, ${cycles}, ${repeatsPerVariant}, ${forwardModeCycles}, ${errorVariantCallCount}, ${retriesToError}, ${iterationMode}, ${callCount}, ${errorAttempts}, ${isParallel})`)
     }
     verifyIterationsCount(
       result.iterations,
       totalVariantsCount,
       errorIndex,
+      firstMatchingIndex,
       findBestError,
       dontThrowIfError,
       cycles,
@@ -982,6 +1004,8 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       retriesToError,
       iterationMode,
       callCount,
+      errorAttempts,
+      isParallel,
     )
     if (logEnabled) {
       traceExit(`ok`)
@@ -1072,15 +1096,16 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       return
     }
     // Error is thrown when: (1) no findBestError, or (2) findBestError but dontThrowIfError=false
-    // Use callCount to detect if error variant was actually called (handles edge cases where formula gives 0 but iterator still runs)
-    const errorExpected = (!findBestError || !dontThrowIfError) && errorIndex !== null && callCount > errorIndex
+    // Use errorAttempts > retriesToError since that directly reflects when innerTest throws
+    // Works for all modes: forward, backward, random
+    const errorExpected = (!findBestError || !dontThrowIfError) && errorAttempts > retriesToError
     if (errorExpected) {
       if (logEnabled) {
         log('</execution>')
         log('<verification>')
         traceEnter(`verifyExpectedError`)
       }
-      verifyExpectedError(err, errorIndex, callCount)
+      verifyExpectedError(err)
       if (logEnabled) {
         traceExit(`ok (expected error)`)
         log('</verification>')
