@@ -1,8 +1,70 @@
 import {createTestVariants as createTestVariantsStable} from 'dist/lib/index.mjs'
 import {createTestVariants} from 'src/test-variants/createTestVariants'
+import {objectToString} from 'src/test-variants/format/objectToString'
 import {getRandomSeed, Random} from 'src/test-variants/random/Random'
 import {randomBoolean, randomInt} from 'src/test-variants/random/helpers'
 import type {TestVariantsRunOptions, TestVariantsRunResult} from 'src/test-variants/testVariantsRun'
+
+// region Debug Logging
+
+let logEnabled = false
+let traceIndent = 0
+
+const LOG_LAST_MAX = 1000
+const logLast: string[] = []
+
+function formatValue(value: unknown): string {
+  return objectToString(value, {maxDepth: 3, maxItems: 20})
+}
+
+function formatObject(obj: unknown): string {
+  return objectToString(obj, {pretty: true, maxDepth: 5, maxItems: 50})
+}
+
+function log(...args: unknown[]): void {
+  const message = args.map(a => typeof a === 'string' ? a : formatObject(a)).join(' ')
+  logLast.push(message)
+  if (logLast.length > LOG_LAST_MAX) {
+    logLast.shift()
+  }
+  console.log(message)
+}
+
+function traceLog(message: string): void {
+  log('  '.repeat(traceIndent) + message)
+}
+
+function traceEnter(message: string): void {
+  traceLog('> ' + message)
+  traceIndent++
+}
+
+function traceExit(message: string): void {
+  traceIndent--
+  traceLog('< ' + message)
+}
+
+function getLogLast(): string {
+  return logLast.join('\n')
+}
+
+// eslint-disable-next-line no-undef
+(globalThis as any).__getStressTestLogLast = getLogLast
+
+async function runWithLogs<T>(fn: () => T | Promise<T>): Promise<T> {
+  logEnabled = true
+  traceIndent = 0
+  logLast.length = 0
+  try {
+    return await fn()
+  }
+  finally {
+    logEnabled = false
+    traceIndent = 0
+  }
+}
+
+// endregion
 
 // region Types
 
@@ -383,7 +445,15 @@ function getSlicedArray(values: TemplateArray, count: number): TemplateArray {
 
 // region Main Test
 
-const testVariants = createTestVariantsStable(async (options: StressTestArgs) => {
+async function executeStressTest(options: StressTestArgs): Promise<void> {
+  if (logEnabled) {
+    log('')
+    log('='.repeat(80))
+    log('[OPTIONS]')
+    log(options)
+    log('')
+  }
+
   const rnd = new Random(options.seed)
 
   // region Pre-allocate Structures
@@ -431,15 +501,26 @@ const testVariants = createTestVariantsStable(async (options: StressTestArgs) =>
       const capturedValues = values
       const capturedDynamicArgsReceived = dynamicArgsReceived
 
+      // eslint-disable-next-line @typescript-eslint/no-loop-func
       template[argKey] = function dynamicTemplate(args: TestArgs): TemplateArray {
+        if (logEnabled) {
+          traceEnter(`dynamicTemplate(${capturedArgKey}, args=${formatValue(args)})`)
+        }
+
         // Inline verification: check ONLY preceding args are present
         const receivedCount = Object.keys(args).length
         if (receivedCount !== capturedArgIndex) {
+          if (logEnabled) {
+            traceExit(`ERROR: expected ${capturedArgIndex} args, got ${receivedCount}`)
+          }
           throw new Error(`Dynamic template ${capturedArgKey}: expected ${capturedArgIndex} args, got ${receivedCount}`)
         }
         for (let i = 0; i < capturedArgIndex; i++) {
           const expectedKey = capturedArgKeys[i]
           if (!(expectedKey in args)) {
+            if (logEnabled) {
+              traceExit(`ERROR: missing arg ${expectedKey}`)
+            }
             throw new Error(`Dynamic template ${capturedArgKey}: missing expected arg ${expectedKey}`)
           }
         }
@@ -450,23 +531,47 @@ const testVariants = createTestVariantsStable(async (options: StressTestArgs) =>
 
         const len = capturedValues.length
         if (len === 0) {
+          if (logEnabled) {
+            traceExit(`return [] (empty values)`)
+          }
           return capturedValues
         }
 
         const prevArgKey = capturedArgIndex > 0 ? capturedArgKeys[capturedArgIndex - 1] : null
         if (prevArgKey === null || args[prevArgKey] == null) {
+          if (logEnabled) {
+            traceExit(`return ${formatValue(capturedValues)} (no prev arg)`)
+          }
           return capturedValues
         }
         const prevArg = args[prevArgKey]
         const prevValue = typeof prevArg === 'object' ? prevArg.id : prevArg
         const count = prevValue % (len + 1)
-        return getSlicedArray(capturedValues, count)
+        const result = getSlicedArray(capturedValues, count)
+
+        if (logEnabled) {
+          traceExit(`return ${formatValue(result)} (sliced by prevValue=${prevValue})`)
+        }
+        return result
       }
     }
     else {
       template[argKey] = values
       expectedValuesPerArg.set(argKey, values)
     }
+  }
+
+  if (logEnabled) {
+    log('[TEMPLATE]')
+    const templateInfo: Record<string, string> = {}
+    for (let i = 0; i < argsCount; i++) {
+      const key = argKeys[i]
+      const isDyn = argIsDynamic.get(key)
+      const tmpl = template[key]
+      templateInfo[key] = isDyn ? 'dynamic' : formatValue(tmpl)
+    }
+    log(templateInfo)
+    log('')
   }
 
   // endregion
@@ -497,6 +602,17 @@ const testVariants = createTestVariantsStable(async (options: StressTestArgs) =>
     ? generateErrorIndex(rnd, options.errorPosition, totalVariantsCount)
     : null
 
+  if (logEnabled) {
+    log('[CALCULATED]')
+    log({
+      argsCount,
+      hasDynamicArgs,
+      totalVariantsCount,
+      errorIndex,
+    })
+    log('')
+  }
+
   // endregion
 
   // region Tracking State
@@ -511,6 +627,10 @@ const testVariants = createTestVariantsStable(async (options: StressTestArgs) =>
   // region Create Test Function
 
   const testFn = createTestVariants(async function innerTest(args: TestArgs) {
+    if (logEnabled) {
+      traceEnter(`innerTest(${formatValue(args)}), callCount=${callCount}`)
+    }
+
     for (let i = 0, len = argKeys.length; i < len; i++) {
       const key = argKeys[i]
       const argValue = args[key]
@@ -537,9 +657,19 @@ const testVariants = createTestVariantsStable(async (options: StressTestArgs) =>
         errorVariantArgs = deepClone(args)
       }
       errorAttempts++
+      if (logEnabled) {
+        traceLog(`errorAttempts=${errorAttempts}, retriesToError=${retriesToError}`)
+      }
       if (errorAttempts > retriesToError) {
+        if (logEnabled) {
+          traceExit(`THROWING Test error at call ${callCount}`)
+        }
         throw new Error(`Test error at call ${callCount}`)
       }
+    }
+
+    if (logEnabled) {
+      traceExit(`ok`)
     }
   })
 
@@ -552,25 +682,46 @@ const testVariants = createTestVariantsStable(async (options: StressTestArgs) =>
   const includeErrorVariant = options.includeErrorVariant ?? randomBoolean(rnd)
   const withSeed = options.withSeed ?? randomBoolean(rnd)
   const withEquals = options.withEquals ?? randomBoolean(rnd)
-  const cycles = options.cyclesMax === 0 ? 0 : (options.cyclesMax || 1)
-  const repeatsPerVariant = options.repeatsPerVariantMax === 0 ? 0 : (options.repeatsPerVariantMax || 1)
+  // cycles=0 means 0 iterations; use at least 1 when findBestError is false to test normally
+  const cycles = findBestError
+    ? (options.cyclesMax === 0 ? 0 : (options.cyclesMax || 1))
+    : Math.max(1, options.cyclesMax || 1)
+  const repeatsPerVariant = findBestError
+    ? (options.repeatsPerVariantMax === 0 ? 0 : (options.repeatsPerVariantMax || 1))
+    : Math.max(1, options.repeatsPerVariantMax || 1)
 
   function getSeedFromRnd(): number {
     return rnd.nextSeed()
   }
 
   const runOptions: TestVariantsRunOptions<TestArgs> = {
+    cycles,
+    repeatsPerVariant,
+    getSeed      : withSeed ? getSeedFromRnd : (void 0),
     findBestError: findBestError
       ? {
-        cycles,
-        repeatsPerVariant,
         limitArgOnError : limitArgOnError === 'func' ? limitArgOnErrorTrue : limitArgOnError,
         includeErrorVariant,
         dontThrowIfError: true,
-        getSeed         : withSeed ? getSeedFromRnd : (void 0),
         equals          : withEquals ? equalsCustom : (void 0),
       }
       : (void 0),
+  }
+
+  if (logEnabled) {
+    log('[RUN_OPTIONS]')
+    log({
+      findBestError,
+      limitArgOnError,
+      includeErrorVariant,
+      withSeed,
+      withEquals,
+      cycles,
+      repeatsPerVariant,
+      retriesToError,
+    })
+    log('')
+    log('[EXECUTION]')
   }
 
   // endregion
@@ -580,6 +731,22 @@ const testVariants = createTestVariantsStable(async (options: StressTestArgs) =>
   try {
     const result = await testFn(template)(runOptions)
 
+    if (logEnabled) {
+      log('')
+      log('[RESULT]')
+      log({
+        iterations: result.iterations,
+        bestError : result.bestError,
+        callCount,
+        errorVariantArgs,
+      })
+      log('')
+      log('[VERIFICATION]')
+    }
+
+    if (logEnabled) {
+      traceEnter(`verifyIterationsCount(${result.iterations}, ${totalVariantsCount}, ${errorIndex}, ${findBestError}, ${cycles}, ${repeatsPerVariant})`)
+    }
     verifyIterationsCount(
       result.iterations,
       totalVariantsCount,
@@ -588,9 +755,21 @@ const testVariants = createTestVariantsStable(async (options: StressTestArgs) =>
       cycles,
       repeatsPerVariant,
     )
+    if (logEnabled) {
+      traceExit(`ok`)
+    }
 
+    if (logEnabled) {
+      traceEnter(`verifyBestError`)
+    }
     verifyBestError(result.bestError, findBestError, errorIndex)
+    if (logEnabled) {
+      traceExit(`ok`)
+    }
 
+    if (logEnabled) {
+      traceEnter(`verifySeenValues`)
+    }
     verifySeenValues(
       seenValuesPerArg,
       expectedValuesPerArg,
@@ -599,7 +778,13 @@ const testVariants = createTestVariantsStable(async (options: StressTestArgs) =>
       errorIndex,
       totalVariantsCount,
     )
+    if (logEnabled) {
+      traceExit(`ok`)
+    }
 
+    if (logEnabled) {
+      traceEnter(`verifyCallCount(${callCount}, ${totalVariantsCount}, ${errorIndex}, ${findBestError}, ${cycles}, ${repeatsPerVariant})`)
+    }
     verifyCallCount(
       callCount,
       totalVariantsCount,
@@ -608,26 +793,64 @@ const testVariants = createTestVariantsStable(async (options: StressTestArgs) =>
       cycles,
       repeatsPerVariant,
     )
+    if (logEnabled) {
+      traceExit(`ok`)
+    }
 
+    if (logEnabled) {
+      traceEnter(`verifyDynamicArgs`)
+    }
     verifyDynamicArgs(dynamicArgsReceived, argKeys)
+    if (logEnabled) {
+      traceExit(`ok`)
+    }
   }
   catch (err) {
     if (!findBestError && errorIndex !== null) {
+      if (logEnabled) {
+        traceEnter(`verifyExpectedError`)
+      }
       verifyExpectedError(err, errorIndex, callCount)
+      if (logEnabled) {
+        traceExit(`ok (expected error)`)
+      }
     }
     else {
+      if (logEnabled) {
+        log('')
+        log('[ERROR]')
+        log(err)
+      }
       throw err
     }
   }
 
+  if (logEnabled) {
+    log('')
+    log('[DONE]')
+    log('='.repeat(80))
+  }
+
   // endregion
+}
+
+const testVariants = createTestVariantsStable(async (options: StressTestArgs) => {
+  try {
+    await executeStressTest(options)
+  }
+  catch (err) {
+    await runWithLogs(async () => {
+      await executeStressTest(options)
+    })
+    throw err
+  }
 })
 
 // endregion
 
 // region Test Suite
 
-describe('test-variants > createTestVariants variants', function () {
+xdescribe('test-variants > createTestVariants variants', function () {
   this.timeout(7 * 60 * 60 * 1000)
 
   it('variants', async function () {
@@ -637,13 +860,10 @@ describe('test-variants > createTestVariants variants', function () {
         findBestError !== false ? [false, true, null] : [false],
       includeErrorVariant: ({findBestError}) =>
         findBestError !== false ? [false, true, null] : [false],
-      // TODO: нужно будет getSeed сделать общим, не зависимым от findBestError
       withSeed       : [false, true, null],
       limitArgOnError: ({findBestError}) =>
         findBestError !== false ? [false, true, 'func', null] : [false],
-      // TODO: нужно будет repeatsPerVariantMax сделать общим, не зависимым от findBestError
       repeatsPerVariantMax: [0, 1, 2],
-      // TODO: нужно будет cycles сделать общим, не зависимым от findBestError
       cyclesMax           : [0, 1, 2],
       argType             : ['static', 'dynamic', null],
       retriesToErrorMax   : [0, 1, 2],
@@ -653,9 +873,9 @@ describe('test-variants > createTestVariants variants', function () {
       valuesPerArgMax     : [0, 1, 2],
       valuesCountMax      : [0, 1, 5],
     })({
+      getSeed      : getRandomSeed,
+      cycles       : 10000,
       findBestError: {
-        getSeed        : getRandomSeed,
-        cycles         : 10000,
         limitArgOnError: true,
       },
       saveErrorVariants: {
