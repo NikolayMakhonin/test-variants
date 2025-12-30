@@ -6,18 +6,11 @@
  *
  * ## Before Starting Work
  *
- * Execute all Decision Maps before any work:
- * - @/ai/project/base/docs/Decision_Map.md
- * - @/ai/project/test-variants/docs/Decision_Map.md
- *
  * Read and apply all documentation required for TypeScript test files with ultra-performance code:
- * - @/ai/project/base/docs/rules/common/development.md
  * - @/ai/project/base/docs/rules/docs/documentation.md
- * - @/ai/project/base/docs/rules/docs/writing-standards.md
  * - @/ai/project/base/docs/rules/common/code.md
  * - @/ai/project/base/docs/rules/common/naming.md
  * - @/ai/project/base/docs/rules/common/logging.md
- * - @/ai/project/base/docs/rules/code/TypeScript/rules/test.md
  * - @/ai/project/base/docs/rules/code/TypeScript/rules/ultra-performance.md
  * - @/ai/project/base/docs/rules/code/test-development/principles.md
  *
@@ -1177,7 +1170,6 @@ describe('test-variants > createTestVariants variants', function () {
     await testVariants({
       argType          : ['static', 'dynamic', null],
       retriesToErrorMax: [0, 1, 2],
-      errorPosition    : ['none', 'first', 'last', null],
       valueType        : ['primitive', 'object', null],
       iterationMode    : ['forward', 'backward', 'random', null],
       findBestError    : [false, true, null],
@@ -1198,6 +1190,7 @@ describe('test-variants > createTestVariants variants', function () {
       valuesCountMax      : [1, 5],
       // Parallel: false/1 = sequential, 4/8 = concurrent, true = max parallel, null = random
       parallel            : [false, 1, 4, 8, true, null],
+      errorPosition       : ['none', 'first', 'last', null],
     })({
       // limitVariantsCount: 127_000,
       limitTime    : 2 * 60 * 1000,
