@@ -5,7 +5,7 @@ import {type IPool, Pool} from '@flemist/time-limits'
 import {garbageCollect} from 'src/garbage-collect/garbageCollect'
 import {Obj, type SaveErrorVariantsOptions, type TestVariantsLogOptions} from 'src/test-variants/types'
 import {generateErrorVariantFilePath, parseErrorVariantFile, readErrorVariantFiles, saveErrorVariantFile} from 'src/test-variants/saveErrorVariants'
-import {TestVariantsIterator, type GetSeedParams, type LimitArgOnError} from './testVariantsIterator'
+import {TestVariantsIterator, type GetSeedParams, type LimitArgOnError, type ModeConfig} from './testVariantsIterator'
 import * as path from 'path'
 
 const logOptionsDefault: Required<TestVariantsLogOptions> = {
@@ -96,8 +96,8 @@ export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
   cycles?: null | number,
   /** Generates seed for reproducible randomized testing; seed is added to args */
   getSeed?: null | ((params: GetSeedParams) => any),
-  /** Number of repeat tests per variant within each cycle */
-  repeatsPerVariant?: null | number,
+  /** Iteration phases; each phase runs until its limits are reached */
+  modes?: null | ModeConfig[],
   findBestError?: null | TestVariantsFindBestErrorOptions,
   /** Save error-causing args to files and replay them before normal iteration */
   saveErrorVariants?: null | SaveErrorVariantsOptions<Args, SavedArgs>,

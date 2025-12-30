@@ -273,8 +273,8 @@ describe('test-variants > testVariantsIterator', function () {
       argsTemplates: {
         a: [1, 2],
       },
-      getSeed          : ({variantIndex, cycleIndex, repeatIndex}) => `${cycleIndex}-${variantIndex}-${repeatIndex}`,
-      repeatsPerVariant: 3,
+      getSeed: ({variantIndex, cycleIndex, repeatIndex}) => `${cycleIndex}-${variantIndex}-${repeatIndex}`,
+      modes  : [{mode: 'forward', repeatsPerVariant: 3}],
     })
 
     iterator.start()
@@ -293,13 +293,13 @@ describe('test-variants > testVariantsIterator', function () {
     assert.strictEqual(iterator.next(), null)
   })
 
-  it('repeatsPerVariant with multiple cycles', async function () {
+  it('repeatsPerVariant with external cycles via start()', async function () {
     const iterator = testVariantsIterator({
       argsTemplates: {
         a: [1, 2],
       },
-      getSeed          : ({variantIndex, cycleIndex, repeatIndex}) => `${cycleIndex}-${variantIndex}-${repeatIndex}`,
-      repeatsPerVariant: 2,
+      getSeed: ({variantIndex, cycleIndex, repeatIndex}) => `${cycleIndex}-${variantIndex}-${repeatIndex}`,
+      modes  : [{mode: 'forward', repeatsPerVariant: 2}],
     })
 
     // Cycle 0
@@ -316,6 +316,122 @@ describe('test-variants > testVariantsIterator', function () {
     assert.deepStrictEqual(iterator.next(), {a: 1, seed: '1-0-1'})
     assert.deepStrictEqual(iterator.next(), {a: 2, seed: '1-1-0'})
     assert.deepStrictEqual(iterator.next(), {a: 2, seed: '1-1-1'})
+    assert.strictEqual(iterator.next(), null)
+  })
+
+  it('forward mode cycles iterates variants multiple times', async function () {
+    const iterator = testVariantsIterator({
+      argsTemplates: {
+        a: [1, 2],
+      },
+      modes: [{mode: 'forward', cycles: 2}],
+    })
+
+    iterator.start()
+    // Cycle 0
+    assert.deepStrictEqual(iterator.next(), {a: 1})
+    assert.deepStrictEqual(iterator.next(), {a: 2})
+    // Cycle 1
+    assert.deepStrictEqual(iterator.next(), {a: 1})
+    assert.deepStrictEqual(iterator.next(), {a: 2})
+    // Done
+    assert.strictEqual(iterator.next(), null)
+  })
+
+  it('forward mode cycles with repeatsPerVariant', async function () {
+    const iterator = testVariantsIterator({
+      argsTemplates: {
+        a: [1, 2],
+      },
+      getSeed: ({variantIndex, repeatIndex}) => `${variantIndex}-${repeatIndex}`,
+      modes  : [{mode: 'forward', cycles: 2, repeatsPerVariant: 2}],
+    })
+
+    iterator.start()
+    // Cycle 0
+    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '0-0'})
+    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '0-1'})
+    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '1-0'})
+    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '1-1'})
+    // Cycle 1
+    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '2-0'})
+    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '2-1'})
+    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '3-0'})
+    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '3-1'})
+    // Done
+    assert.strictEqual(iterator.next(), null)
+  })
+
+  it('random mode picks variants within limits', async function () {
+    const iterator = testVariantsIterator({
+      argsTemplates: {
+        a: [1, 2, 3],
+      },
+      modes: [{mode: 'random', limitTotalCount: 10}],
+    })
+
+    iterator.start()
+    const seen = new Set<number>()
+    for (let i = 0; i < 10; i++) {
+      const result = iterator.next()
+      assert.ok(result !== null)
+      assert.ok([1, 2, 3].includes(result.a))
+      seen.add(result.a)
+    }
+    // After 10 random picks, should have seen at least 2 different values
+    assert.ok(seen.size >= 2, `Expected at least 2 different values, got ${seen.size}`)
+    // 11th pick should return null (limitTotalCount reached)
+    assert.strictEqual(iterator.next(), null)
+  })
+
+  it('random mode respects limitTime', async function () {
+    const iterator = testVariantsIterator({
+      argsTemplates: {
+        a: [1, 2, 3],
+      },
+      modes: [{mode: 'random', limitTime: 10}],
+    })
+
+    iterator.start()
+    const start = Date.now()
+    let count = 0
+    while (iterator.next() !== null) {
+      count++
+      if (count > 1000000) {
+        throw new Error('Too many iterations - limitTime not working')
+      }
+    }
+    const elapsed = Date.now() - start
+    assert.ok(elapsed >= 10, `Expected at least 10ms elapsed, got ${elapsed}ms`)
+    assert.ok(count > 0, 'Expected at least some iterations')
+  })
+
+  it('forward then random mode sequence', async function () {
+    const iterator = testVariantsIterator({
+      argsTemplates: {
+        a: [1, 2],
+      },
+      modes: [
+        {mode: 'forward'},
+        {mode: 'random', limitTotalCount: 3},
+      ],
+    })
+
+    iterator.start()
+    // Forward mode first
+    assert.deepStrictEqual(iterator.next(), {a: 1})
+    assert.deepStrictEqual(iterator.next(), {a: 2})
+    // Then random mode - 3 picks
+    const result1 = iterator.next()
+    assert.ok(result1 !== null, 'Random mode pick 1 should not be null')
+    assert.ok([1, 2].includes(result1.a))
+    const result2 = iterator.next()
+    assert.ok(result2 !== null, 'Random mode pick 2 should not be null')
+    assert.ok([1, 2].includes(result2.a))
+    const result3 = iterator.next()
+    assert.ok(result3 !== null, 'Random mode pick 3 should not be null')
+    assert.ok([1, 2].includes(result3.a))
+    // Done
     assert.strictEqual(iterator.next(), null)
   })
 

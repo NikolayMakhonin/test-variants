@@ -396,8 +396,8 @@ describe('test-variants > testVariantsRun', function () {
         argsTemplates: {
           i: Array.from({length: variantsCount}).map((_, i) => i),
         },
-        getSeed          : ({cycleIndex}) => cycleIndex,
-        repeatsPerVariant: 1,
+        getSeed: ({cycleIndex}) => cycleIndex,
+        modes  : [{mode: 'forward', repeatsPerVariant: 1}],
       })
 
       const result = await testVariantsRun(testRun, variants, {
