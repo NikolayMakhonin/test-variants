@@ -397,6 +397,13 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
             debug = false
           }
           else {
+            // Save error variant even without findBestError
+            if (errorVariantFilePath) {
+              await fileLock({
+                filePath: errorVariantFilePath,
+                func    : () => saveErrorVariantFile(_args, errorVariantFilePath, saveErrorVariants?.argsToJson),
+              })
+            }
             throw err
           }
         }
@@ -443,6 +450,13 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
             }
             // Store error and abort to throw after pool drains
             else if (!abortControllerParallel.signal.aborted) {
+              // Save error variant even without findBestError
+              if (errorVariantFilePath) {
+                void fileLock({
+                  filePath: errorVariantFilePath,
+                  func    : () => saveErrorVariantFile(_args, errorVariantFilePath, saveErrorVariants?.argsToJson),
+                })
+              }
               abortControllerParallel.abort(err)
             }
           }

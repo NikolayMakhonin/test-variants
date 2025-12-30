@@ -435,6 +435,101 @@ describe('test-variants > testVariantsIterator', function () {
     assert.strictEqual(iterator.next(), null)
   })
 
+  it('sequential modes persist position when interrupted by limits', async function () {
+    const iterator = testVariantsIterator({
+      argsTemplates: {
+        a: [1, 2, 3, 4],
+      },
+      modes: [
+        {mode: 'forward', limitTotalCount: 2},
+        {mode: 'backward', limitTotalCount: 2},
+      ],
+    })
+
+    iterator.start()
+    // Forward mode: picks 2 variants (a=1, a=2), interrupted by limit, saves position at a=2
+    assert.deepStrictEqual(iterator.next(), {a: 1})
+    assert.deepStrictEqual(iterator.next(), {a: 2})
+    // Backward mode: picks 2 variants from end (a=4, a=3), interrupted by limit, saves position at a=3
+    assert.deepStrictEqual(iterator.next(), {a: 4})
+    assert.deepStrictEqual(iterator.next(), {a: 3})
+    // Done for this cycle
+    assert.strictEqual(iterator.next(), null)
+
+    // New external cycle - positions persist because modes were interrupted by limits
+    iterator.start()
+    // Forward mode: continues from saved position (a=2), picks a=3, a=4
+    assert.deepStrictEqual(iterator.next(), {a: 3})
+    assert.deepStrictEqual(iterator.next(), {a: 4})
+    // Backward mode: continues from saved position (a=3), picks a=2, a=1
+    assert.deepStrictEqual(iterator.next(), {a: 2})
+    assert.deepStrictEqual(iterator.next(), {a: 1})
+    // Done
+    assert.strictEqual(iterator.next(), null)
+  })
+
+  it('sequential mode position not saved when naturally completed', async function () {
+    const iterator = testVariantsIterator({
+      argsTemplates: {
+        a: [1, 2],
+      },
+      modes: [
+        {mode: 'forward'}, // No limits - will complete naturally
+      ],
+    })
+
+    iterator.start()
+    // Forward mode: completes all variants naturally
+    assert.deepStrictEqual(iterator.next(), {a: 1})
+    assert.deepStrictEqual(iterator.next(), {a: 2})
+    assert.strictEqual(iterator.next(), null)
+
+    // Second cycle: starts from beginning (position not saved because naturally completed)
+    iterator.start()
+    assert.deepStrictEqual(iterator.next(), {a: 1})
+    assert.deepStrictEqual(iterator.next(), {a: 2})
+    assert.strictEqual(iterator.next(), null)
+  })
+
+  it('sequential mode position persistence with repeatsPerVariant', async function () {
+    const iterator = testVariantsIterator({
+      argsTemplates: {
+        a: [1, 2, 3],
+      },
+      // Note: variantIndex resets on each start() call, so use cycleIndex to distinguish cycles
+      getSeed: ({cycleIndex, variantIndex, repeatIndex}) => `c${cycleIndex}-v${variantIndex}-r${repeatIndex}`,
+      modes  : [
+        {mode: 'forward', limitTotalCount: 4, repeatsPerVariant: 2},
+      ],
+    })
+
+    iterator.start()
+    // First cycle: 4 picks = 2 variants * 2 repeats, interrupted by limit
+    // Position saved at a=2 (indexes=[1], repeatIndex=1)
+    assert.deepStrictEqual(iterator.next(), {a: 1, seed: 'c0-v0-r0'})
+    assert.deepStrictEqual(iterator.next(), {a: 1, seed: 'c0-v0-r1'})
+    assert.deepStrictEqual(iterator.next(), {a: 2, seed: 'c0-v1-r0'})
+    assert.deepStrictEqual(iterator.next(), {a: 2, seed: 'c0-v1-r1'})
+    assert.strictEqual(iterator.next(), null)
+
+    iterator.start()
+    // Second cycle: continues from saved position (indexes=[1], a=2)
+    // Advances to a=3, gets 2 repeats, then no more variants - mode naturally completes
+    // Natural completion clears saved position
+    assert.deepStrictEqual(iterator.next(), {a: 3, seed: 'c1-v0-r0'})
+    assert.deepStrictEqual(iterator.next(), {a: 3, seed: 'c1-v0-r1'})
+    // No more variants after a=3, mode naturally completes
+    assert.strictEqual(iterator.next(), null)
+
+    iterator.start()
+    // Third cycle: no saved position (was cleared), starts fresh from beginning
+    assert.deepStrictEqual(iterator.next(), {a: 1, seed: 'c2-v0-r0'})
+    assert.deepStrictEqual(iterator.next(), {a: 1, seed: 'c2-v0-r1'})
+    assert.deepStrictEqual(iterator.next(), {a: 2, seed: 'c2-v1-r0'})
+    assert.deepStrictEqual(iterator.next(), {a: 2, seed: 'c2-v1-r1'})
+    assert.strictEqual(iterator.next(), null)
+  })
+
   it('addLimit({args}) applies limit when position reached', async function () {
     const iterator = testVariantsIterator({
       argsTemplates: {

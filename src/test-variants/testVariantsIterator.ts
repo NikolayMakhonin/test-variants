@@ -67,6 +67,8 @@ export type TestVariantsIterator<Args extends Obj> = {
   readonly modeIndex: number
   /** Current mode configuration; null if no modes */
   readonly modeConfig: ModeConfig | null
+  /** Minimum completed cycles across all modes; used for completion condition */
+  readonly minCompletedCycles: number
   /** Add or tighten limit */
   addLimit(options?: null | AddLimitOptions<Args>): void
   /** Reset to beginning of iteration for next cycle */
@@ -129,15 +131,20 @@ export type RandomModeConfig = BaseModeConfig & {
 /** Mode configuration for iteration phase */
 export type ModeConfig = ForwardModeConfig | BackwardModeConfig | RandomModeConfig
 
-/** Runtime state for current mode */
+/** State per mode */
 type ModeState = {
-  /** Index in modes array */
-  index: number
-  /** Number of picks performed in current mode */
+  /** Saved position for sequential modes; null if not interrupted */
+  savedPosition: {
+    indexes: number[]
+    repeatIndex: number
+  } | null
+  /** Total completed cycles */
+  completedCycles: number
+  /** Picks in current round */
   pickCount: number
-  /** Start time of current mode */
+  /** Start time of current round */
   startTime: number
-  /** Current cycle within forward mode (0-based) */
+  /** Cycle within current round (0-based) */
   cycle: number
 }
 
@@ -159,10 +166,12 @@ type IteratorState<Args extends Obj> = {
   started: boolean
   currentArgs: Args | null
   pendingLimits: PendingLimit<Args>[]
-  /** Mode configurations for iteration phases */
+  /** Mode configurations */
   modes: ModeConfig[]
-  /** Runtime state for current mode */
-  modeState: ModeState
+  /** Current mode index */
+  modeIndex: number
+  /** State per mode */
+  modesState: ModeState[]
 }
 
 /** Calculate template values for given key index, including extra values from saved variants */
@@ -714,6 +723,7 @@ function getModeCycles(modeConfig: ModeConfig): number {
 /** Advance in forward mode handling cycles; returns true if successful */
 function advanceForwardMode<Args extends Obj>(
   state: IteratorState<Args>,
+  modeState: ModeState,
   templates: TestVariantsTemplate<Args, any>[],
   keys: (keyof Args)[],
   keysCount: number,
@@ -727,8 +737,8 @@ function advanceForwardMode<Args extends Obj>(
     if (state.index < 0) {
       return true
     }
-    if (state.modeState.cycle + 1 < cycles) {
-      state.modeState.cycle++
+    if (modeState.cycle + 1 < cycles) {
+      modeState.cycle++
       return true
     }
     return false
@@ -737,8 +747,8 @@ function advanceForwardMode<Args extends Obj>(
     return true
   }
   // Variants exhausted - check if more cycles remain
-  if (state.modeState.cycle + 1 < cycles) {
-    state.modeState.cycle++
+  if (modeState.cycle + 1 < cycles) {
+    modeState.cycle++
     resetIterationPositionToStart(state, templates, keys, keysCount)
     return advanceVariant(state, templates, keys, keysCount)
   }
@@ -748,6 +758,7 @@ function advanceForwardMode<Args extends Obj>(
 /** Advance in backward mode handling cycles; returns true if successful */
 function advanceBackwardMode<Args extends Obj>(
   state: IteratorState<Args>,
+  modeState: ModeState,
   templates: TestVariantsTemplate<Args, any>[],
   keys: (keyof Args)[],
   keysCount: number,
@@ -761,8 +772,8 @@ function advanceBackwardMode<Args extends Obj>(
     if (state.index < 0) {
       return true
     }
-    if (state.modeState.cycle + 1 < cycles) {
-      state.modeState.cycle++
+    if (modeState.cycle + 1 < cycles) {
+      modeState.cycle++
       return true
     }
     return false
@@ -775,28 +786,105 @@ function advanceBackwardMode<Args extends Obj>(
     return true
   }
   // Variants exhausted - check if more cycles remain
-  if (state.modeState.cycle + 1 < cycles) {
-    state.modeState.cycle++
+  if (modeState.cycle + 1 < cycles) {
+    modeState.cycle++
     return resetIterationPositionToEnd(state, templates, keys, keysCount)
   }
   return false
 }
 
-/** Switch to next mode; resets mode state */
+/** Save current position for a sequential mode */
+function saveModePosition<Args extends Obj>(
+  state: IteratorState<Args>,
+  modeIndex: number,
+  keysCount: number,
+): void {
+  const indexes: number[] = []
+  for (let i = 0; i < keysCount; i++) {
+    indexes[i] = state.indexes[i]
+  }
+  state.modesState[modeIndex].savedPosition = {
+    indexes,
+    repeatIndex: state.repeatIndex,
+  }
+}
+
+/** Try to restore saved position; returns true if successful, false if position is invalid */
+function tryRestoreSavedPosition<Args extends Obj>(
+  saved: {indexes: number[], repeatIndex: number},
+  state: IteratorState<Args>,
+  templates: TestVariantsTemplate<Args, any>[],
+  keys: (keyof Args)[],
+  keysCount: number,
+): boolean {
+  // Clear args before reconstruction
+  for (let i = 0; i < keysCount; i++) {
+    delete state.args[keys[i]]
+  }
+
+  // Reconstruct args from saved indexes, validating each step
+  for (let i = 0; i < keysCount; i++) {
+    const savedIndex = saved.indexes[i]
+    const values = calcTemplateValues(state, templates, state.args, i)
+
+    // Validate: index must be within template and limits
+    if (savedIndex < 0 || savedIndex >= values.length) {
+      return false
+    }
+    const limit = state.argLimits[i]
+    if (limit != null && savedIndex > limit) {
+      return false
+    }
+
+    state.indexes[i] = savedIndex
+    state.argValues[i] = values
+    state.args[keys[i]] = values[savedIndex]
+  }
+
+  state.repeatIndex = saved.repeatIndex
+  return true
+}
+
+/** Switch to next mode; optionally saves current position and resets mode state */
 function switchToNextMode<Args extends Obj>(
   state: IteratorState<Args>,
   templates: TestVariantsTemplate<Args, any>[],
   keys: (keyof Args)[],
   keysCount: number,
+  savePosition: boolean,
 ): void {
-  state.modeState.index++
-  state.modeState.pickCount = 0
-  state.modeState.startTime = Date.now()
-  state.modeState.cycle = 0
-  if (state.modeState.index < state.modes.length) {
-    const nextMode = state.modes[state.modeState.index]
+  const currentModeIndex = state.modeIndex
+  const currentMode = state.modes[currentModeIndex]
+  const currentModeState = state.modesState[currentModeIndex]
+
+  // For sequential modes: save position when interrupted by limits, clear when naturally completed
+  if (currentMode && (currentMode.mode === 'forward' || currentMode.mode === 'backward')) {
+    if (savePosition) {
+      saveModePosition(state, currentModeIndex, keysCount)
+    }
+    else {
+      // Mode naturally completed - clear saved position and count completed cycles
+      currentModeState.savedPosition = null
+      currentModeState.completedCycles += currentModeState.cycle + 1
+    }
+  }
+
+  state.modeIndex++
+  if (state.modeIndex < state.modes.length) {
+    const nextModeState = state.modesState[state.modeIndex]
+    nextModeState.pickCount = 0
+    nextModeState.startTime = Date.now()
+    nextModeState.cycle = 0
+
+    const nextMode = state.modes[state.modeIndex]
     if (nextMode.mode === 'forward' || nextMode.mode === 'backward') {
+      // Reset state, then try to restore saved position
       resetIteratorState(state, templates, keys, keysCount)
+      const saved = nextModeState.savedPosition
+      if (saved) {
+        tryRestoreSavedPosition(saved, state, templates, keys, keysCount)
+        // If restore failed, state remains in fresh position from resetIteratorState
+      }
     }
   }
 }
@@ -826,6 +914,18 @@ export function testVariantsIterator<Args extends Obj>(
     extraValues[i] = null
   }
 
+  // Initialize modesState for all modes
+  const modesState: ModeState[] = []
+  for (let i = 0; i < modes.length; i++) {
+    modesState[i] = {
+      savedPosition  : null,
+      completedCycles: 0,
+      pickCount      : 0,
+      startTime      : 0,
+      cycle          : 0,
+    }
+  }
+
   const state: IteratorState<Args> = {
     args         : {} as Args,
     indexes,
@@ -841,12 +941,8 @@ export function testVariantsIterator<Args extends Obj>(
     currentArgs  : null,
     pendingLimits: [],
     modes,
-    modeState    : {
-      index    : 0,
-      pickCount: 0,
-      startTime: 0,
-      cycle    : 0,
-    },
+    modeIndex    : 0,
+    modesState,
   }
 
   function buildCurrentArgs(): Args {
@@ -875,10 +971,22 @@ export function testVariantsIterator<Args extends Obj>(
       return state.limit
     },
     get modeIndex() {
-      return state.modeState.index
+      return state.modeIndex
     },
     get modeConfig() {
-      return state.modes[state.modeState.index] ?? null
+      return state.modes[state.modeIndex] ?? null
+    },
+    get minCompletedCycles() {
+      if (state.modesState.length === 0) {
+        return 0
+      }
+      let min = state.modesState[0].completedCycles
+      for (let i = 1; i < state.modesState.length; i++) {
+        if (state.modesState[i].completedCycles < min) {
+          min = state.modesState[i].completedCycles
+        }
+      }
+      return min
     },
     addLimit(options) {
       const hasArgs = options?.args != null
@@ -986,10 +1094,22 @@ export function testVariantsIterator<Args extends Obj>(
     start() {
       state.cycleIndex++
       resetIteratorState(state, templates, keys, keysCount)
-      state.modeState.index = 0
-      state.modeState.pickCount = 0
-      state.modeState.startTime = Date.now()
-      state.modeState.cycle = 0
+      state.modeIndex = 0
+      if (state.modesState.length > 0) {
+        const mode0State = state.modesState[0]
+        mode0State.pickCount = 0
+        mode0State.startTime = Date.now()
+        mode0State.cycle = 0
+
+        // Restore saved position for mode 0 if it exists (was interrupted by limit previously)
+        const mode0 = state.modes[0]
+        if (mode0 && (mode0.mode === 'forward' || mode0.mode === 'backward')) {
+          const saved = mode0State.savedPosition
+          if (saved) {
+            tryRestoreSavedPosition(saved, state, templates, keys, keysCount)
+          }
+        }
+      }
       state.started = true
     },
     next() {
@@ -998,29 +1118,30 @@ export function testVariantsIterator<Args extends Obj>(
       }
 
       // Check if all modes exhausted
-      if (state.modeState.index >= state.modes.length) {
+      if (state.modeIndex >= state.modes.length) {
         if (state.count == null) {
           state.count = state.index + 1
         }
         return null
       }
 
-      const modeConfig = state.modes[state.modeState.index]
+      const modeConfig = state.modes[state.modeIndex]
+      const modeState = state.modesState[state.modeIndex]
       const repeatsPerVariant = getModeRepeatsPerVariant(modeConfig)
 
       // Try next repeat for current variant
       if (state.index >= 0 && state.repeatIndex + 1 < repeatsPerVariant) {
         if (state.count == null || state.index < state.count) {
           state.repeatIndex++
-          state.modeState.pickCount++
+          modeState.pickCount++
           state.currentArgs = buildCurrentArgs()
           return state.currentArgs
         }
       }
 
-      // Check if current mode is exhausted - switch to next mode
-      if (isModeExhausted(modeConfig, state.modeState)) {
-        switchToNextMode(state, templates, keys, keysCount)
+      // Check if current mode is exhausted - switch to next mode (save position since interrupted by limit)
+      if (isModeExhausted(modeConfig, modeState)) {
+        switchToNextMode(state, templates, keys, keysCount, true)
         return this.next()
       }
 
@@ -1030,22 +1151,26 @@ export function testVariantsIterator<Args extends Obj>(
 
       if (modeConfig.mode === 'random') {
         success = randomPickVariant(state, templates, keys, keysCount, limitArgOnError)
+        // For random mode: each variant pick = 1 completed cycle
+        if (success) {
+          modeState.completedCycles++
+        }
       }
       else if (modeConfig.mode === 'backward') {
-        success = advanceBackwardMode(state, templates, keys, keysCount, getModeCycles(modeConfig))
+        success = advanceBackwardMode(state, modeState, templates, keys, keysCount, getModeCycles(modeConfig))
       }
       else {
-        success = advanceForwardMode(state, templates, keys, keysCount, getModeCycles(modeConfig))
+        success = advanceForwardMode(state, modeState, templates, keys, keysCount, getModeCycles(modeConfig))
       }
 
       if (!success) {
-        // Current mode exhausted - switch to next mode
-        switchToNextMode(state, templates, keys, keysCount)
+        // Current mode naturally completed - switch to next mode (don't save position)
+        switchToNextMode(state, templates, keys, keysCount, false)
         return this.next()
       }
 
       state.index++
-      state.modeState.pickCount++
+      modeState.pickCount++
 
       // Process pending limits at new position
       if (state.pendingLimits.length > 0) {

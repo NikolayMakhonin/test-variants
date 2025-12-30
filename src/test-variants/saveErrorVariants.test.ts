@@ -104,10 +104,10 @@ describe('test-variants > saveErrorVariants', function () {
   })
 
   describe('generateErrorVariantFilePath', function () {
-    it('generates filename with UTC date format', function () {
+    it('generates filename with UTC date format and random hash', function () {
       const sessionDate = new Date('2024-06-15T14:30:45.123Z')
       const filePath = generateErrorVariantFilePath({sessionDate})
-      assert.strictEqual(filePath, '2024-06-15_14-30-45.json')
+      assert.match(filePath, /^2024-06-15_14-30-45_[a-z0-9]+\.json$/)
     })
   })
 
