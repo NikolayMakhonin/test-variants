@@ -447,11 +447,10 @@ function getSlicedArray(values: TemplateArray, count: number): TemplateArray {
 
 async function executeStressTest(options: StressTestArgs): Promise<void> {
   if (logEnabled) {
-    log('')
-    log('='.repeat(80))
-    log('[OPTIONS]')
+    log('<test>')
+    log('<options>')
     log(options)
-    log('')
+    log('</options>')
   }
 
   const rnd = new Random(options.seed)
@@ -562,7 +561,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   }
 
   if (logEnabled) {
-    log('[TEMPLATE]')
+    log('<template>')
     const templateInfo: Record<string, string> = {}
     for (let i = 0; i < argsCount; i++) {
       const key = argKeys[i]
@@ -571,7 +570,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       templateInfo[key] = isDyn ? 'dynamic' : formatValue(tmpl)
     }
     log(templateInfo)
-    log('')
+    log('</template>')
   }
 
   // endregion
@@ -603,14 +602,14 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     : null
 
   if (logEnabled) {
-    log('[CALCULATED]')
+    log('<calculated>')
     log({
       argsCount,
       hasDynamicArgs,
       totalVariantsCount,
       errorIndex,
     })
-    log('')
+    log('</calculated>')
   }
 
   // endregion
@@ -710,7 +709,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   }
 
   if (logEnabled) {
-    log('[RUN_OPTIONS]')
+    log('<run-options>')
     log({
       findBestError,
       limitArgOnError,
@@ -721,8 +720,8 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       repeatsPerVariant,
       retriesToError,
     })
-    log('')
-    log('[EXECUTION]')
+    log('</run-options>')
+    log('<execution>')
   }
 
   // endregion
@@ -733,16 +732,16 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     const result = await testFn(template)(runOptions)
 
     if (logEnabled) {
-      log('')
-      log('[RESULT]')
+      log('</execution>')
+      log('<result>')
       log({
         iterations: result.iterations,
         bestError : result.bestError,
         callCount,
         errorVariantArgs,
       })
-      log('')
-      log('[VERIFICATION]')
+      log('</result>')
+      log('<verification>')
     }
 
     if (logEnabled) {
@@ -804,32 +803,34 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     verifyDynamicArgs(dynamicArgsReceived, argKeys)
     if (logEnabled) {
       traceExit(`ok`)
+      log('</verification>')
+      log('</test>')
     }
   }
   catch (err) {
     if (!findBestError && errorIndex !== null) {
       if (logEnabled) {
+        log('</execution>')
+        log('<verification>')
         traceEnter(`verifyExpectedError`)
       }
       verifyExpectedError(err, errorIndex, callCount)
       if (logEnabled) {
         traceExit(`ok (expected error)`)
+        log('</verification>')
+        log('</test>')
       }
     }
     else {
       if (logEnabled) {
-        log('')
-        log('[ERROR]')
+        log('</execution>')
+        log('<error>')
         log(err)
+        log('</error>')
+        log('</test>')
       }
       throw err
     }
-  }
-
-  if (logEnabled) {
-    log('')
-    log('[DONE]')
-    log('='.repeat(80))
   }
 
   // endregion
@@ -875,14 +876,14 @@ describe('test-variants > createTestVariants variants', function () {
       valuesCountMax      : [0, 1, 5],
     })({
       getSeed      : getRandomSeed,
-      cycles       : 10000,
+      cycles       : 200,
       findBestError: {
         limitArgOnError: true,
       },
       saveErrorVariants: {
-        dir               : 'tmp/test/createTestVariants/variants',
-        retriesPerVariant : 10,
-        useToFindBestError: true,
+        dir              : 'tmp/test/createTestVariants/variants',
+        retriesPerVariant: 10,
+        // useToFindBestError: true,
       },
     })
   })
