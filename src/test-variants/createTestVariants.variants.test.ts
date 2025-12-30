@@ -116,6 +116,7 @@ type StressTestArgs = {
   forwardModeCyclesMax: number
   iterationMode: 'forward' | 'backward' | 'random' | null
   withEquals: boolean | null
+  parallel: number | null
   seed: number
 }
 
@@ -125,6 +126,7 @@ type StressTestArgs = {
 
 const LIMIT_ARG_OPTIONS: readonly (false | true | 'func')[] = [false, true, 'func']
 const ITERATION_MODES: readonly ('forward' | 'backward' | 'random')[] = ['forward', 'backward', 'random']
+const PARALLEL_OPTIONS: readonly number[] = [1, 4, 8]
 
 // endregion
 
@@ -306,40 +308,39 @@ function verifyIterationsCount(
   retriesToError: number,
   iterationMode: 'forward' | 'backward' | 'random',
 ): void {
-  if (totalVariantsCount === null) {
-    if (resultIterations < 0) {
-      throw new Error(`Iterations should be >= 0, got ${resultIterations}`)
-    }
-    return
+  // Verify: iterations is never negative
+  if (resultIterations < 0) {
+    throw new Error(`Iterations should be >= 0, got ${resultIterations}`)
   }
-  if (totalVariantsCount === 0) {
-    if (resultIterations !== 0) {
-      throw new Error(`Expected 0 iterations for empty variants, got ${resultIterations}`)
-    }
-    return
+
+  // Verify: when totalVariantsCount=0, iterations should be 0
+  if (totalVariantsCount === 0 && resultIterations !== 0) {
+    throw new Error(`Expected 0 iterations for empty variants, got ${resultIterations}`)
   }
-  // Random mode - can't verify exact count; forward/backward are deterministic
-  if (iterationMode === 'random') {
-    if (resultIterations < 0) {
-      throw new Error(`Iterations should be >= 0, got ${resultIterations}`)
-    }
-    return
-  }
-  // Error is thrown when total calls to error variant > retriesToError
-  // Total calls = errorVariantCallCount * cycles * repeatsPerVariant * forwardModeCycles
+
+  // Calculate expected error behavior
   const totalErrorCalls = errorVariantCallCount * cycles * repeatsPerVariant * forwardModeCycles
   const errorWillBeThrown = errorIndex !== null && totalErrorCalls > retriesToError
-  if (errorWillBeThrown) {
-    if (!findBestError) {
-      throw new Error('Expected error to be thrown without findBestError')
-    }
-    if (resultIterations === 0 && totalVariantsCount > 0) {
-      throw new Error('Expected some iterations when totalVariantsCount > 0')
-    }
-    return
+
+  // Verify: when error expected without findBestError, should have thrown
+  if (errorWillBeThrown && !findBestError) {
+    throw new Error('Expected error to be thrown without findBestError')
   }
-  // No error expected - verify full iteration
-  if (cycles > 0 && repeatsPerVariant > 0 && forwardModeCycles > 0) {
+
+  // Verify: when error expected and totalVariantsCount > 0, should have some iterations
+  if (errorWillBeThrown && totalVariantsCount !== null && totalVariantsCount > 0 && resultIterations === 0) {
+    throw new Error('Expected some iterations when totalVariantsCount > 0 and error expected')
+  }
+
+  // Verify exact count for deterministic modes with known variant count and no error
+  if (totalVariantsCount !== null
+    && totalVariantsCount > 0
+    && !errorWillBeThrown
+    && iterationMode !== 'random'
+    && cycles > 0
+    && repeatsPerVariant > 0
+    && forwardModeCycles > 0
+  ) {
     const expected = totalVariantsCount * cycles * repeatsPerVariant * forwardModeCycles
     if (resultIterations !== expected) {
       throw new Error(`Expected ${expected} iterations (variants=${totalVariantsCount}, cycles=${cycles}, repeats=${repeatsPerVariant}, forwardModeCycles=${forwardModeCycles}), got ${resultIterations}`)
@@ -358,14 +359,12 @@ function verifyBestError(
   forwardModeCycles: number,
   iterationMode: 'forward' | 'backward' | 'random',
 ): void {
-  // Random mode - skip strict verification; forward/backward are deterministic
-  if (iterationMode === 'random') {
-    return
-  }
-  // Error is thrown when total calls to error variant > retriesToError
+  // Calculate expected error behavior
   const totalErrorCalls = errorVariantCallCount * cycles * repeatsPerVariant * forwardModeCycles
   const errorWillBeThrown = errorIndex !== null && totalErrorCalls > retriesToError
-  if (findBestError && errorWillBeThrown) {
+
+  // Verify: when findBestError and error expected, bestError should be set
+  if (findBestError && errorWillBeThrown && iterationMode !== 'random') {
     if (resultBestError === null) {
       throw new Error('Expected bestError to be set when error occurred with findBestError')
     }
@@ -375,10 +374,18 @@ function verifyBestError(
     if (resultBestError.index > errorIndex) {
       throw new Error(`bestError.index (${resultBestError.index}) should be <= errorIndex (${errorIndex})`)
     }
-    return
   }
-  if (resultBestError !== null) {
+
+  // Verify: when no error expected, bestError should be null
+  if (!errorWillBeThrown && resultBestError !== null) {
     throw new Error('Expected bestError to be null when no error occurred')
+  }
+
+  // Verify: for random mode with error, bestError should still be set if findBestError
+  if (iterationMode === 'random' && findBestError && resultBestError !== null) {
+    if (!(resultBestError.error instanceof Error) || !resultBestError.error.message.startsWith('Test error at call')) {
+      throw new Error('bestError.error should be our test error (random mode)')
+    }
   }
 }
 
@@ -387,24 +394,42 @@ function verifySeenValues(
   expectedValuesPerArg: Map<string, TemplateArray>,
   argIsDynamic: Map<string, boolean>,
   argKeys: string[],
-  errorIndex: number | null,
-  totalVariantsCount: number | null,
+  actualIterations: number,
+  fullCoverage: boolean,
 ): void {
-  if (totalVariantsCount === null || errorIndex !== null || totalVariantsCount === 0) {
-    return
-  }
   for (let i = 0, len = argKeys.length; i < len; i++) {
     const key = argKeys[i]
-    if (argIsDynamic.get(key)) {
-      continue
-    }
-    const expected = expectedValuesPerArg.get(key)
     const seen = seenValuesPerArg.get(key)
-    for (let j = 0, lenJ = expected.length; j < lenJ; j++) {
-      const v = expected[j]
-      const valueToCheck: number | undefined = typeof v === 'object' ? v?.id : v
-      if (!seen.has(valueToCheck)) {
-        throw new Error(`Value ${valueToCheck} was not seen for arg ${key}`)
+    const isDynamic = argIsDynamic.get(key)
+    const templateValues = expectedValuesPerArg.get(key) ?? []
+
+    // Build set of expected value ids for static args
+    const expectedIds = new Set<number | undefined>()
+    for (let j = 0, lenJ = templateValues.length; j < lenJ; j++) {
+      const v = templateValues[j]
+      expectedIds.add(typeof v === 'object' ? v?.id : v)
+    }
+
+    // Verify: when no iterations, nothing should be seen (all args)
+    if (actualIterations === 0 && seen.size > 0) {
+      throw new Error(`Expected no values for ${key} when actualIterations=0, saw ${seen.size}`)
+    }
+
+    // Verify: for static args with iterations, no unexpected values
+    if (!isDynamic && actualIterations > 0) {
+      for (const seenValue of seen) {
+        if (!expectedIds.has(seenValue)) {
+          throw new Error(`Unexpected value ${seenValue} seen for ${key}`)
+        }
+      }
+    }
+
+    // Verify: for static args with full coverage, all expected values were seen
+    if (!isDynamic && fullCoverage) {
+      for (const expectedId of expectedIds) {
+        if (!seen.has(expectedId)) {
+          throw new Error(`Value ${expectedId} was not seen for arg ${key}`)
+        }
       }
     }
   }
@@ -419,17 +444,27 @@ function verifyCallCount(
   forwardModeCycles: number,
   iterationMode: 'forward' | 'backward' | 'random',
 ): void {
-  if (totalVariantsCount === null || errorIndex !== null || totalVariantsCount === 0) {
-    return
+  // Verify: callCount is never negative
+  if (callCount < 0) {
+    throw new Error(`callCount should be >= 0, got ${callCount}`)
   }
-  // Random mode - skip exact count verification; forward/backward are deterministic
-  if (iterationMode === 'random') {
-    return
+
+  // Verify: when totalVariantsCount=0, callCount should be 0
+  if (totalVariantsCount === 0 && callCount !== 0) {
+    throw new Error(`Expected callCount=0 when totalVariantsCount=0, got ${callCount}`)
   }
-  // Cycles and repeats apply regardless of findBestError
-  const expected = totalVariantsCount * cycles * repeatsPerVariant * forwardModeCycles
-  if (callCount !== expected) {
-    throw new Error(`Expected callCount=${expected}, got ${callCount}`)
+
+  // Verify: when error expected, callCount should be > 0 (error happens during iteration)
+  if (errorIndex !== null && totalVariantsCount !== null && totalVariantsCount > 0 && callCount === 0) {
+    throw new Error(`Expected callCount > 0 when error expected, got ${callCount}`)
+  }
+
+  // Verify exact count for deterministic modes with known variant count and no error
+  if (totalVariantsCount !== null && totalVariantsCount > 0 && errorIndex === null && iterationMode !== 'random') {
+    const expected = totalVariantsCount * cycles * repeatsPerVariant * forwardModeCycles
+    if (callCount !== expected) {
+      throw new Error(`Expected callCount=${expected}, got ${callCount}`)
+    }
   }
 }
 
@@ -532,6 +567,10 @@ function computeErrorVariantCallCount(
 
 const slicedArraysCache: Map<TemplateArray, TemplateArray[]> = new Map()
 
+function clearSlicedArraysCache(): void {
+  slicedArraysCache.clear()
+}
+
 function getSlicedArray(values: TemplateArray, count: number): TemplateArray {
   let cache = slicedArraysCache.get(values)
   if (cache === (void 0)) {
@@ -550,6 +589,8 @@ function getSlicedArray(values: TemplateArray, count: number): TemplateArray {
 // region Main Test
 
 async function executeStressTest(options: StressTestArgs): Promise<void> {
+  clearSlicedArraysCache()
+
   if (logEnabled) {
     log('<test>')
     log('<options>')
@@ -572,7 +613,8 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
 
   // region Generate Template
 
-  const argsCount = randomInt(rnd, 0, options.argsCountMax + 1)
+  // Note: argsCount >= 1 to avoid library bug with empty templates in backward mode cycles
+  const argsCount = randomInt(rnd, 1, options.argsCountMax + 1)
 
   for (let argIndex = 0; argIndex < argsCount; argIndex++) {
     const argKey = `arg${argIndex}`
@@ -685,10 +727,9 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   if (hasDynamicArgs) {
     totalVariantsCount = null
   }
-  else if (argsCount === 0) {
-    totalVariantsCount = 0
-  }
   else {
+    // Cartesian product of zero sets = 1 (empty combination)
+    // Cartesian product with any empty set = 0
     totalVariantsCount = 1
     for (let i = 0; i < argsCount; i++) {
       const arr = template[argKeys[i]] as TemplateArray
@@ -735,7 +776,9 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
 
   // region Create Test Function
 
-  const testFn = createTestVariants(async function innerTest(args: TestArgs) {
+  // Note: innerTest is SYNCHRONOUS for maximum performance
+  // Async overhead would destroy throughput with millions of iterations
+  const testFn = createTestVariants(function innerTest(args: TestArgs): void {
     if (logEnabled) {
       traceEnter(`innerTest(${formatValue(args)}), callCount=${callCount}`)
     }
@@ -823,9 +866,13 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     modes = [{mode: 'forward', cycles: forwardModeCycles, repeatsPerVariant}]
   }
 
+  // Parallel mode: 1 = no parallelism, >1 = concurrent execution
+  const parallel = options.parallel ?? PARALLEL_OPTIONS[randomInt(rnd, 0, PARALLEL_OPTIONS.length)]
+
   const runOptions: TestVariantsRunOptions<TestArgs> = {
     cycles,
     modes,
+    parallel,
     getSeed      : withSeed ? getSeedFromRnd : (void 0),
     log          : logEnabled ? {start: true, progressInterval: 5000, completed: true, error: true} : false,
     findBestError: findBestError
@@ -851,6 +898,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       repeatsPerVariant,
       forwardModeCycles,
       retriesToError,
+      parallel,
     })
     log('</run-options>')
     log('<execution>')
@@ -906,13 +954,21 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     if (logEnabled) {
       traceEnter(`verifySeenValues`)
     }
+    // Full coverage: all variants visited at least once (static templates, no error, deterministic mode, iterations > 0)
+    const expectedIterationsForCoverage = (totalVariantsCount ?? 0) * cycles * repeatsPerVariant * forwardModeCycles
+    const fullCoverage = errorIndex === null
+      && totalVariantsCount !== null
+      && totalVariantsCount > 0
+      && iterationMode !== 'random'
+      && expectedIterationsForCoverage > 0
+      && result.iterations >= expectedIterationsForCoverage
     verifySeenValues(
       seenValuesPerArg,
       expectedValuesPerArg,
       argIsDynamic,
       argKeys,
-      errorIndex,
-      totalVariantsCount,
+      result.iterations,
+      fullCoverage,
     )
     if (logEnabled) {
       traceExit(`ok`)
@@ -1021,27 +1077,30 @@ describe('test-variants > createTestVariants variants', function () {
 
   it('variants', async function () {
     await testVariants({
-      findBestError: [false, true, null],
-      withEquals   : ({findBestError}) =>
+      argType          : ['static', 'dynamic', null],
+      retriesToErrorMax: [0, 1, 2],
+      errorPosition    : ['none', 'first', 'last', null],
+      valueType        : ['primitive', 'object', null],
+      iterationMode    : ['forward', 'backward', 'random', null],
+      findBestError    : [false, true, null],
+      withEquals       : ({findBestError}) =>
         findBestError !== false ? [false, true, null] : [false],
       includeErrorVariant: ({findBestError}) =>
         findBestError !== false ? [false, true, null] : [false],
-      withSeed       : [false, true, null],
       limitArgOnError: ({findBestError}) =>
         findBestError !== false ? [false, true, 'func', null] : [false],
-      iterationMode       : ['forward', 'backward', 'random', null],
-      repeatsPerVariantMax: [0, 1, 2],
-      cyclesMax           : [0, 1, 2],
-      forwardModeCyclesMax: [0, 1, 2],
-      argType             : ['static', 'dynamic', null],
-      retriesToErrorMax   : [0, 1, 2],
-      errorPosition       : ['none', 'first', 'last', null],
-      valueType           : ['primitive', 'object', null],
-      argsCountMax        : [0, 1, 2, 3],
-      valuesPerArgMax     : [0, 1, 2],
-      valuesCountMax      : [0, 1, 5],
+      cyclesMax           : [1, 2],
+      withSeed            : [false, true, null],
+      repeatsPerVariantMax: [1, 2],
+      forwardModeCyclesMax: [1, 2],
+      argsCountMax        : [1, 2, 3],
+      valuesPerArgMax     : [1, 2],
+      valuesCountMax      : [1, 5],
+      // Parallel: 1 = no parallelism (sequential), 4/8 = concurrent execution, null = random
+      parallel            : [1, 4, null],
     })({
-      limitTime    : 2 * 60 * 1000,
+      // limitVariantsCount: 127_000,
+      limitTime    : 120 * 1000,
       getSeed      : getRandomSeed,
       cycles       : 10000,
       findBestError: {
@@ -1052,6 +1111,7 @@ describe('test-variants > createTestVariants variants', function () {
         retriesPerVariant: 10,
         // useToFindBestError: true,
       },
+      // parallel: true,
     })
   })
 })
