@@ -275,6 +275,7 @@ function verifyIterationsCount(
   errorVariantCallCount: number,
   retriesToError: number,
   iterationMode: 'forward' | 'backward' | 'random',
+  callCount: number,
 ): void {
   // Verify: iterations is never negative
   if (resultIterations < 0) {
@@ -287,8 +288,9 @@ function verifyIterationsCount(
   }
 
   // Calculate expected error behavior
+  // Error can only occur if error variant was actually called (callCount > errorIndex)
   const totalErrorCalls = errorVariantCallCount * cycles * repeatsPerVariant * forwardModeCycles
-  const errorWillOccur = errorIndex !== null && totalErrorCalls > retriesToError
+  const errorWillOccur = errorIndex !== null && totalErrorCalls > retriesToError && callCount > errorIndex
   // Error is thrown if: (1) no findBestError, or (2) findBestError but dontThrowIfError=false
   const errorWillBeThrown = errorWillOccur && (!findBestError || !dontThrowIfError)
 
@@ -958,7 +960,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     }
 
     if (logEnabled) {
-      traceEnter(`verifyIterationsCount(${result.iterations}, ${totalVariantsCount}, ${errorIndex}, ${findBestError}, ${dontThrowIfError}, ${cycles}, ${repeatsPerVariant}, ${forwardModeCycles}, ${errorVariantCallCount}, ${retriesToError}, ${iterationMode})`)
+      traceEnter(`verifyIterationsCount(${result.iterations}, ${totalVariantsCount}, ${errorIndex}, ${findBestError}, ${dontThrowIfError}, ${cycles}, ${repeatsPerVariant}, ${forwardModeCycles}, ${errorVariantCallCount}, ${retriesToError}, ${iterationMode}, ${callCount})`)
     }
     verifyIterationsCount(
       result.iterations,
@@ -972,6 +974,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       errorVariantCallCount,
       retriesToError,
       iterationMode,
+      callCount,
     )
     if (logEnabled) {
       traceExit(`ok`)
@@ -1061,9 +1064,9 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       }
       return
     }
-    const totalErrorCalls = errorVariantCallCount * cycles * repeatsPerVariant * forwardModeCycles
     // Error is thrown when: (1) no findBestError, or (2) findBestError but dontThrowIfError=false
-    const errorExpected = (!findBestError || !dontThrowIfError) && errorIndex !== null && totalErrorCalls > retriesToError
+    // Use callCount to detect if error variant was actually called (handles edge cases where formula gives 0 but iterator still runs)
+    const errorExpected = (!findBestError || !dontThrowIfError) && errorIndex !== null && callCount > errorIndex
     if (errorExpected) {
       if (logEnabled) {
         log('</execution>')
@@ -1149,6 +1152,21 @@ describe('test-variants > createTestVariants variants', function () {
         retriesPerVariant: 10,
         // useToFindBestError: true,
       },
+      modes: [
+        {
+          mode     : 'forward',
+          limitTime: 30 * 1000,
+        },
+        {
+          mode     : 'random',
+          limitTime: 60 * 1000,
+        },
+        {
+          mode             : 'backward',
+          limitTotalCount  : 1,
+          repeatsPerVariant: 10,
+        },
+      ],
       parallel: 10,
     })
   })
