@@ -1,24 +1,60 @@
 /**
- * # Debugging and Coding Work Requirements
+ * # Stress Test Work Instructions
  *
- * - Maximize variability and coverage of all possible and impossible test cases
- * - Maximize performance
+ * These are my (project owner) mandatory instructions for LLM agents working with this file.
+ * Follow these instructions with absolute priority according to project rules.
+ *
+ * ## Before Starting Work
+ *
+ * Execute all Decision Maps before any work:
+ * - @/ai/project/base/docs/Decision_Map.md
+ * - @/ai/project/core/docs/Decision_Map.md
+ * - @/ai/project/test-variants/docs/Decision_Map.md
+ *
+ * Read and apply all relevant documentation before modifying code:
+ * - @/ai/project/base/docs/rules/docs/documentation.md
+ * - @/ai/project/base/docs/rules/common/code.md
+ * - @/ai/project/base/docs/rules/common/naming.md
+ * - @/ai/project/base/docs/rules/common/development.md
+ * - @/ai/project/base/docs/rules/docs/writing-standards.md
+ * - etc
+ *
+ * ## Stress Test Philosophy
+ *
+ * The goal of stress tests is to FIND errors, not to pass tests.
+ * Tests must fail on any unexpected behavior - this is their primary purpose.
+ * Polish code to perfection through massive verification of everything.
+ *
+ * Strive to find as many explicit and implicit errors and unexpected behaviors as possible.
+ * Never sweep bugs under the rug.
+ * Never fix bugs with workarounds; always search for systemic root causes.
+ * Debugging time is irrelevant; actual debugging and code improvement is what matters.
+ *
+ * ## Coverage Requirements
+ *
+ * Test all possible variations of all parameters, modes, edge cases, and combinations.
+ * Perform all possible verifications of all results, states, and invariants.
+ * Include boundary conditions, zero values, empty inputs, and impossible cases.
+ *
+ * ## Code Quality Requirements
+ *
+ * - Maximize performance for millions of iterations
  * - Maximize cleanliness, simplicity, and code quality
- * - Follow all principles and rules of good code
- * - Follow project documentation for writing code
- * - Format logs with XML tags
- * - Write logs exclusively for LLM and exclusively in stress tests themselves
- * - Ensure logs are sufficient for LLM to get all necessary information for debugging
- * - Enable logs exclusively when error is caught and exclusively for duration of one repeated execution of the erroneous test
- * - Write everything in code and tests in English in accordance with all project rules for writing texts and documentation
- * - Never fix bugs with workarounds; always search for systemic problems; always search for similar problems and way to fix them all at once
- * - Always think about consequences of any code changes
- * - Always search for most simple, most effective, most competent, most flexible, and most reliable solutions
- * - During work, improve code, tests, and logs; make code more quality, more compliant with rules, more readable, more split into independent parts, more competent, and more universal
- * - During work, eliminate workarounds and bad code; bring everything to ideal order
+ * - Search for most simple, most effective, most competent, most flexible, and most reliable solutions
+ * - Apply discovered solutions systematically to all similar cases
+ * - Improve code, tests, and logs during every modification
+ * - Eliminate workarounds and bad code; bring everything to ideal order
  *
- * AND READ THE DOCS
- * FOLLOW ALL DECISION MAPS
+ * ## Logging Requirements
+ *
+ * - Format logs with XML tags for LLM parsing
+ * - Write logs exclusively for LLM debugging
+ * - Enable logs exclusively when error is caught and exclusively for duration of one repeated execution
+ * - Ensure logs provide all information necessary for debugging
+ *
+ * ## Language Requirements
+ *
+ * Write all code, comments, and logs in English following all project text writing rules
  */
 
 import {createTestVariants as createTestVariantsStable} from 'dist/lib/index.mjs'
