@@ -1394,8 +1394,13 @@ describe('test-variants > createTestVariants variants', function () {
           limitTests: 100,
         },
         {
+          mode      : 'random',
+          limitTests: 100,
+        },
+        {
           mode      : 'backward',
-          limitTests: 10,
+          limitTests: 1,
+          attemptsPerVariant: 10,
         },
       ],
       parallel: 1,
