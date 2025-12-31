@@ -1353,7 +1353,13 @@ const testVariants = createTestVariants(async (options: StressTestArgs) => {
 describe('test-variants > createTestVariants variants', function () {
   this.timeout(7 * 60 * 60 * 1000)
 
+  // Don't change these limits
+  const limitTime = 120 * 1000
+  const LIMIT_TIME_MIN = 110 * 1000
+  const LIMIT_TIME_MAX = 160 * 1000
+
   it('variants', async function () {
+    const startTime = Date.now()
     await testVariants({
       argType          : ['static', 'dynamic', null],
       retriesToErrorMax: [0, 1, 2],
@@ -1381,8 +1387,7 @@ describe('test-variants > createTestVariants variants', function () {
       // Mode configuration: 'single' uses one mode, 'multi' uses forward+backward for position persistence testing
       modeConfig           : ['single', 'multi', null],
     })({
-      // limitTests: 127_000,
-      limitTime    : 2 * 60 * 1000,
+      limitTime,
       getSeed      : getRandomSeed,
       cycles       : 1,
       findBestError: {
@@ -1411,6 +1416,22 @@ describe('test-variants > createTestVariants variants', function () {
       ],
       parallel: 1,
     })
+
+    // Validate stress test execution time
+    const elapsedSeconds = (Date.now() - startTime) / 1000
+    if (elapsedSeconds < LIMIT_TIME_MIN) {
+      throw new Error(
+        `Stress test completed too fast: ${elapsedSeconds.toFixed(1)}s (expected ${limitTime}s)\n`
+        + `Possible cause: false positive result, not all iterations executed, early termination bug, etc`,
+      )
+    }
+    if (elapsedSeconds > LIMIT_TIME_MAX) {
+      throw new Error(
+        `Stress test took too long: ${elapsedSeconds.toFixed(1)}s (expected ${limitTime}s)\n`
+        + `Possible cause: hang, infinite loop, non-working time limit, etc`,
+      )
+    }
+    log(`Stress test execution time: ${elapsedSeconds.toFixed(1)}s (OK)`)
   })
 })
 
