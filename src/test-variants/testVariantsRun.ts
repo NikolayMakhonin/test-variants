@@ -257,6 +257,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   let prevGC_Iterations = iterations
   let prevGC_IterationsAsync = iterationsAsync
   let prevModeIndex = -1
+  let modeChanged = false
 
   const pool: IPool = parallel <= 1
     ? null
@@ -301,6 +302,11 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   if (logDebug) {
     log(`[debug] start() called: cycleIndex=${variants.cycleIndex}, modeIndex=${variants.modeIndex}, minCompletedCount=${variants.minCompletedCount}, cycles=${cycles}`)
   }
+  // Always show current mode at start
+  if (logModeChange) {
+    prevModeIndex = variants.modeIndex
+    log(`[test-variants] ${formatModeConfig(variants.modeConfig, variants.modeIndex)}`)
+  }
   while (variants.minCompletedCount < cycles && !timeLimitExceeded) {
     if (logDebug) {
       log(`[debug] outer loop: minCompletedCount=${variants.minCompletedCount} < cycles=${cycles}`)
@@ -316,12 +322,12 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
       const _index = variants.index
       const _args = args
 
-      if (logDebug && variants.modeIndex !== prevModeIndex) {
-        log(`[debug] mode switch: modeIndex=${variants.modeIndex}, index=${variants.index}`)
-      }
-      if (logModeChange && variants.modeIndex !== prevModeIndex) {
+      if (variants.modeIndex !== prevModeIndex) {
+        if (logDebug) {
+          log(`[debug] mode switch: modeIndex=${variants.modeIndex}, index=${variants.index}`)
+        }
+        modeChanged = true
         prevModeIndex = variants.modeIndex
-        log(`[test-variants] ${formatModeConfig(variants.modeConfig, variants.modeIndex)}`)
       }
 
       const now = (logInterval || GC_Interval || limitTime) && timeController.now()
@@ -333,6 +339,11 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
 
       if (logInterval && now - prevLogTime >= logInterval) {
         // the log is required to prevent the karma browserNoActivityTimeout
+        // Log mode change together with progress when mode changed
+        if (logModeChange && modeChanged) {
+          log(`[test-variants] ${formatModeConfig(variants.modeConfig, variants.modeIndex)}`)
+          modeChanged = false
+        }
         let logMsg = ''
         const cycleElapsed = now - cycleStartTime
         const totalElapsed = now - startTime
