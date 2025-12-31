@@ -8,6 +8,7 @@ import {generateErrorVariantFilePath, parseErrorVariantFile, readErrorVariantFil
 import {TestVariantsIterator, type GetSeedParams, type LimitArgOnError, type ModeConfig} from './testVariantsIterator'
 import {fileLock} from 'src/test-variants/fs/fileLock'
 import {deepEqual} from 'src/helpers/deepEqual'
+import {log} from 'src/helpers/log'
 import * as path from 'path'
 import type {ITimeController} from '@flemist/time-controller'
 import {timeControllerDefault} from '@flemist/time-controller'
@@ -172,13 +173,13 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   const GC_IterationsAsync = options.GC_IterationsAsync ?? 10000
   const GC_Interval = options.GC_Interval ?? 1000
 
-  const log = options.log
-  const logOpts = log === false
+  const logRaw = options.log
+  const logOpts = logRaw === false
     ? logOptionsDisabled
-    : log === true
+    : logRaw === true
       ? logOptionsDefault
-      : log && typeof log === 'object'
-        ? log
+      : logRaw && typeof logRaw === 'object'
+        ? logRaw
         : logOptionsDefault
   const logStart = logOpts.start ?? logOptionsDefault.start
   const logInterval = logOpts.progressInterval ?? logOptionsDefault.progressInterval
@@ -244,7 +245,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
 
   const startMemory = getMemoryUsage()
   if (logStart && startMemory != null) {
-    console.log(`[test-variants] start, memory: ${formatBytes(startMemory)}`)
+    log(`[test-variants] start, memory: ${formatBytes(startMemory)}`)
   }
 
   let debug = false
@@ -282,22 +283,28 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
 
   function onCompleted() {
     if (logCompleted) {
-      let log = `[test-variants] variants: ${variants.index}, iterations: ${iterations}, async: ${iterationsAsync}`
+      let logMsg = `[test-variants] variants: ${variants.index}, iterations: ${iterations}, async: ${iterationsAsync}`
       if (startMemory != null) {
         const memory = getMemoryUsage()
         if (memory != null) {
           const diff = memory - startMemory
-          log += `, memory: ${formatBytes(memory)} (${diff >= 0 ? '+' : ''}${formatBytes(diff)})`
+          logMsg += `, memory: ${formatBytes(memory)} (${diff >= 0 ? '+' : ''}${formatBytes(diff)})`
         }
       }
-      console.log(log)
+      log(logMsg)
     }
   }
 
   // Main iteration using iterator
   let timeLimitExceeded = false
   variants.start()
+  if (logDebug) {
+    log(`[debug] start() called: cycleIndex=${variants.cycleIndex}, modeIndex=${variants.modeIndex}, minCompletedCount=${variants.minCompletedCount}, cycles=${cycles}`)
+  }
   while (variants.minCompletedCount < cycles && !timeLimitExceeded) {
+    if (logDebug) {
+      log(`[debug] outer loop: minCompletedCount=${variants.minCompletedCount} < cycles=${cycles}`)
+    }
     // Check time limit at start of each round
     if (limitTime && timeController.now() - startTime >= limitTime) {
       timeLimitExceeded = true
@@ -309,9 +316,12 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
       const _index = variants.index
       const _args = args
 
+      if (logDebug && variants.modeIndex !== prevModeIndex) {
+        log(`[debug] mode switch: modeIndex=${variants.modeIndex}, index=${variants.index}`)
+      }
       if (logModeChange && variants.modeIndex !== prevModeIndex) {
         prevModeIndex = variants.modeIndex
-        console.log(`[test-variants] ${formatModeConfig(variants.modeConfig, variants.modeIndex)}`)
+        log(`[test-variants] ${formatModeConfig(variants.modeConfig, variants.modeIndex)}`)
       }
 
       const now = (logInterval || GC_Interval || limitTime) && timeController.now()
@@ -323,11 +333,11 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
 
       if (logInterval && now - prevLogTime >= logInterval) {
         // the log is required to prevent the karma browserNoActivityTimeout
-        let log = ''
+        let logMsg = ''
         const cycleElapsed = now - cycleStartTime
         const totalElapsed = now - startTime
         if (findBestError) {
-          log += `cycle: ${variants.cycleIndex}, variant: ${variants.index}`
+          logMsg += `cycle: ${variants.cycleIndex}, variant: ${variants.index}`
           let max = variants.count
           if (max != null) {
             if (prevCycleVariantsCount != null && prevCycleVariantsCount < max) {
@@ -349,25 +359,25 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
             else {
               estimatedCycleTime = cycleElapsed * max / variants.index
             }
-            log += `/${max} (${formatDuration(cycleElapsed)}/${formatDuration(estimatedCycleTime)})`
+            logMsg += `/${max} (${formatDuration(cycleElapsed)}/${formatDuration(estimatedCycleTime)})`
           }
           else {
-            log += ` (${formatDuration(cycleElapsed)})`
+            logMsg += ` (${formatDuration(cycleElapsed)})`
           }
         }
         else {
-          log += `variant: ${variants.index} (${formatDuration(cycleElapsed)})`
+          logMsg += `variant: ${variants.index} (${formatDuration(cycleElapsed)})`
         }
-        log += `, total: ${iterations} (${formatDuration(totalElapsed)})`
+        logMsg += `, total: ${iterations} (${formatDuration(totalElapsed)})`
         if (prevLogMemory != null) {
           const memory = getMemoryUsage()
           if (memory != null) {
             const diff = memory - prevLogMemory
-            log += `, memory: ${formatBytes(memory)} (${diff >= 0 ? '+' : ''}${formatBytes(diff)})`
+            logMsg += `, memory: ${formatBytes(memory)} (${diff >= 0 ? '+' : ''}${formatBytes(diff)})`
             prevLogMemory = memory
           }
         }
-        console.log(log)
+        log(logMsg)
         prevLogTime = now
       }
 
@@ -490,6 +500,10 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
       }
     }
 
+    if (logDebug) {
+      log(`[debug] inner loop exited: modeIndex=${variants.modeIndex}, index=${variants.index}, count=${variants.count}, iterations=${iterations}`)
+    }
+
     // Track cycle metrics for logging
     prevCycleVariantsCount = variants.count
     prevCycleDuration = timeController.now() - cycleStartTime
@@ -501,7 +515,13 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
       break
     }
 
+    if (logDebug) {
+      log(`[debug] calling start() again: cycleIndex=${variants.cycleIndex}, minCompletedCount before start=${variants.minCompletedCount}`)
+    }
     variants.start()
+    if (logDebug) {
+      log(`[debug] after start(): cycleIndex=${variants.cycleIndex}, modeIndex=${variants.modeIndex}, minCompletedCount=${variants.minCompletedCount}`)
+    }
   }
 
   if (pool) {
