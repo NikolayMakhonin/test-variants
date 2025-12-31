@@ -350,10 +350,6 @@ describe('test-variants > createTestVariants', function () {
         }
         results.push([a, b, c])
 
-        // if (a === 2 && b === '4' && c === true) {
-        //   throw new Error('TEST')
-        // }
-
         countInProcess--
         console.log(`${a} ${b} ${c} ${countInProcess} END`)
       })({

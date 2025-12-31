@@ -84,15 +84,15 @@ function formatModeConfig(modeConfig: ModeConfig | null, modeIndex: number): str
     if (modeConfig.cycles != null) {
       result += `, cycles=${modeConfig.cycles}`
     }
-    if (modeConfig.repeatsPerVariant != null) {
-      result += `, repeats=${modeConfig.repeatsPerVariant}`
+    if (modeConfig.attemptsPerVariant != null) {
+      result += `, attempts=${modeConfig.attemptsPerVariant}`
     }
   }
   if (modeConfig.limitTime != null) {
     result += `, limitTime=${modeConfig.limitTime}ms`
   }
-  if (modeConfig.limitPickCount != null) {
-    result += `, limitCount=${modeConfig.limitPickCount}`
+  if (modeConfig.limitTests != null) {
+    result += `, limitTests=${modeConfig.limitTests}`
   }
   return result
 }
@@ -125,13 +125,13 @@ export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
   cycles?: null | number,
   /** Generates seed for reproducible randomized testing; seed is added to args */
   getSeed?: null | ((params: GetSeedParams) => any),
-  /** Iteration phases; each phase runs until its limits are reached */
-  modes?: null | ModeConfig[],
+  /** Iteration modes (variant traversal methods); each mode runs until its limits are reached */
+  iterationModes?: null | ModeConfig[],
   findBestError?: null | TestVariantsFindBestErrorOptions,
   /** Save error-causing args to files and replay them before normal iteration */
   saveErrorVariants?: null | SaveErrorVariantsOptions<Args, SavedArgs>,
   /** Tests only first N variants, ignores the rest. If null or not specified, tests all variants */
-  limitVariantsCount?: null | number,
+  limitTests?: null | number,
   /** Maximum test run duration in milliseconds; when exceeded, iteration stops and current results are returned */
   limitTime?: null | number,
   /** Time controller for testable time-dependent operations; null uses timeControllerDefault */
@@ -141,7 +141,8 @@ export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
 export type TestVariantsBestError<Args extends Obj> = {
   error: any,
   args: Args,
-  index: number,
+  /** Number of tests run before the error (including attemptsPerVariant) */
+  tests: number,
 }
 
 export type TestVariantsRunResult<Arg extends Obj> = {
@@ -155,7 +156,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   options: TestVariantsRunOptions<Args, SavedArgs> = {},
 ): Promise<TestVariantsRunResult<Args>> {
   const saveErrorVariants = options.saveErrorVariants
-  const retriesPerVariant = saveErrorVariants?.retriesPerVariant ?? 1
+  const attemptsPerVariant = saveErrorVariants?.attemptsPerVariant ?? 1
   const useToFindBestError = saveErrorVariants?.useToFindBestError
   const sessionDate = new Date()
   const errorVariantFilePath = saveErrorVariants
@@ -196,8 +197,8 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
       : options.parallel
 
   // Apply initial limits
-  if (options.limitVariantsCount != null) {
-    variants.addLimit({index: options.limitVariantsCount})
+  if (options.limitTests != null) {
+    variants.addLimit({index: options.limitTests})
   }
 
   // Replay phase: run previously saved error variants before normal iteration
@@ -205,9 +206,10 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     const files = await readErrorVariantFiles(saveErrorVariants.dir)
     for (const filePath of files) {
       const args = await parseErrorVariantFile<Args, SavedArgs>(filePath, saveErrorVariants.jsonToArgs)
-      for (let retry = 0; retry < retriesPerVariant; retry++) {
+      for (let retry = 0; retry < attemptsPerVariant; retry++) {
         try {
-          const promiseOrResult = testRun(args, -1, null as any)
+          // During replay, no regular tests have run yet, so tests count is 0
+          const promiseOrResult = testRun(args, 0, null as any)
           if (isPromiseLike(promiseOrResult)) {
             await promiseOrResult
           }
@@ -383,9 +385,10 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
 
       if (!pool || abortSignalParallel.aborted) {
         try {
+          // Pass current iterations count (tests run before this one)
           let promiseOrIterations = testRun(
             _args,
-            _index,
+            iterations,
             abortSignalParallel,
           )
           if (isPromiseLike(promiseOrIterations)) {
@@ -427,6 +430,8 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
             hold : true,
           })
         }
+        // Capture current iterations count for this test (tests run before this one)
+        const _tests = iterations
         // eslint-disable-next-line @typescript-eslint/no-loop-func
         void (async () => {
           try {
@@ -435,7 +440,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
             }
             let promiseOrIterations = testRun(
               _args,
-              _index,
+              _tests,
               abortSignalParallel,
             )
             if (isPromiseLike(promiseOrIterations)) {
@@ -521,7 +526,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     ? {
       error: variants.limit.error,
       args : variants.limit.args,
-      index: includeErrorVariant ? (variants.count ?? 1) - 1 : (variants.count ?? 0),
+      tests: includeErrorVariant ? (variants.count ?? 1) - 1 : (variants.count ?? 0),
     }
     : null
 

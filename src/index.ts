@@ -8,9 +8,6 @@ export {
   generateErrorVariantFilePath,
 } from 'src/test-variants/saveErrorVariants'
 export {
-  type TestVariantsTemplatesExt,
-} from 'src/test-variants/testVariantsIterable'
-export {
   type ErrorEvent,
   type OnErrorCallback,
   type TestVariantsTest,
@@ -26,6 +23,7 @@ export {
   type TestVariantsRunResult,
 } from 'src/test-variants/testVariantsRun'
 export {
+  type TestVariantsTemplatesExt,
   type TestVariantsSetArgs,
   type TestVariantsCall,
   createTestVariants,
@@ -34,6 +32,7 @@ export {
   type GetSeedParams,
   type LimitArgOnErrorOptions,
   type LimitArgOnError,
+  type ModeConfig,
   type TestVariantsIteratorOptions,
   type TestVariantsIteratorLimit,
   type AddLimitOptions,

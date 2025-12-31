@@ -1,16 +1,21 @@
 import {type PromiseOrValue} from '@flemist/async-utils'
 
 import {
-  TestVariantsTemplatesExt,
-} from 'src/test-variants/testVariantsIterable'
-import {
-  TestVariantsCreateTestRunOptions,
   testVariantsCreateTestRun,
   TestVariantsTest,
+  TestVariantsCreateTestRunOptions,
 } from 'src/test-variants/testVariantsCreateTestRun'
 import {testVariantsRun, TestVariantsRunOptions, TestVariantsRunResult} from 'src/test-variants/testVariantsRun'
 import {testVariantsIterator} from 'src/test-variants/testVariantsIterator'
-import {Obj} from 'src/test-variants/types'
+import {Obj, TestVariantsTemplates} from 'src/test-variants/types'
+
+/** Extended templates type that allows additional args beyond the base Args type */
+export type TestVariantsTemplatesExt<Args extends Obj, ArgsExtra extends Obj> =
+  TestVariantsTemplates<{
+    [key in (keyof ArgsExtra | keyof Args)]: key extends keyof Args ? Args[key]
+      : key extends keyof ArgsExtra ? ArgsExtra[key]
+        : never
+  }>
 
 export type TestVariantsCall<Args extends Obj> = <SavedArgs = Args>(
   options?: null | TestVariantsRunOptions<Args, SavedArgs> & TestVariantsCreateTestRunOptions<Args>
@@ -25,22 +30,15 @@ export function createTestVariants<Args extends Obj>(
 ): TestVariantsSetArgs<Args> {
   return function testVariantsArgs(args) {
     return async function testVariantsCall(options) {
-      const log = options?.log
-      const logError = log === false
-        ? false
-        : log && typeof log === 'object'
-          ? log.error ?? true
-          : true
-
       const testRun = testVariantsCreateTestRun<Args>(test, {
         onError: options?.onError,
-        logError,
+        log    : options?.log,
       })
 
       const variants = testVariantsIterator<Args>({
         argsTemplates      : args as any,
         getSeed            : options?.getSeed,
-        modes              : options?.modes,
+        iterationModes     : options?.iterationModes,
         equals             : options?.findBestError?.equals,
         limitArgOnError    : options?.findBestError?.limitArgOnError,
         includeErrorVariant: options?.findBestError?.includeErrorVariant,
@@ -51,56 +49,3 @@ export function createTestVariants<Args extends Obj>(
     }
   }
 }
-
-/*
-export class TestVariants<Args extends Obj> {
-  private readonly _test: TestVariantsTest<Args>
-  test(args: Args, abortSignal: IAbortSignalFast) {
-    return this._test(args, abortSignal)
-  }
-
-  constructor(
-    test: TestVariantsTest<Args>,
-  ) {
-    this.test = test
-  }
-
-  createVariants<ArgsExtra extends Obj>(
-    argsTemplates: TestVariantsTemplatesExt<Args, ArgsExtra>,
-  ): Iterable<Args> {
-    return testVariantsIterable<Args, ArgsExtra>(argsTemplates)
-  }
-
-  createTestRun(
-    options?: null | TestVariantsCreateTestRunOptions<Args>,
-  ) {
-    return testVariantsCreateTestRun<Args>(this._test, options)
-  }
-
-  testAll<ArgsExtra extends Obj>(
-    argsTemplates: TestVariantsTemplatesExt<Args, ArgsExtra>,
-  ): TestVariantsCall<Args>
-  testAll(
-    variants: Iterable<Args>,
-  ): TestVariantsCall<Args>
-  testAll<ArgsExtra extends Obj>(
-    variantsOrTemplates: Iterable<Args> | TestVariantsTemplatesExt<Args, ArgsExtra>,
-  ): TestVariantsCall<Args> {
-    const variants = Symbol.iterator in variantsOrTemplates
-      ? variantsOrTemplates as Iterable<Args>
-      : this.createVariants(variantsOrTemplates as TestVariantsTemplatesExt<Args, ArgsExtra>)
-
-    const _this = this
-
-    return function testVariantsCall(
-      options?: null | TestVariantsRunOptions & TestVariantsCreateTestRunOptions<Args>,
-    ) {
-      const testRun = _this.createTestRun({
-        onError: options?.onError,
-      })
-
-      return testVariantsRun<Args>(testRun, variants, options)
-    }
-  }
-}
-*/

@@ -4,12 +4,12 @@ import type {Obj, TestVariantsTemplate, TestVariantsTemplates} from 'src/test-va
 
 /** Parameters passed to getSeed function for generating test seeds */
 export type GetSeedParams = {
-  /** Index of current variant/parameter-combination being tested */
-  variantIndex: number,
-  /** Index of current cycle - full pass through all variants (0..cycles-1) */
-  cycleIndex: number,
-  /** Index of repeat for current variant within this cycle (0..repeatsPerVariant-1) */
-  repeatIndex: number,
+  /** Total number of tests run */
+  tests: number,
+  /** Number of full passes through all variants */
+  cycles: number,
+  /** Number of repeats of current variant */
+  repeats: number,
 }
 
 /** Options for limiting per-arg indexes on error */
@@ -38,8 +38,8 @@ export type TestVariantsIteratorOptions<Args extends Obj> = {
   includeErrorVariant?: null | boolean
   /** Generates seed for reproducible randomized testing; seed is added to args */
   getSeed?: null | ((params: GetSeedParams) => any)
-  /** Iteration phases; each phase runs until its limits are reached, then next phase starts */
-  modes?: null | ModeConfig[]
+  /** Iteration modes (variant traversal methods); each mode runs until its limits are reached */
+  iterationModes?: null | ModeConfig[]
   /** Time controller for testable time-dependent operations; null uses timeControllerDefault */
   timeController?: null | ITimeController
 }
@@ -106,7 +106,7 @@ export type BaseModeConfig = {
   /** Maximum time in ms for this phase */
   limitTime?: null | number
   /** Maximum total picks in this phase */
-  limitPickCount?: null | number
+  limitTests?: null | number
 }
 
 /** Sequential mode configuration shared by forward and backward modes */
@@ -114,7 +114,7 @@ export type SequentialModeConfig = BaseModeConfig & {
   /** Number of full passes through all variants */
   cycles?: null | number
   /** Number of repeat tests per variant */
-  repeatsPerVariant?: null | number
+  attemptsPerVariant?: null | number
 }
 
 /** Forward mode configuration */
@@ -704,7 +704,7 @@ function isModeExhausted(modeConfig: ModeConfig, modeState: ModeState, now: numb
   if (getModeRepeatsPerVariant(modeConfig) <= 0 || getModeCycles(modeConfig) <= 0) {
     return true
   }
-  if (modeConfig.limitPickCount != null && modeState.pickCount >= modeConfig.limitPickCount) {
+  if (modeConfig.limitTests != null && modeState.pickCount >= modeConfig.limitTests) {
     return true
   }
   if (modeConfig.limitTime != null && now - modeState.startTime >= modeConfig.limitTime) {
@@ -713,10 +713,10 @@ function isModeExhausted(modeConfig: ModeConfig, modeState: ModeState, now: numb
   return false
 }
 
-/** Get repeatsPerVariant for current mode */
+/** Get attemptsPerVariant for current mode */
 function getModeRepeatsPerVariant(modeConfig: ModeConfig): number {
   if (modeConfig.mode === 'forward' || modeConfig.mode === 'backward') {
-    return modeConfig.repeatsPerVariant ?? 1
+    return modeConfig.attemptsPerVariant ?? 1
   }
   return 1
 }
@@ -929,7 +929,7 @@ export function testVariantsIterator<Args extends Obj>(
   const {
     argsTemplates, getSeed, equals, limitArgOnError, includeErrorVariant,
   } = options
-  const modes = options.modes ?? DEFAULT_MODES
+  const modes = options.iterationModes ?? DEFAULT_MODES
   const timeController = options.timeController ?? timeControllerDefault
   const keys = Object.keys(argsTemplates) as (keyof Args)[]
   const templates: TestVariantsTemplate<Args, any>[] = Object.values(argsTemplates)
@@ -984,9 +984,9 @@ export function testVariantsIterator<Args extends Obj>(
   function buildCurrentArgs(): Args {
     if (getSeed) {
       const seed = getSeed({
-        variantIndex: state.index,
-        cycleIndex  : state.cycleIndex,
-        repeatIndex : state.repeatIndex,
+        tests  : state.index,
+        cycles : state.cycleIndex,
+        repeats: state.repeatIndex,
       })
       return {...state.args, seed} as Args
     }
@@ -1196,10 +1196,10 @@ export function testVariantsIterator<Args extends Obj>(
       const now = timeController.now()
       const modeConfig = state.modes[state.modeIndex]
       const modeState = state.modesState[state.modeIndex]
-      const repeatsPerVariant = getModeRepeatsPerVariant(modeConfig)
+      const attemptsPerVariant = getModeRepeatsPerVariant(modeConfig)
 
       // Try next repeat for current variant
-      if (state.index >= 0 && state.repeatIndex + 1 < repeatsPerVariant) {
+      if (state.index >= 0 && state.repeatIndex + 1 < attemptsPerVariant) {
         if (state.count == null || state.index < state.count) {
           state.repeatIndex++
           modeState.pickCount++

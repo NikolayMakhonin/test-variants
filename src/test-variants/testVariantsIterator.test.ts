@@ -256,7 +256,7 @@ describe('test-variants > testVariantsIterator', function () {
       argsTemplates: {
         a: [1, 2],
       },
-      getSeed: ({variantIndex, cycleIndex, repeatIndex}) => `${cycleIndex}-${variantIndex}-${repeatIndex}`,
+      getSeed: ({tests, cycles, repeats}) => `${cycles}-${tests}-${repeats}`,
     })
 
     iterator.start()
@@ -268,13 +268,13 @@ describe('test-variants > testVariantsIterator', function () {
     assert.deepStrictEqual(result2, {a: 2, seed: '0-1-0'})
   })
 
-  it('repeatsPerVariant repeats each variant', async function () {
+  it('attemptsPerVariant repeats each variant', async function () {
     const iterator = testVariantsIterator({
       argsTemplates: {
         a: [1, 2],
       },
-      getSeed: ({variantIndex, cycleIndex, repeatIndex}) => `${cycleIndex}-${variantIndex}-${repeatIndex}`,
-      modes  : [{mode: 'forward', repeatsPerVariant: 3}],
+      getSeed       : ({tests, cycles, repeats}) => `${cycles}-${tests}-${repeats}`,
+      iterationModes: [{mode: 'forward', attemptsPerVariant: 3}],
     })
 
     iterator.start()
@@ -293,13 +293,13 @@ describe('test-variants > testVariantsIterator', function () {
     assert.strictEqual(iterator.next(), null)
   })
 
-  it('repeatsPerVariant with external cycles via start()', async function () {
+  it('attemptsPerVariant with external cycles via start()', async function () {
     const iterator = testVariantsIterator({
       argsTemplates: {
         a: [1, 2],
       },
-      getSeed: ({variantIndex, cycleIndex, repeatIndex}) => `${cycleIndex}-${variantIndex}-${repeatIndex}`,
-      modes  : [{mode: 'forward', repeatsPerVariant: 2}],
+      getSeed       : ({tests, cycles, repeats}) => `${cycles}-${tests}-${repeats}`,
+      iterationModes: [{mode: 'forward', attemptsPerVariant: 2}],
     })
 
     // Cycle 0
@@ -324,7 +324,7 @@ describe('test-variants > testVariantsIterator', function () {
       argsTemplates: {
         a: [1, 2],
       },
-      modes: [{mode: 'forward', cycles: 2}],
+      iterationModes: [{mode: 'forward', cycles: 2}],
     })
 
     iterator.start()
@@ -338,13 +338,13 @@ describe('test-variants > testVariantsIterator', function () {
     assert.strictEqual(iterator.next(), null)
   })
 
-  it('forward mode cycles with repeatsPerVariant', async function () {
+  it('forward mode cycles with attemptsPerVariant', async function () {
     const iterator = testVariantsIterator({
       argsTemplates: {
         a: [1, 2],
       },
-      getSeed: ({variantIndex, repeatIndex}) => `${variantIndex}-${repeatIndex}`,
-      modes  : [{mode: 'forward', cycles: 2, repeatsPerVariant: 2}],
+      getSeed       : ({tests, repeats}) => `${tests}-${repeats}`,
+      iterationModes: [{mode: 'forward', cycles: 2, attemptsPerVariant: 2}],
     })
 
     iterator.start()
@@ -369,7 +369,7 @@ describe('test-variants > testVariantsIterator', function () {
       argsTemplates: {
         a: [1, 2, 3],
       },
-      modes: [{mode: 'random', limitPickCount: pickCount}],
+      iterationModes: [{mode: 'random', limitTests: pickCount}],
     })
 
     iterator.start()
@@ -382,7 +382,7 @@ describe('test-variants > testVariantsIterator', function () {
     }
     // After 30 random picks, should have seen at least 2 different values
     assert.ok(seen.size >= 2, `Expected at least 2 different values, got ${seen.size}`)
-    // Next pick should return null (limitPickCount reached)
+    // Next pick should return null (limitTests reached)
     assert.strictEqual(iterator.next(), null)
   })
 
@@ -391,7 +391,7 @@ describe('test-variants > testVariantsIterator', function () {
       argsTemplates: {
         a: [1, 2, 3],
       },
-      modes: [{mode: 'random', limitTime: 10}],
+      iterationModes: [{mode: 'random', limitTime: 10}],
     })
 
     iterator.start()
@@ -414,9 +414,9 @@ describe('test-variants > testVariantsIterator', function () {
       argsTemplates: {
         a: [1, 2],
       },
-      modes: [
+      iterationModes: [
         {mode: 'forward'},
-        {mode: 'random', limitPickCount: 3},
+        {mode: 'random', limitTests: 3},
       ],
     })
 
@@ -443,9 +443,9 @@ describe('test-variants > testVariantsIterator', function () {
       argsTemplates: {
         a: [1, 2, 3, 4],
       },
-      modes: [
-        {mode: 'forward', limitPickCount: 2},
-        {mode: 'backward', limitPickCount: 2},
+      iterationModes: [
+        {mode: 'forward', limitTests: 2},
+        {mode: 'backward', limitTests: 2},
       ],
     })
 
@@ -476,7 +476,7 @@ describe('test-variants > testVariantsIterator', function () {
       argsTemplates: {
         a: [1, 2],
       },
-      modes: [
+      iterationModes: [
         {mode: 'forward'}, // No limits - will complete naturally
       ],
     })
@@ -494,15 +494,15 @@ describe('test-variants > testVariantsIterator', function () {
     assert.strictEqual(iterator.next(), null)
   })
 
-  it('sequential mode position persistence with repeatsPerVariant', async function () {
+  it('sequential mode position persistence with attemptsPerVariant', async function () {
     const iterator = testVariantsIterator({
       argsTemplates: {
         a: [1, 2, 3],
       },
-      // Note: variantIndex resets on each start() call, so use cycleIndex to distinguish cycles
-      getSeed: ({cycleIndex, variantIndex, repeatIndex}) => `c${cycleIndex}-v${variantIndex}-r${repeatIndex}`,
-      modes  : [
-        {mode: 'forward', limitPickCount: 4, repeatsPerVariant: 2},
+      // Note: tests resets on each start() call, so use cycles to distinguish cycles
+      getSeed       : ({tests, cycles, repeats}) => `c${cycles}-v${tests}-r${repeats}`,
+      iterationModes: [
+        {mode: 'forward', limitTests: 4, attemptsPerVariant: 2},
       ],
     })
 

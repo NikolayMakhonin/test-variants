@@ -6,14 +6,16 @@ import {argsToString} from 'src/test-variants/argsToString'
 export type ErrorEvent<Args extends Obj> = {
   error: any,
   args: Args,
-  index: number,
+  /** Number of tests run before this error (including attemptsPerVariant) */
+  tests: number,
 }
 
 export type OnErrorCallback<Args extends Obj> = (event: ErrorEvent<Args>) => PromiseOrValue<void>
 
 export type TestVariantsCreateTestRunOptions<Args extends Obj> = {
   onError?: null | OnErrorCallback<Args>,
-  logError?: null | boolean,
+  /** Logging options; null/true uses defaults; false disables all */
+  log?: null | boolean | { error?: null | boolean },
 }
 
 export type TestVariantsTestRunResult = void | {
@@ -22,7 +24,7 @@ export type TestVariantsTestRunResult = void | {
 }
 
 export type TestVariantsTestRun<Args extends Obj> =(
-  args: Args, index: number, abortSignal: IAbortSignalFast
+  args: Args, tests: number, abortSignal: IAbortSignalFast
 ) => PromiseOrValue<TestVariantsTestRunResult>
 
 export type TestVariantsTestResult = number | void | TestVariantsTestRunResult
@@ -34,7 +36,12 @@ export function testVariantsCreateTestRun<Args extends Obj>(
   test: TestVariantsTest<Args>,
   options?: null | TestVariantsCreateTestRunOptions<Args>,
 ): TestVariantsTestRun<Args> {
-  const logError = options?.logError ?? true
+  const log = options?.log
+  const logError = log === false
+    ? false
+    : log === true || log == null
+      ? true
+      : log.error ?? true
   let debugIteration = 0
 
   let errorEvent: ErrorEvent<Args> | null = null
@@ -42,15 +49,15 @@ export function testVariantsCreateTestRun<Args extends Obj>(
   async function onError(
     error: any,
     args: Args,
-    index: number,
+    tests: number,
   ): Promise<void> {
     errorEvent = {
       error,
       args,
-      index: index,
+      tests,
     }
     if (logError) {
-      console.error(`[test-variants] error variant: ${index}\n${argsToString(args)}`)
+      console.error(`[test-variants] error variant: ${tests}\n${argsToString(args)}`)
       console.error(error)
     }
 
@@ -74,7 +81,7 @@ export function testVariantsCreateTestRun<Args extends Obj>(
 
   return function testRun(
     args: Args,
-    index: number,
+    tests: number,
     abortSignal: IAbortSignalFast,
   ): PromiseOrValue<TestVariantsTestRunResult> {
     try {
@@ -96,7 +103,7 @@ export function testVariantsCreateTestRun<Args extends Obj>(
             iterationsSync : 0,
           }
         }, err => {
-          return onError(err, args, index)
+          return onError(err, args, tests)
         })
       }
 
@@ -116,7 +123,7 @@ export function testVariantsCreateTestRun<Args extends Obj>(
       }
     }
     catch (err) {
-      return onError(err, args, index)
+      return onError(err, args, tests)
     }
   }
 }

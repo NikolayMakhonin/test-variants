@@ -175,7 +175,7 @@ describe('test-variants > testVariantsRun', function () {
         b: Array.from({length: 100}).map((_, i) => i),
       },
       limitArgOnError: true,
-      getSeed        : ({cycleIndex, variantIndex}) => cycleIndex * 10000 + variantIndex,
+      getSeed        : ({cycles, tests}) => cycles * 10000 + tests,
     })
 
     const testRun = (args: { a: number, b: number, seed: number }) => {
@@ -376,7 +376,6 @@ describe('test-variants > testVariantsRun', function () {
     const variantsCount = 1000
 
     for (let expectedIndex = 0; expectedIndex <= variantsCount; expectedIndex++) {
-      // let firstError: any = null
       const expectedArgs = expectedIndex < variantsCount ? {i: expectedIndex} : null
 
       const testRun: TestVariantsTestRun<typeof expectedArgs> = (args: { i: number }) => {
@@ -396,8 +395,8 @@ describe('test-variants > testVariantsRun', function () {
         argsTemplates: {
           i: Array.from({length: variantsCount}).map((_, i) => i),
         },
-        getSeed: ({cycleIndex}) => cycleIndex,
-        modes  : [{mode: 'forward', repeatsPerVariant: 1}],
+        getSeed       : ({cycles}) => cycles,
+        iterationModes: [{mode: 'forward', attemptsPerVariant: 1}],
       })
 
       const result = await testVariantsRun(testRun, variants, {
@@ -407,12 +406,6 @@ describe('test-variants > testVariantsRun', function () {
         },
         log: false,
       })
-
-      // if (firstError) {
-      //   throw firstError
-      // }
-
-      // console.log(result)
 
       try {
         if (expectedIndex >= variantsCount) {

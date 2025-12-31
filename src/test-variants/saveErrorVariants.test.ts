@@ -263,7 +263,7 @@ describe('test-variants > saveErrorVariants', function () {
       await testFn({a: [2]})({
         saveErrorVariants: {
           dir              : TEST_DIR,
-          retriesPerVariant: 3,
+          attemptsPerVariant: 3,
         },
         log: false,
       })

@@ -148,7 +148,7 @@ type StressTestArgs = {
   includeErrorVariant: boolean | null
   dontThrowIfError: boolean | null
   withSeed: boolean | null
-  repeatsPerVariantMax: number
+  attemptsPerVariantMax: number
   cyclesMax: number
   forwardModeCyclesMax: number
   iterationMode: 'forward' | 'backward' | 'random' | null
@@ -285,7 +285,7 @@ function verifyIterationsCount(
   findBestError: boolean,
   dontThrowIfError: boolean,
   cycles: number,
-  repeatsPerVariant: number,
+  attemptsPerVariant: number,
   forwardModeCycles: number,
   errorVariantCallCount: number,
   retriesToError: number,
@@ -309,7 +309,7 @@ function verifyIterationsCount(
   // For random mode: use actual errorAttempts since random picks may not hit error variant
   // For multi-mode: use actual errorAttempts since position persistence affects which variants are hit per cycle
   // For deterministic modes: use theoretical calculation based on variant structure
-  const totalErrorCalls = errorVariantCallCount * cycles * repeatsPerVariant * forwardModeCycles
+  const totalErrorCalls = errorVariantCallCount * cycles * attemptsPerVariant * forwardModeCycles
   const errorWillOccur = iterationMode === 'random' || isMultiMode
     ? errorAttempts > retriesToError
     : errorIndex !== null && totalErrorCalls > retriesToError && callCount > firstMatchingIndex
@@ -341,12 +341,12 @@ function verifyIterationsCount(
     && iterationMode !== 'random'
     && !isMultiMode
     && cycles > 0
-    && repeatsPerVariant > 0
+    && attemptsPerVariant > 0
     && forwardModeCycles > 0
   ) {
-    const expected = totalVariantsCount * cycles * repeatsPerVariant * forwardModeCycles
+    const expected = totalVariantsCount * cycles * attemptsPerVariant * forwardModeCycles
     if (resultIterations !== expected) {
-      throw new Error(`Expected ${expected} iterations (variants=${totalVariantsCount}, cycles=${cycles}, repeats=${repeatsPerVariant}, forwardModeCycles=${forwardModeCycles}), got ${resultIterations}`)
+      throw new Error(`Expected ${expected} iterations (variants=${totalVariantsCount}, cycles=${cycles}, repeats=${attemptsPerVariant}, forwardModeCycles=${forwardModeCycles}), got ${resultIterations}`)
     }
   }
 }
@@ -360,13 +360,13 @@ function verifyBestError(
   errorVariantCallCount: number,
   retriesToError: number,
   cycles: number,
-  repeatsPerVariant: number,
+  attemptsPerVariant: number,
   forwardModeCycles: number,
   iterationMode: 'forward' | 'backward' | 'random',
   isMultiMode: boolean,
 ): void {
   // Calculate expected error behavior
-  const totalErrorCalls = errorVariantCallCount * cycles * repeatsPerVariant * forwardModeCycles
+  const totalErrorCalls = errorVariantCallCount * cycles * attemptsPerVariant * forwardModeCycles
   const errorWillOccur = errorIndex !== null && totalErrorCalls > retriesToError
 
   // bestError is set only when findBestError=true and dontThrowIfError=true
@@ -482,7 +482,7 @@ function verifyCallCount(
   totalVariantsCount: number | null,
   errorIndex: number | null,
   cycles: number,
-  repeatsPerVariant: number,
+  attemptsPerVariant: number,
   forwardModeCycles: number,
   iterationMode: 'forward' | 'backward' | 'random',
   isMultiMode: boolean,
@@ -498,7 +498,7 @@ function verifyCallCount(
   }
 
   // Verify: when error expected and iterations expected, callCount should be > 0
-  const expectedIterations = (totalVariantsCount ?? 0) * cycles * repeatsPerVariant * forwardModeCycles
+  const expectedIterations = (totalVariantsCount ?? 0) * cycles * attemptsPerVariant * forwardModeCycles
   if (errorIndex !== null && totalVariantsCount !== null && totalVariantsCount > 0 && expectedIterations > 0 && callCount === 0) {
     throw new Error(`Expected callCount > 0 when error expected, got ${callCount}`)
   }
@@ -511,10 +511,10 @@ function verifyCallCount(
     && iterationMode !== 'random'
     && !isMultiMode
     && cycles > 0
-    && repeatsPerVariant > 0
+    && attemptsPerVariant > 0
     && forwardModeCycles > 0
   ) {
-    const expected = totalVariantsCount * cycles * repeatsPerVariant * forwardModeCycles
+    const expected = totalVariantsCount * cycles * attemptsPerVariant * forwardModeCycles
     if (callCount !== expected) {
       throw new Error(`Expected callCount=${expected}, got ${callCount}`)
     }
@@ -563,7 +563,7 @@ function verifyPositionPersistence(
   totalVariantsCount: number,
   limitPerMode: number,
   cycles: number,
-  repeatsPerVariant: number,
+  attemptsPerVariant: number,
   isParallel: boolean,
   errorIndex: number | null,
 ): void {
@@ -585,7 +585,7 @@ function verifyPositionPersistence(
   let lastIndex = -1
   let direction: 'forward' | 'backward' | 'unknown' = 'unknown'
   let runLength = 0
-  const effectiveLimit = limitPerMode * repeatsPerVariant
+  const effectiveLimit = limitPerMode * attemptsPerVariant
 
   for (let i = 0, len = variantIndicesSeen.length; i < len; i++) {
     const index = variantIndicesSeen[i]
@@ -950,7 +950,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   }
 
   // Precompute errorVariantArgs for reliable value-based error detection
-  // callCount-based detection is unreliable with repeatsPerVariant > 1 or parallel mode
+  // callCount-based detection is unreliable with attemptsPerVariant > 1 or parallel mode
   // Seed is stripped before comparison, so withSeed doesn't affect precomputation
   // For dynamic templates, errorVariantArgs remains null and is set on first encounter
   let errorVariantArgs: TestArgs | null = null
@@ -1002,12 +1002,12 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
 
   // Pre-compute max expected calls for infinite loop guard (worst case: findBestError=false)
   const guardCycles = Math.max(1, options.cyclesMax || 1)
-  const guardRepeats = Math.max(1, options.repeatsPerVariantMax || 1)
+  const guardRepeats = Math.max(1, options.attemptsPerVariantMax || 1)
   const guardForwardCycles = Math.max(1, options.forwardModeCyclesMax || 1)
   let maxExpectedCalls: number
   if (isMultiMode && totalVariantsCount !== null) {
     // Multi-mode: limitPerMode = floor(totalVariantsCount / 2), run 2 modes
-    // With limitPickCount interruption, modes need ceil(variants/limitPerMode) rounds to complete
+    // With limitTests interruption, modes need ceil(variants/limitPerMode) rounds to complete
     const limitPerMode = Math.max(1, Math.floor(totalVariantsCount / 2))
     const roundsToComplete = Math.ceil(totalVariantsCount / limitPerMode)
     maxExpectedCalls = limitPerMode * 2 * guardRepeats * guardCycles * roundsToComplete
@@ -1112,9 +1112,9 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   const cycles = findBestError
     ? (options.cyclesMax === 0 ? 0 : (options.cyclesMax || 1))
     : Math.max(1, options.cyclesMax || 1)
-  const repeatsPerVariant = findBestError
-    ? (options.repeatsPerVariantMax === 0 ? 0 : (options.repeatsPerVariantMax || 1))
-    : Math.max(1, options.repeatsPerVariantMax || 1)
+  const attemptsPerVariant = findBestError
+    ? (options.attemptsPerVariantMax === 0 ? 0 : (options.attemptsPerVariantMax || 1))
+    : Math.max(1, options.attemptsPerVariantMax || 1)
   const forwardModeCycles = findBestError
     ? (options.forwardModeCyclesMax === 0 ? 0 : (options.forwardModeCyclesMax || 1))
     : Math.max(1, options.forwardModeCyclesMax || 1)
@@ -1132,28 +1132,28 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     // Limit each mode to half the variants to ensure mode switching
     limitPerMode = Math.max(1, Math.floor(totalVariantsCount / 2))
     modes = [
-      {mode: 'forward', limitPickCount: limitPerMode, repeatsPerVariant},
-      {mode: 'backward', limitPickCount: limitPerMode, repeatsPerVariant},
+      {mode: 'forward', limitTests: limitPerMode, attemptsPerVariant},
+      {mode: 'backward', limitTests: limitPerMode, attemptsPerVariant},
     ]
   }
   else if (iterationMode === 'random') {
     // Random mode limit per external cycle (cycles is handled by outer loop)
-    // Ensure limit is at least 1 to prevent infinite loops (limitPickCount=0 means no limit)
+    // Ensure limit is at least 1 to prevent infinite loops (limitTests=0 means no limit)
     const randomLimit = totalVariantsCount !== null && totalVariantsCount > 0
-      ? Math.max(1, totalVariantsCount * repeatsPerVariant * forwardModeCycles)
+      ? Math.max(1, totalVariantsCount * attemptsPerVariant * forwardModeCycles)
       : 100
-    modes = [{mode: 'random', limitPickCount: randomLimit}]
+    modes = [{mode: 'random', limitTests: randomLimit}]
   }
   else if (iterationMode === 'backward') {
-    modes = [{mode: 'backward', cycles: forwardModeCycles, repeatsPerVariant}]
+    modes = [{mode: 'backward', cycles: forwardModeCycles, attemptsPerVariant}]
   }
   else {
-    modes = [{mode: 'forward', cycles: forwardModeCycles, repeatsPerVariant}]
+    modes = [{mode: 'forward', cycles: forwardModeCycles, attemptsPerVariant}]
   }
 
   const runOptions: TestVariantsRunOptions<TestArgs> = {
     cycles,
-    modes,
+    iterationModes: modes,
     parallel,
     getSeed      : withSeed ? getSeedFromRnd : (void 0),
     log          : logEnabled ? {start: true, progressInterval: 5000, completed: true, error: true} : false,
@@ -1180,7 +1180,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       modeConfig,
       isMultiMode,
       cycles,
-      repeatsPerVariant,
+      attemptsPerVariant,
       forwardModeCycles,
       retriesToError,
       parallel,
@@ -1210,7 +1210,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     }
 
     if (logEnabled) {
-      traceEnter(`verifyIterationsCount(${result.iterations}, ${totalVariantsCount}, ${errorIndex}, ${firstMatchingIndex}, ${lastMatchingIndex}, ${findBestError}, ${dontThrowIfError}, ${cycles}, ${repeatsPerVariant}, ${forwardModeCycles}, ${errorVariantCallCount}, ${retriesToError}, ${iterationMode}, ${callCount}, ${errorAttempts}, ${isParallel}, ${isMultiMode})`)
+      traceEnter(`verifyIterationsCount(${result.iterations}, ${totalVariantsCount}, ${errorIndex}, ${firstMatchingIndex}, ${lastMatchingIndex}, ${findBestError}, ${dontThrowIfError}, ${cycles}, ${attemptsPerVariant}, ${forwardModeCycles}, ${errorVariantCallCount}, ${retriesToError}, ${iterationMode}, ${callCount}, ${errorAttempts}, ${isParallel}, ${isMultiMode})`)
     }
     verifyIterationsCount(
       result.iterations,
@@ -1221,7 +1221,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       findBestError,
       dontThrowIfError,
       cycles,
-      repeatsPerVariant,
+      attemptsPerVariant,
       forwardModeCycles,
       errorVariantCallCount,
       retriesToError,
@@ -1238,7 +1238,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     if (logEnabled) {
       traceEnter(`verifyBestError`)
     }
-    verifyBestError(result.bestError, findBestError, dontThrowIfError, errorIndex, errorVariantArgs, errorVariantCallCount, retriesToError, cycles, repeatsPerVariant, forwardModeCycles, iterationMode, isMultiMode)
+    verifyBestError(result.bestError, findBestError, dontThrowIfError, errorIndex, errorVariantArgs, errorVariantCallCount, retriesToError, cycles, attemptsPerVariant, forwardModeCycles, iterationMode, isMultiMode)
     if (logEnabled) {
       traceExit(`ok`)
     }
@@ -1247,7 +1247,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       traceEnter(`verifySeenValues`)
     }
     // Full coverage: all variants visited at least once (static templates, no error, deterministic mode, iterations > 0)
-    const expectedIterationsForCoverage = (totalVariantsCount ?? 0) * cycles * repeatsPerVariant * forwardModeCycles
+    const expectedIterationsForCoverage = (totalVariantsCount ?? 0) * cycles * attemptsPerVariant * forwardModeCycles
     const fullCoverage = errorIndex === null
       && totalVariantsCount !== null
       && totalVariantsCount > 0
@@ -1268,14 +1268,14 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     }
 
     if (logEnabled) {
-      traceEnter(`verifyCallCount(${callCount}, ${totalVariantsCount}, ${errorIndex}, ${cycles}, ${repeatsPerVariant}, ${forwardModeCycles}, ${iterationMode}, ${isMultiMode})`)
+      traceEnter(`verifyCallCount(${callCount}, ${totalVariantsCount}, ${errorIndex}, ${cycles}, ${attemptsPerVariant}, ${forwardModeCycles}, ${iterationMode}, ${isMultiMode})`)
     }
     verifyCallCount(
       callCount,
       totalVariantsCount,
       errorIndex,
       cycles,
-      repeatsPerVariant,
+      attemptsPerVariant,
       forwardModeCycles,
       iterationMode,
       isMultiMode,
@@ -1302,7 +1302,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
         totalVariantsCount,
         limitPerMode,
         cycles,
-        repeatsPerVariant,
+        attemptsPerVariant,
         isParallel,
         errorIndex,
       )
@@ -1410,7 +1410,7 @@ describe('test-variants > createTestVariants variants', function () {
         findBestError !== false ? [false, true, null] : [true],
       cyclesMax           : [0, 1, 2],
       withSeed            : [false, true, null],
-      repeatsPerVariantMax: [0, 1, 2],
+      attemptsPerVariantMax: [0, 1, 2],
       forwardModeCyclesMax: [0, 1, 2],
       argsCountMax        : [0, 1, 2, 3],
       valuesPerArgMax     : [0, 1, 2],
@@ -1421,7 +1421,7 @@ describe('test-variants > createTestVariants variants', function () {
       // Mode configuration: 'single' uses one mode, 'multi' uses forward+backward for position persistence testing
       modeConfig          : ['single', 'multi', null],
     })({
-      // limitVariantsCount: 127_000,
+      // limitTests: 127_000,
       limitTime    : 2 * 60 * 1000,
       getSeed      : getRandomSeed,
       cycles       : 1,
@@ -1430,17 +1430,16 @@ describe('test-variants > createTestVariants variants', function () {
       },
       saveErrorVariants: {
         dir              : 'tmp/test/createTestVariants/variants',
-        retriesPerVariant: 10,
-        // useToFindBestError: true,
+        attemptsPerVariant: 10,
       },
-      modes: [
+      iterationModes: [
         {
-          mode           : 'forward',
-          limitPickCount: 100,
+          mode      : 'forward',
+          limitTests: 100,
         },
         {
-          mode           : 'backward',
-          limitPickCount: 10,
+          mode      : 'backward',
+          limitTests: 10,
         },
       ],
       parallel: 1,

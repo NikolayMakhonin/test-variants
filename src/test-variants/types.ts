@@ -24,7 +24,7 @@ export type SaveErrorVariantsOptions<Args, SavedArgs = Args> = {
   /** Directory path for error variant JSON files */
   dir: string
   /** Retry attempts per variant during replay phase (default: 1) */
-  retriesPerVariant?: null | number
+  attemptsPerVariant?: null | number
   /** Custom file path generator; returns path relative to dir; null - use default path */
   getFilePath?: null | ((options: GenerateErrorVariantFilePathOptions) => string | null)
   /** Transform args before JSON serialization */
@@ -36,17 +36,7 @@ export type SaveErrorVariantsOptions<Args, SavedArgs = Args> = {
 }
 
 export type TestVariantsTemplate<Args extends Obj, Value> = Value[] | ((args: Args) => Value[])
-/*
-type Func<Args extends Obj> = (args: Args) => any
 
-export type FuncOrArgs<Args extends Obj = Obj> = Func<Args> | Args
-
-export type ToArgs<T extends FuncOrArgs> =
-  T extends Func<infer Args> ? Args : T
-
-export type ToFunc<T extends FuncOrArgs> =
-  T extends Func<any> ? T : Func<T>
-*/
 export type TestVariantsTemplates<Args extends Obj> = {
   [key in keyof Args]: TestVariantsTemplate<Args, Args[key]>
 }
