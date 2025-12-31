@@ -29,8 +29,8 @@ TypeScript library for combinatorial randomized testing - runs a test function w
 ## Public API
 
 ```ts
-// creates a function for running tests with all parameter combinations
-// the test function is passed as parameter, it can be: sync, async, or hybrid
+// Creates a function for running tests with all parameter combinations
+// The test function is passed as parameter, it can be: sync, async, or hybrid
 const testVariants = createTestVariants(async (
   // test parameters that will be iterated
   {
@@ -51,8 +51,8 @@ const testVariants = createTestVariants(async (
 ) => {
   // test body
 
-  // returns: void | number | { iterationsAsync: number, iterationsSync: number }
-  // return iterationsAsync and iterationsSync if you need to count the total number
+  // Returns: void | number | { iterationsAsync: number, iterationsSync: number }
+  // Return iterationsAsync and iterationsSync if you need to count the total number
   // of async and sync iterations inside the test
   // number is equivalent to iterationsSync
 })
@@ -63,17 +63,17 @@ const result = await testVariants({
   arg2: (args) => [valueA, valueB],  // args: { arg1 } - already assigned parameters
   arg3: [valueX],
 })({
-  // all parameters are optional
-  // missing values or null mean default value is used
+  // All parameters are optional
+  // Missing values or null mean default value is used
 
-  // automatic garbage collection after N iterations or after time interval
-  // useful for preventing timeout in karma for sync tests,
+  // Automatic garbage collection after N iterations or after time interval
+  // Useful for preventing timeout in karma for sync tests,
   // or preventing hangs in Node.js due to Promise bugs
   GC_Iterations: number,      // default: 1000000
   GC_IterationsAsync: number, // default: 10000
   GC_Interval: number,        // default: 1000 (milliseconds)
 
-  // console output parameters. default: true
+  // Console output parameters, default: true
   log: true, // all console output parameters default
   log: boolean | {
     // message about test start
@@ -91,7 +91,7 @@ const result = await testVariants({
   // for aborting async operations inside the test
   abortSignal: IAbortSignalFast,
 
-  // parallel execution (for async tests)
+  // Parallel execution (for async tests)
   parallel: boolean | number, // default: 1 - no parallel
   parallel: true,             // all parallel
   parallel: 4,                // maximum 4 parallel
@@ -105,21 +105,21 @@ const result = await testVariants({
   // Test terminates if the following conditions are met for all iteration modes:
   // 1) for `forward` and `backward` - number of full passes of all variants reached cycles
   // 2) for `random` - number of picked variants reached cycles (without counting attemptsPerVariant)
-  // Until these conditions are met, iteration modes will switch in a circle.
+  // Until these conditions are met, iteration modes will switch in a circle
   // If in the last pass any mode executed zero tests,
   // it is not counted in termination condition check
   // If none of the modes executed any test in the last pass,
   // the cycle terminates
   cycles: 3,
 
-  // Iteration modes (variant traversal). default: forward
+  // Iteration modes (variant traversal), default: forward
   // All modes preserve their current positions between mode switches,
-  // so with multiple executions, they will eventually traverse all variants.
+  // so with multiple executions, they will eventually traverse all variants
   // When traversal reaches the last variant and no termination conditions are met,
   // traversal starts over
   iterationModes: [
     {
-      // lexicographic traversal of variants (like numeric counting)
+      // Lexicographic traversal of variants (like numeric counting)
       // from first (the very last argument in template)
       // to last (the very first argument in template) or until limits reached
       mode: 'forward',
@@ -133,9 +133,9 @@ const result = await testVariants({
       limitTests: number,         // default: null - unlimited
     },
     {
-      // lexicographic traversal of variants in reverse order
+      // Lexicographic traversal of variants in reverse order
       // from the last possible or from current constraint to the first variant
-      // same parameters as for 'forward'
+      // Same parameters as for 'forward'
       mode: 'backward',
       cycles: number,
       attemptsPerVariant: number,
@@ -143,7 +143,7 @@ const result = await testVariants({
       limitTests: number,
     },
     {
-      // random traversal of variants within current constraints
+      // Random traversal of variants within current constraints
       mode: 'random',
       limitTime: 10000,
       limitTests: 1000,
@@ -159,11 +159,12 @@ const result = await testVariants({
   // and tests run faster
   findBestError: {
     equals: (a, b) => boolean,
-    // specifies that each argument value must not exceed
+    // Additional constraint on top of the main lexicographic one
+    // Specifies that each argument value must not exceed
     // the argument value of the last variant that caused an error
     limitArgOnError: boolean | Function,  // default: false
     limitArgOnError: true,                // rule applies to all arguments
-    // custom rule, whether to limit argument value
+    // Custom rule, whether to limit argument value
     limitArgOnError: ({
       name,          // argument name
       valueIndex,    // argument value index in template
@@ -173,19 +174,19 @@ const result = await testVariants({
     // the following is equivalent to limitArgOnError: true
     limitArgOnError: ({ valueIndex, maxValueIndex }) => valueIndex >= maxValueIndex,
 
-    // option intended only for system verification
-    // if true, iteration will include the last error variant
+    // Option intended only for system verification
+    // If true, iteration will include the last error variant
     includeErrorVariant: boolean, // default: false
 
-    // if true, when testVariants completes, if an error was found,
+    // If true, when testVariants completes, if an error was found,
     // no exception will be thrown, instead
     // all error info will be returned in the result
     dontThrowIfError: false,
   },
 
-  // seed generation for pseudo-random generator
-  // seed will be set in test parameters as seed field, even if it's null or undefined
-  // this seed will be used for exact reproduction of pseudo-random behavior inside the test
+  // Seed generation for pseudo-random generator
+  // Seed will be set in test parameters as seed field, even if it's null or undefined
+  // This seed will be used for exact reproduction of pseudo-random behavior inside the test
   getSeed: ({ // default: null - seed disabled, not set in test arguments
     // total number of tests run
     tests,
@@ -229,16 +230,16 @@ const result = await testVariants({
     tests,  // number of tests run before the error (including attemptsPerVariant)
   }) => void | Promise<void>,
 
-  // time controller for all internal delays, timeouts and getting current time
-  // used inside testVariants instead of direct setTimeout, Date.now calls, etc.
-  // intended only for testing and debugging the test-variants library itself
+  // Time controller for all internal delays, timeouts and getting current time
+  // Used inside testVariants instead of direct setTimeout, Date.now calls, etc
+  // Intended only for testing and debugging the test-variants library itself
   timeController: ITimeController, // default: null - use timeControllerDefault
 })
 
-// result:
+// Result:
 {
   iterations: number,
-  // found best error, if findBestError is enabled and dontThrowIfError is disabled
+  // Found best error, if findBestError is enabled and dontThrowIfError is disabled
   bestError: null | {
     error: any, // the error caught via try..catch
     args: { // test parameters that caused the error
