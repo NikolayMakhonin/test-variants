@@ -1,7 +1,7 @@
 import {TestVariantsTestRun} from './testVariantsCreateTestRun'
 import {AbortControllerFast, type IAbortSignalFast} from '@flemist/abort-controller-fast'
 import {combineAbortSignals, isPromiseLike} from '@flemist/async-utils'
-import {type IPool, Pool} from '@flemist/time-limits'
+import {type IPool, Pool, poolWait} from '@flemist/time-limits'
 import {garbageCollect} from 'src/garbage-collect/garbageCollect'
 import {Obj, type SaveErrorVariantsOptions, type TestVariantsLogOptions} from 'src/test-variants/types'
 import {generateErrorVariantFilePath, parseErrorVariantFile, readErrorVariantFiles, saveErrorVariantFile} from 'src/test-variants/saveErrorVariants'
@@ -9,6 +9,8 @@ import {TestVariantsIterator, type GetSeedParams, type LimitArgOnError, type Mod
 import {fileLock} from 'src/test-variants/fs/fileLock'
 import {deepEqual} from 'src/helpers/deepEqual'
 import * as path from 'path'
+import type {ITimeController} from '@flemist/time-controller'
+import {timeControllerDefault} from '@flemist/time-controller'
 
 const logOptionsDefault: Required<TestVariantsLogOptions> = {
   start           : true,
@@ -89,8 +91,8 @@ function formatModeConfig(modeConfig: ModeConfig | null, modeIndex: number): str
   if (modeConfig.limitTime != null) {
     result += `, limitTime=${modeConfig.limitTime}ms`
   }
-  if (modeConfig.limitTotalCount != null) {
-    result += `, limitCount=${modeConfig.limitTotalCount}`
+  if (modeConfig.limitPickCount != null) {
+    result += `, limitCount=${modeConfig.limitPickCount}`
   }
   return result
 }
@@ -132,6 +134,8 @@ export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
   limitVariantsCount?: null | number,
   /** Maximum test run duration in milliseconds; when exceeded, iteration stops and current results are returned */
   limitTime?: null | number,
+  /** Time controller for testable time-dependent operations; null uses timeControllerDefault */
+  timeController?: null | ITimeController,
 }
 
 export type TestVariantsBestError<Args extends Obj> = {
@@ -183,6 +187,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   const cycles = options.cycles ?? 1
   const dontThrowIfError = findBestError?.dontThrowIfError
   const limitTime = options.limitTime
+  const timeController = options.timeController ?? timeControllerDefault
 
   const parallel = options.parallel === true
     ? 2 ** 31
@@ -225,7 +230,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
 
   let prevCycleVariantsCount: null | number = null
   let prevCycleDuration: null | number = null
-  const startTime = Date.now()
+  const startTime = timeController.now()
   let cycleStartTime = startTime
 
   const abortControllerParallel = new AbortControllerFast()
@@ -240,7 +245,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   let debug = false
   let iterations = 0
   let iterationsAsync = 0
-  let prevLogTime = Date.now()
+  let prevLogTime = timeController.now()
   let prevLogMemory = startMemory
   let prevGC_Time = prevLogTime
   let prevGC_Iterations = iterations
@@ -287,7 +292,13 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   // Main iteration using iterator
   let timeLimitExceeded = false
   variants.start()
-  while (variants.cycleIndex < cycles && !timeLimitExceeded) {
+  while (variants.minCompletedCount < cycles && !timeLimitExceeded) {
+    // Check time limit at start of each round
+    if (limitTime && timeController.now() - startTime >= limitTime) {
+      timeLimitExceeded = true
+      break
+    }
+
     let args: Args | null
     while (!abortSignalExternal?.aborted && (debug || (args = variants.next()) != null)) {
       const _index = variants.index
@@ -298,7 +309,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
         console.log(`[test-variants] ${formatModeConfig(variants.modeConfig, variants.modeIndex)}`)
       }
 
-      const now = (logInterval || GC_Interval || limitTime) && Date.now()
+      const now = (logInterval || GC_Interval || limitTime) && timeController.now()
 
       if (limitTime && now - startTime >= limitTime) {
         timeLimitExceeded = true
@@ -410,7 +421,11 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
       }
       else {
         if (!pool.hold(1)) {
-          await pool.holdWait(1)
+          await poolWait({
+            pool,
+            count: 1,
+            hold : true,
+          })
         }
         // eslint-disable-next-line @typescript-eslint/no-loop-func
         void (async () => {
@@ -469,13 +484,24 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
 
     // Track cycle metrics for logging
     prevCycleVariantsCount = variants.count
-    prevCycleDuration = Date.now() - cycleStartTime
-    cycleStartTime = Date.now()
+    prevCycleDuration = timeController.now() - cycleStartTime
+    cycleStartTime = timeController.now()
+
+    // Check time limit at end of each round
+    if (limitTime && timeController.now() - startTime >= limitTime) {
+      timeLimitExceeded = true
+      break
+    }
+
     variants.start()
   }
 
   if (pool) {
-    await pool.holdWait(parallel)
+    await poolWait({
+      pool,
+      count: parallel,
+      hold : true,
+    })
     void pool.release(parallel)
   }
 

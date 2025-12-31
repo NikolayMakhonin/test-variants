@@ -58,7 +58,7 @@ export function testVariantsCreateTestRun<Args extends Obj>(
     const time0 = Date.now()
     // Will stop execution right before next error iteration for step-by-step debugging
     // eslint-disable-next-line no-debugger
-    debugger
+    // debugger
     if (Date.now() - time0 > 50 && debugIteration < 5) {
       console.log('[test-variants] DEBUG ITERATION: ' + debugIteration)
       debugIteration++

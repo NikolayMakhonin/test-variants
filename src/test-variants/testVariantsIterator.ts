@@ -1,3 +1,5 @@
+import type {ITimeController} from '@flemist/time-controller'
+import {timeControllerDefault} from '@flemist/time-controller'
 import type {Obj, TestVariantsTemplate, TestVariantsTemplates} from 'src/test-variants/types'
 
 /** Parameters passed to getSeed function for generating test seeds */
@@ -38,6 +40,8 @@ export type TestVariantsIteratorOptions<Args extends Obj> = {
   getSeed?: null | ((params: GetSeedParams) => any)
   /** Iteration phases; each phase runs until its limits are reached, then next phase starts */
   modes?: null | ModeConfig[]
+  /** Time controller for testable time-dependent operations; null uses timeControllerDefault */
+  timeController?: null | ITimeController
 }
 
 /** Limit information with args and optional error */
@@ -68,7 +72,7 @@ export type TestVariantsIterator<Args extends Obj> = {
   /** Current mode configuration; null if no modes */
   readonly modeConfig: ModeConfig | null
   /** Minimum completed cycles across all modes; used for completion condition */
-  readonly minCompletedCycles: number
+  readonly minCompletedCount: number
   /** Add or tighten limit */
   addLimit(options?: null | AddLimitOptions<Args>): void
   /** Reset to beginning of iteration for next cycle */
@@ -102,7 +106,7 @@ export type BaseModeConfig = {
   /** Maximum time in ms for this phase */
   limitTime?: null | number
   /** Maximum total picks in this phase */
-  limitTotalCount?: null | number
+  limitPickCount?: null | number
 }
 
 /** Sequential mode configuration shared by forward and backward modes */
@@ -137,15 +141,20 @@ type ModeState = {
   savedPosition: {
     indexes: number[]
     repeatIndex: number
+    cycle: number
   } | null
   /** Total completed cycles */
-  completedCycles: number
+  completedCount: number
   /** Picks in current round */
   pickCount: number
   /** Start time of current round */
   startTime: number
   /** Cycle within current round (0-based) */
   cycle: number
+  /** Whether mode executed at least 1 test in current outer cycle */
+  hadProgressInCycle: boolean
+  /** Progress flag from previous cycle (saved before reset in start()) */
+  hadProgressInPreviousCycle: boolean
 }
 
 /** Iterator internal state */
@@ -690,15 +699,15 @@ function createLimit<Args>(args: Args, error?: unknown): TestVariantsIteratorLim
 const DEFAULT_MODES: ModeConfig[] = [{mode: 'forward'}]
 
 /** Check if current mode has reached its limits */
-function isModeExhausted(modeConfig: ModeConfig, modeState: ModeState): boolean {
+function isModeExhausted(modeConfig: ModeConfig, modeState: ModeState, now: number): boolean {
   // Mode with no repeats or no cycles produces no iterations
   if (getModeRepeatsPerVariant(modeConfig) <= 0 || getModeCycles(modeConfig) <= 0) {
     return true
   }
-  if (modeConfig.limitTotalCount != null && modeState.pickCount >= modeConfig.limitTotalCount) {
+  if (modeConfig.limitPickCount != null && modeState.pickCount >= modeConfig.limitPickCount) {
     return true
   }
-  if (modeConfig.limitTime != null && Date.now() - modeState.startTime >= modeConfig.limitTime) {
+  if (modeConfig.limitTime != null && now - modeState.startTime >= modeConfig.limitTime) {
     return true
   }
   return false
@@ -803,16 +812,19 @@ function saveModePosition<Args extends Obj>(
   for (let i = 0; i < keysCount; i++) {
     indexes[i] = state.indexes[i]
   }
-  state.modesState[modeIndex].savedPosition = {
+  const modeState = state.modesState[modeIndex]
+  modeState.savedPosition = {
     indexes,
     repeatIndex: state.repeatIndex,
+    cycle      : modeState.cycle,
   }
 }
 
 /** Try to restore saved position; returns true if successful, false if position is invalid */
 function tryRestoreSavedPosition<Args extends Obj>(
-  saved: {indexes: number[], repeatIndex: number},
+  saved: {indexes: number[], repeatIndex: number, cycle: number},
   state: IteratorState<Args>,
+  modeState: ModeState,
   templates: TestVariantsTemplate<Args, any>[],
   keys: (keyof Args)[],
   keysCount: number,
@@ -842,6 +854,7 @@ function tryRestoreSavedPosition<Args extends Obj>(
   }
 
   state.repeatIndex = saved.repeatIndex
+  modeState.cycle = saved.cycle
   return true
 }
 
@@ -852,29 +865,43 @@ function switchToNextMode<Args extends Obj>(
   keys: (keyof Args)[],
   keysCount: number,
   savePosition: boolean,
+  now: number,
 ): void {
   const currentModeIndex = state.modeIndex
   const currentMode = state.modes[currentModeIndex]
   const currentModeState = state.modesState[currentModeIndex]
 
   // For sequential modes: save position when interrupted by limits, clear when naturally completed
+  // completedCount increments when mode ran tests in this cycle OR had saved position from previous rounds
   if (currentMode && (currentMode.mode === 'forward' || currentMode.mode === 'backward')) {
     if (savePosition) {
       saveModePosition(state, currentModeIndex, keysCount)
     }
     else {
-      // Mode naturally completed - clear saved position and count completed cycles
+      // Mode completed - count if made progress:
+      // - hadProgressInCycle: yielded at least one variant this cycle
+      // - pickCount > 0: picked variants but hit count limit before yielding (hadProgressInCycle not set yet)
+      // - savedPosition != null: had progress from previous rounds (position was saved)
+      const hadProgress = currentModeState.hadProgressInCycle
+        || currentModeState.pickCount > 0
+        || currentModeState.savedPosition != null
       currentModeState.savedPosition = null
-      currentModeState.completedCycles += currentModeState.cycle + 1
+      if (hadProgress) {
+        currentModeState.completedCount++
+      }
     }
+  }
+  // Random mode: completedCount increments per-pick in next() only when variant is yielded
+  // Here we only count natural completion (empty template, !savePosition) if progress was made
+  else if (currentMode && currentMode.mode === 'random' && !savePosition && currentModeState.hadProgressInCycle) {
+    currentModeState.completedCount++
   }
 
   state.modeIndex++
   if (state.modeIndex < state.modes.length) {
     const nextModeState = state.modesState[state.modeIndex]
     nextModeState.pickCount = 0
-    nextModeState.startTime = Date.now()
-    nextModeState.cycle = 0
+    nextModeState.startTime = now
 
     const nextMode = state.modes[state.modeIndex]
     if (nextMode.mode === 'forward' || nextMode.mode === 'backward') {
@@ -882,9 +909,15 @@ function switchToNextMode<Args extends Obj>(
       resetIteratorState(state, templates, keys, keysCount)
       const saved = nextModeState.savedPosition
       if (saved) {
-        tryRestoreSavedPosition(saved, state, templates, keys, keysCount)
+        tryRestoreSavedPosition(saved, state, nextModeState, templates, keys, keysCount)
         // If restore failed, state remains in fresh position from resetIteratorState
       }
+      else {
+        nextModeState.cycle = 0
+      }
+    }
+    else {
+      nextModeState.cycle = 0
     }
   }
 }
@@ -897,6 +930,7 @@ export function testVariantsIterator<Args extends Obj>(
     argsTemplates, getSeed, equals, limitArgOnError, includeErrorVariant,
   } = options
   const modes = options.modes ?? DEFAULT_MODES
+  const timeController = options.timeController ?? timeControllerDefault
   const keys = Object.keys(argsTemplates) as (keyof Args)[]
   const templates: TestVariantsTemplate<Args, any>[] = Object.values(argsTemplates)
   const keysCount = keys.length
@@ -918,11 +952,13 @@ export function testVariantsIterator<Args extends Obj>(
   const modesState: ModeState[] = []
   for (let i = 0; i < modes.length; i++) {
     modesState[i] = {
-      savedPosition  : null,
-      completedCycles: 0,
-      pickCount      : 0,
-      startTime      : 0,
-      cycle          : 0,
+      savedPosition             : null,
+      completedCount            : 0,
+      pickCount                 : 0,
+      startTime                 : 0,
+      cycle                     : 0,
+      hadProgressInCycle        : false,
+      hadProgressInPreviousCycle: true, // Initial true allows first cycle to start
     }
   }
 
@@ -976,15 +1012,28 @@ export function testVariantsIterator<Args extends Obj>(
     get modeConfig() {
       return state.modes[state.modeIndex] ?? null
     },
-    get minCompletedCycles() {
+    get minCompletedCount() {
       if (state.modesState.length === 0) {
-        return 0
+        return Infinity
       }
-      let min = state.modesState[0].completedCycles
-      for (let i = 1; i < state.modesState.length; i++) {
-        if (state.modesState[i].completedCycles < min) {
-          min = state.modesState[i].completedCycles
+      // Use hadProgressInPreviousCycle because this getter is called AFTER start() resets hadProgressInCycle
+      // Only count modes that made progress in the previous cycle
+      // Modes with no progress are stuck and should not block min calculation
+      let min = Infinity
+      let anyModeHadProgress = false
+      for (let i = 0; i < state.modesState.length; i++) {
+        const modeState = state.modesState[i]
+        if (modeState.hadProgressInPreviousCycle) {
+          anyModeHadProgress = true
+          if (modeState.completedCount < min) {
+            min = modeState.completedCount
+          }
         }
+      }
+      // If no mode made progress in previous cycle, iteration is stuck → return Infinity to exit
+      // Initial state has hadProgressInPreviousCycle = true to allow first cycle to start
+      if (!anyModeHadProgress) {
+        return Infinity
       }
       return min
     },
@@ -1092,22 +1141,41 @@ export function testVariantsIterator<Args extends Obj>(
       }
     },
     start() {
+      // Do NOT increment completedCount for interrupted modes here
+      // Completion only counts when mode naturally finishes all variants
+      // Modes interrupted by count limit (error found) should not count as completed
+
+      // Save progress flags before resetting (used by minCompletedCount which is checked after start())
+      // On first start (cycleIndex = -1), keep initial hadProgressInPreviousCycle = true to allow loop entry
+      // On subsequent starts, save current progress before resetting
+      for (let i = 0; i < state.modesState.length; i++) {
+        if (state.cycleIndex >= 0) {
+          state.modesState[i].hadProgressInPreviousCycle = state.modesState[i].hadProgressInCycle
+        }
+        state.modesState[i].hadProgressInCycle = false
+      }
+
       state.cycleIndex++
       resetIteratorState(state, templates, keys, keysCount)
       state.modeIndex = 0
       if (state.modesState.length > 0) {
         const mode0State = state.modesState[0]
         mode0State.pickCount = 0
-        mode0State.startTime = Date.now()
-        mode0State.cycle = 0
+        mode0State.startTime = timeController.now()
 
         // Restore saved position for mode 0 if it exists (was interrupted by limit previously)
         const mode0 = state.modes[0]
         if (mode0 && (mode0.mode === 'forward' || mode0.mode === 'backward')) {
           const saved = mode0State.savedPosition
           if (saved) {
-            tryRestoreSavedPosition(saved, state, templates, keys, keysCount)
+            tryRestoreSavedPosition(saved, state, mode0State, templates, keys, keysCount)
           }
+          else {
+            mode0State.cycle = 0
+          }
+        }
+        else {
+          mode0State.cycle = 0
         }
       }
       state.started = true
@@ -1125,6 +1193,7 @@ export function testVariantsIterator<Args extends Obj>(
         return null
       }
 
+      const now = timeController.now()
       const modeConfig = state.modes[state.modeIndex]
       const modeState = state.modesState[state.modeIndex]
       const repeatsPerVariant = getModeRepeatsPerVariant(modeConfig)
@@ -1134,14 +1203,15 @@ export function testVariantsIterator<Args extends Obj>(
         if (state.count == null || state.index < state.count) {
           state.repeatIndex++
           modeState.pickCount++
+          modeState.hadProgressInCycle = true
           state.currentArgs = buildCurrentArgs()
           return state.currentArgs
         }
       }
 
       // Check if current mode is exhausted - switch to next mode (save position since interrupted by limit)
-      if (isModeExhausted(modeConfig, modeState)) {
-        switchToNextMode(state, templates, keys, keysCount, true)
+      if (isModeExhausted(modeConfig, modeState, now)) {
+        switchToNextMode(state, templates, keys, keysCount, true, now)
         return this.next()
       }
 
@@ -1151,10 +1221,6 @@ export function testVariantsIterator<Args extends Obj>(
 
       if (modeConfig.mode === 'random') {
         success = randomPickVariant(state, templates, keys, keysCount, limitArgOnError)
-        // For random mode: each variant pick = 1 completed cycle
-        if (success) {
-          modeState.completedCycles++
-        }
       }
       else if (modeConfig.mode === 'backward') {
         success = advanceBackwardMode(state, modeState, templates, keys, keysCount, getModeCycles(modeConfig))
@@ -1165,22 +1231,34 @@ export function testVariantsIterator<Args extends Obj>(
 
       if (!success) {
         // Current mode naturally completed - switch to next mode (don't save position)
-        switchToNextMode(state, templates, keys, keysCount, false)
+        switchToNextMode(state, templates, keys, keysCount, false, now)
         return this.next()
       }
 
       state.index++
       modeState.pickCount++
+      // Mark progress as soon as we successfully advance to a variant
+      // This ensures modes hitting count limit are still counted in minCompletedCount
+      modeState.hadProgressInCycle = true
 
       // Process pending limits at new position
       if (state.pendingLimits.length > 0) {
         processPendingLimits(state, templates, keys, keysCount, equals, limitArgOnError, includeErrorVariant)
       }
 
-      // Check count limit
+      // Check count limit - end cycle (count is a global limit, not per-mode)
       if (state.count != null && state.index >= state.count) {
+        // Current mode made progress, count it as completed
+        modeState.completedCount++
+        // Mark all modes as exhausted for this cycle
+        state.modeIndex = state.modes.length
         return null
       }
+      // For random mode: each yielded pick = 1 completed cycle
+      if (modeConfig.mode === 'random') {
+        modeState.completedCount++
+      }
+
       state.currentArgs = buildCurrentArgs()
       return state.currentArgs
     },

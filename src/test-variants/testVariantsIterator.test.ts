@@ -363,24 +363,26 @@ describe('test-variants > testVariantsIterator', function () {
   })
 
   it('random mode picks variants within limits', async function () {
+    // Use 30 picks to make probability of all same values negligible (~1e-14)
+    const pickCount = 30
     const iterator = testVariantsIterator({
       argsTemplates: {
         a: [1, 2, 3],
       },
-      modes: [{mode: 'random', limitTotalCount: 10}],
+      modes: [{mode: 'random', limitPickCount: pickCount}],
     })
 
     iterator.start()
     const seen = new Set<number>()
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < pickCount; i++) {
       const result = iterator.next()
       assert.ok(result !== null)
       assert.ok([1, 2, 3].includes(result.a))
       seen.add(result.a)
     }
-    // After 10 random picks, should have seen at least 2 different values
+    // After 30 random picks, should have seen at least 2 different values
     assert.ok(seen.size >= 2, `Expected at least 2 different values, got ${seen.size}`)
-    // 11th pick should return null (limitTotalCount reached)
+    // Next pick should return null (limitPickCount reached)
     assert.strictEqual(iterator.next(), null)
   })
 
@@ -402,7 +404,8 @@ describe('test-variants > testVariantsIterator', function () {
       }
     }
     const elapsed = Date.now() - start
-    assert.ok(elapsed >= 10, `Expected at least 10ms elapsed, got ${elapsed}ms`)
+    // Allow 1ms tolerance for timer precision
+    assert.ok(elapsed >= 9, `Expected at least 9ms elapsed, got ${elapsed}ms`)
     assert.ok(count > 0, 'Expected at least some iterations')
   })
 
@@ -413,7 +416,7 @@ describe('test-variants > testVariantsIterator', function () {
       },
       modes: [
         {mode: 'forward'},
-        {mode: 'random', limitTotalCount: 3},
+        {mode: 'random', limitPickCount: 3},
       ],
     })
 
@@ -441,8 +444,8 @@ describe('test-variants > testVariantsIterator', function () {
         a: [1, 2, 3, 4],
       },
       modes: [
-        {mode: 'forward', limitTotalCount: 2},
-        {mode: 'backward', limitTotalCount: 2},
+        {mode: 'forward', limitPickCount: 2},
+        {mode: 'backward', limitPickCount: 2},
       ],
     })
 
@@ -499,7 +502,7 @@ describe('test-variants > testVariantsIterator', function () {
       // Note: variantIndex resets on each start() call, so use cycleIndex to distinguish cycles
       getSeed: ({cycleIndex, variantIndex, repeatIndex}) => `c${cycleIndex}-v${variantIndex}-r${repeatIndex}`,
       modes  : [
-        {mode: 'forward', limitTotalCount: 4, repeatsPerVariant: 2},
+        {mode: 'forward', limitPickCount: 4, repeatsPerVariant: 2},
       ],
     })
 

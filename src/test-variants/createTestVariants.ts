@@ -44,6 +44,7 @@ export function createTestVariants<Args extends Obj>(
         equals             : options?.findBestError?.equals,
         limitArgOnError    : options?.findBestError?.limitArgOnError,
         includeErrorVariant: options?.findBestError?.includeErrorVariant,
+        timeController     : options?.timeController,
       })
 
       return testVariantsRun(testRun, variants, options)
