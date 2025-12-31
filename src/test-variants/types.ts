@@ -27,7 +27,7 @@ export type SaveErrorVariantsOptions<Args, SavedArgs = Args> = {
   dir: string
   /** Retry attempts per variant during replay phase (default: 1) */
   attemptsPerVariant?: null | number
-  /** Custom file path generator; returns path relative to dir; null - use default path */
+  /** Custom file path generator; returns path relative to dir, or absolute path; null - use default path */
   getFilePath?: null | ((options: GenerateErrorVariantFilePathOptions) => string | null)
   /** Transform args before JSON serialization */
   argsToJson?: null | ((args: Args) => string | SavedArgs)

@@ -170,9 +170,14 @@ type IteratorState<Args extends Obj> = {
   argLimits: (number | null)[]
   /** Extra values per arg from saved variants (appended to template values) */
   extraValues: (any[] | null)[]
+  /** Current variant index (0-based) */
   index: number
+  /** Number of full passes through all variants */
   cycleIndex: number
+  /** Current repeat within variant (0 to attemptsPerVariant-1) */
   repeatIndex: number
+  /** Total tests yielded (including attemptsPerVariant), used for getSeed */
+  testsCount: number
   count: number | null
   /** Whether count was set by explicit addLimit call (not by mode exhaustion) */
   countIsExplicit: boolean
@@ -298,6 +303,7 @@ function resetIteratorState<Args extends Obj>(
   keysCount: number,
 ): void {
   state.index = -1
+  state.testsCount = 0
   resetIterationPositionToStart(state, templates, keys, keysCount)
 }
 
@@ -1002,6 +1008,7 @@ export function testVariantsIterator<Args extends Obj>(
     index          : -1,
     cycleIndex     : -1,
     repeatIndex    : 0,
+    testsCount     : 0,
     count          : null,
     countIsExplicit: false,
     limit          : null,
@@ -1016,7 +1023,7 @@ export function testVariantsIterator<Args extends Obj>(
   function buildCurrentArgs(): Args {
     if (getSeed) {
       const seed = getSeed({
-        tests  : state.index,
+        tests  : state.testsCount,
         cycles : state.cycleIndex,
         repeats: state.repeatIndex,
       })
@@ -1258,6 +1265,7 @@ export function testVariantsIterator<Args extends Obj>(
           modeState.pickCount++
           modeState.hadProgressInCycle = true
           state.currentArgs = buildCurrentArgs()
+          state.testsCount++
           return state.currentArgs
         }
       }
@@ -1322,6 +1330,7 @@ export function testVariantsIterator<Args extends Obj>(
       }
 
       state.currentArgs = buildCurrentArgs()
+      state.testsCount++
       return state.currentArgs
     },
   }

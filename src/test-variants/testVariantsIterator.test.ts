@@ -279,15 +279,15 @@ describe('test-variants > testVariantsIterator', function () {
 
     iterator.start()
 
-    // Variant 0, repeats 0-2
+    // Variant 0, repeats 0-2 (tests=0,1,2 because tests is total tests run, not variant index)
     assert.deepStrictEqual(iterator.next(), {a: 1, seed: '0-0-0'})
-    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '0-0-1'})
-    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '0-0-2'})
+    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '0-1-1'})
+    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '0-2-2'})
 
-    // Variant 1, repeats 0-2
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '0-1-0'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '0-1-1'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '0-1-2'})
+    // Variant 1, repeats 0-2 (tests=3,4,5)
+    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '0-3-0'})
+    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '0-4-1'})
+    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '0-5-2'})
 
     // Done
     assert.strictEqual(iterator.next(), null)
@@ -302,20 +302,20 @@ describe('test-variants > testVariantsIterator', function () {
       iterationModes: [{mode: 'forward', attemptsPerVariant: 2}],
     })
 
-    // Cycle 0
+    // Cycle 0 (tests=0,1,2,3 - testsCount increments per test, including attemptsPerVariant)
     iterator.start()
     assert.deepStrictEqual(iterator.next(), {a: 1, seed: '0-0-0'})
-    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '0-0-1'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '0-1-0'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '0-1-1'})
+    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '0-1-1'})
+    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '0-2-0'})
+    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '0-3-1'})
     assert.strictEqual(iterator.next(), null)
 
-    // Cycle 1
+    // Cycle 1 (testsCount resets on start(), so tests=0,1,2,3 again)
     iterator.start()
     assert.deepStrictEqual(iterator.next(), {a: 1, seed: '1-0-0'})
-    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '1-0-1'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '1-1-0'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '1-1-1'})
+    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '1-1-1'})
+    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '1-2-0'})
+    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '1-3-1'})
     assert.strictEqual(iterator.next(), null)
   })
 
@@ -348,16 +348,16 @@ describe('test-variants > testVariantsIterator', function () {
     })
 
     iterator.start()
-    // Cycle 0
+    // Mode cycle 0 (tests counts all tests including attemptsPerVariant)
     assert.deepStrictEqual(iterator.next(), {a: 1, seed: '0-0'})
-    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '0-1'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '1-0'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '1-1'})
-    // Cycle 1
-    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '2-0'})
-    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '2-1'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '3-0'})
+    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '1-1'})
+    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '2-0'})
     assert.deepStrictEqual(iterator.next(), {a: 2, seed: '3-1'})
+    // Mode cycle 1 (testsCount continues within same external cycle)
+    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '4-0'})
+    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '5-1'})
+    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '6-0'})
+    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '7-1'})
     // Done
     assert.strictEqual(iterator.next(), null)
   })
@@ -509,27 +509,30 @@ describe('test-variants > testVariantsIterator', function () {
     iterator.start()
     // First cycle: 4 picks = 2 variants * 2 repeats, interrupted by limit
     // Position saved at a=2 (indexes=[1], repeatIndex=1)
+    // tests=0,1,2,3 (total tests count, not variant index)
     assert.deepStrictEqual(iterator.next(), {a: 1, seed: 'c0-v0-r0'})
-    assert.deepStrictEqual(iterator.next(), {a: 1, seed: 'c0-v0-r1'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: 'c0-v1-r0'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: 'c0-v1-r1'})
+    assert.deepStrictEqual(iterator.next(), {a: 1, seed: 'c0-v1-r1'})
+    assert.deepStrictEqual(iterator.next(), {a: 2, seed: 'c0-v2-r0'})
+    assert.deepStrictEqual(iterator.next(), {a: 2, seed: 'c0-v3-r1'})
     assert.strictEqual(iterator.next(), null)
 
     iterator.start()
     // Second cycle: continues from saved position (indexes=[1], a=2)
     // Advances to a=3, gets 2 repeats, then no more variants - mode naturally completes
     // Natural completion clears saved position
+    // testsCount resets on start(), so tests=0,1
     assert.deepStrictEqual(iterator.next(), {a: 3, seed: 'c1-v0-r0'})
-    assert.deepStrictEqual(iterator.next(), {a: 3, seed: 'c1-v0-r1'})
+    assert.deepStrictEqual(iterator.next(), {a: 3, seed: 'c1-v1-r1'})
     // No more variants after a=3, mode naturally completes
     assert.strictEqual(iterator.next(), null)
 
     iterator.start()
     // Third cycle: no saved position (was cleared), starts fresh from beginning
+    // testsCount resets on start(), so tests=0,1,2,3
     assert.deepStrictEqual(iterator.next(), {a: 1, seed: 'c2-v0-r0'})
-    assert.deepStrictEqual(iterator.next(), {a: 1, seed: 'c2-v0-r1'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: 'c2-v1-r0'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: 'c2-v1-r1'})
+    assert.deepStrictEqual(iterator.next(), {a: 1, seed: 'c2-v1-r1'})
+    assert.deepStrictEqual(iterator.next(), {a: 2, seed: 'c2-v2-r0'})
+    assert.deepStrictEqual(iterator.next(), {a: 2, seed: 'c2-v3-r1'})
     assert.strictEqual(iterator.next(), null)
   })
 

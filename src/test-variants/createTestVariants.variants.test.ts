@@ -266,9 +266,10 @@ function verifyIterationsCount(
   // Calculate expected error behavior
   // For random mode: use actual errorAttempts since random picks may not hit error variant
   // For multi-mode: use actual errorAttempts since position persistence affects which variants are hit per cycle
-  // For deterministic modes: use theoretical calculation based on variant structure
+  // For backward mode: use actual errorAttempts since backward visits high indices first (lastMatchingIndex, not firstMatchingIndex)
+  // For forward mode: use theoretical calculation based on variant structure
   const totalErrorCalls = errorVariantCallCount * cycles * attemptsPerVariant * forwardModeCycles
-  const errorWillOccur = iterationMode === 'random' || isMultiMode
+  const errorWillOccur = iterationMode === 'random' || isMultiMode || iterationMode === 'backward'
     ? errorAttempts > retriesToError
     : errorIndex !== null && totalErrorCalls > retriesToError && callCount > firstMatchingIndex
   // Error is thrown if: (1) no findBestError, or (2) findBestError but dontThrowIfError=false

@@ -46,7 +46,7 @@ export async function parseErrorVariantFile<Args extends Obj, SavedArgs>(
   return json as unknown as Args
 }
 
-/** Generates default error variant file path: YYYY-MM-DD_HH-mm-ss.json (UTC) */
+/** Generates default error variant file path: YYYY-MM-DD_HH-mm-ss_<hash>.json (UTC) */
 export function generateErrorVariantFilePath(
   options: GenerateErrorVariantFilePathOptions,
 ): string {
