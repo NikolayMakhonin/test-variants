@@ -257,11 +257,11 @@ const result = await testVariants({
 ```
 [test-variants] start, memory: 139MB
 [test-variants] mode[0]: random
-[test-variants] cycle: 3, variant: 65 (1.0s), tests: 615 (5.0s), memory: 148MB (+8.8MB)
+[test-variants] cycle: 3, variant: 65 (1.0s), tests: 615 (5.0s), async: 12, memory: 148MB (+8.8MB)
 [test-variants] mode[1]: backward, limitTests=10
-[test-variants] cycle: 5, variant: 65 (2.0s), tests: 615 (6.0s), memory: 139MB (-8.8MB)
+[test-variants] cycle: 5, variant: 65/100 (2.0s), tests: 615 (6.0s), async: 123, memory: 139MB (-8.8MB)
 [test-variants] mode[2]: forward, limitTests=100, limitTime=10.9m
-[test-variants] end, cycles: 50, variants: 650 (3.0s), tests: 815 (7.0s), sync: 345, async: 123, memory: 138MB (-1.0MB)
+[test-variants] end, tests: 815 (7.0s), async: 123, memory: 138MB (-1.0MB)
 ...
 ```
 
