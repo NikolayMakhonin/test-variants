@@ -282,9 +282,10 @@ function verifyIterationsCount(
   // Verify: when error expected after first variant and totalVariantsCount > 0, should have some iterations
   // For forward mode: firstMatchingIndex > 0 means error is not at first variant
   // For backward mode: lastMatchingIndex < totalVariantsCount - 1 means error is not at first variant (iteration starts from end)
+  // For multi-mode: first mode is always forward, so use forward logic regardless of iterationMode
   // Skip for parallel mode: iteration counting has race conditions with abort signal
   // Skip for random mode: random picks may hit error variant first, resulting in 0 iterations
-  const errorNotAtFirstVariant = iterationMode === 'backward'
+  const errorNotAtFirstVariant = iterationMode === 'backward' && !isMultiMode
     ? lastMatchingIndex < (totalVariantsCount ?? 0) - 1
     : firstMatchingIndex > 0
   if (!isParallel && iterationMode !== 'random' && errorWillOccur && totalVariantsCount !== null && totalVariantsCount > 0 && resultIterations === 0 && errorNotAtFirstVariant) {
@@ -1414,7 +1415,7 @@ describe('test-variants > createTestVariants variants', function () {
           attemptsPerVariant: 10,
         },
       ],
-      parallel: 1,
+      parallel: 10,
     })
 
     // Validate stress test execution time
