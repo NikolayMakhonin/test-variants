@@ -92,7 +92,7 @@ function formatModeConfig(modeConfig: ModeConfig | null, modeIndex: number): str
     }
   }
   if (modeConfig.limitTime != null) {
-    result += `, limitTime=${modeConfig.limitTime}ms`
+    result += `, limitTime=${formatDuration(modeConfig.limitTime)}`
   }
   if (modeConfig.limitTests != null) {
     result += `, limitTests=${modeConfig.limitTests}`
@@ -284,7 +284,8 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
 
   function onCompleted() {
     if (logCompleted) {
-      let logMsg = `[test-variants] variants: ${variants.index}, iterations: ${iterations}, async: ${iterationsAsync}`
+      const totalElapsed = timeController.now() - startTime
+      let logMsg = `[test-variants] end, tests: ${iterations} (${formatDuration(totalElapsed)}), async: ${iterationsAsync}`
       if (startMemory != null) {
         const memory = getMemoryUsage()
         if (memory != null) {
@@ -344,7 +345,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
           log(`[test-variants] ${formatModeConfig(variants.modeConfig, variants.modeIndex)}`)
           modeChanged = false
         }
-        let logMsg = ''
+        let logMsg = '[test-variants] '
         const cycleElapsed = now - cycleStartTime
         const totalElapsed = now - startTime
         if (findBestError) {
@@ -379,7 +380,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
         else {
           logMsg += `variant: ${variants.index} (${formatDuration(cycleElapsed)})`
         }
-        logMsg += `, total: ${iterations} (${formatDuration(totalElapsed)})`
+        logMsg += `, tests: ${iterations} (${formatDuration(totalElapsed)}), async: ${iterationsAsync}`
         if (prevLogMemory != null) {
           const memory = getMemoryUsage()
           if (memory != null) {

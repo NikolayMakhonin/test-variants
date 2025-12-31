@@ -174,6 +174,8 @@ type IteratorState<Args extends Obj> = {
   cycleIndex: number
   repeatIndex: number
   count: number | null
+  /** Whether count was set by explicit addLimit call (not by mode exhaustion) */
+  countIsExplicit: boolean
   limit: TestVariantsIteratorLimit<Args> | null
   started: boolean
   currentArgs: Args | null
@@ -992,21 +994,22 @@ export function testVariantsIterator<Args extends Obj>(
   }
 
   const state: IteratorState<Args> = {
-    args         : {} as Args,
+    args           : {} as Args,
     indexes,
     argValues,
     argLimits,
     extraValues,
-    index        : -1,
-    cycleIndex   : -1,
-    repeatIndex  : 0,
-    count        : null,
-    limit        : null,
-    started      : false,
-    currentArgs  : null,
-    pendingLimits: [],
+    index          : -1,
+    cycleIndex     : -1,
+    repeatIndex    : 0,
+    count          : null,
+    countIsExplicit: false,
+    limit          : null,
+    started        : false,
+    currentArgs    : null,
+    pendingLimits  : [],
     modes,
-    modeIndex    : 0,
+    modeIndex      : 0,
     modesState,
   }
 
@@ -1110,11 +1113,13 @@ export function testVariantsIterator<Args extends Obj>(
           state.pendingLimits.push(limit)
           if (isEarlierIndex) {
             state.count = includeErrorVariant ? state.index + 1 : state.index
+            state.countIsExplicit = true
           }
         }
         else if (isEarlierIndex) {
           // Earlier index but not lexicographically smaller (or limitArgOnError disabled)
           state.count = includeErrorVariant ? state.index + 1 : state.index
+          state.countIsExplicit = true
           state.limit = createLimit(state.currentArgs, options?.error)
         }
         return
@@ -1124,6 +1129,7 @@ export function testVariantsIterator<Args extends Obj>(
       if (hasIndex && !hasArgs) {
         if (state.count == null || options.index < state.count) {
           state.count = options.index
+          state.countIsExplicit = true
         }
         return
       }
@@ -1197,6 +1203,12 @@ export function testVariantsIterator<Args extends Obj>(
       }
 
       state.cycleIndex++
+      // Reset count for new cycle unless:
+      // 1. count was explicitly set by addLimit({index}), OR
+      // 2. there's an error limit set (constrains future cycles in findBestError mode)
+      if (!state.countIsExplicit && !state.limit?.error) {
+        state.count = null
+      }
       resetIteratorState(state, templates, keys, keysCount)
       state.modeIndex = 0
       if (state.modesState.length > 0) {
@@ -1228,6 +1240,9 @@ export function testVariantsIterator<Args extends Obj>(
 
       // Check if all modes exhausted
       if (state.modeIndex >= state.modes.length) {
+        if (state.count == null) {
+          state.count = state.index + 1
+        }
         return null
       }
 

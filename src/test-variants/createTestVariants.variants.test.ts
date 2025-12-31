@@ -61,7 +61,9 @@ import {getRandomSeed, Random} from 'src/test-variants/random/Random'
 import {randomBoolean, randomInt} from 'src/test-variants/random/helpers'
 import {deepClone} from 'src/helpers/deepClone'
 import {deepEqual} from 'src/helpers/deepEqual'
-import {log, traceLog, traceEnter, traceExit, formatValue, getLogLast, resetLog} from 'src/helpers/log'
+import {
+  log, traceLog, traceEnter, traceExit, formatValue, resetLog,
+} from 'src/helpers/log'
 import type {TestVariantsRunOptions, TestVariantsRunResult} from 'src/test-variants/testVariantsRun'
 import type {ModeConfig} from 'src/test-variants/testVariantsIterator'
 
@@ -773,7 +775,9 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
         // Count keys manually to avoid Object.keys() array allocation
         let receivedCount = 0
         for (const _ in args) {
-          receivedCount++
+          if (Object.prototype.hasOwnProperty.call(args, _)) {
+            receivedCount++
+          }
         }
         if (receivedCount !== capturedArgIndex) {
           if (logEnabled) {
@@ -1111,9 +1115,9 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     cycles,
     iterationModes: modes,
     parallel,
-    getSeed      : withSeed ? getSeedFromRnd : (void 0),
-    log          : logEnabled ? {start: true, progressInterval: 5000, completed: true, error: true} : false,
-    findBestError: findBestError
+    getSeed       : withSeed ? getSeedFromRnd : (void 0),
+    log           : logEnabled ? {start: true, progressInterval: 5000, completed: true, error: true} : false,
+    findBestError : findBestError
       ? {
         limitArgOnError: limitArgOnError === 'func' ? limitArgOnErrorTrue : limitArgOnError,
         includeErrorVariant,
@@ -1364,18 +1368,18 @@ describe('test-variants > createTestVariants variants', function () {
         findBestError !== false ? [false, true, 'func', null] : [false],
       dontThrowIfError: ({findBestError}) =>
         findBestError !== false ? [false, true, null] : [true],
-      cyclesMax           : [0, 1, 2],
-      withSeed            : [false, true, null],
+      cyclesMax            : [0, 1, 2],
+      withSeed             : [false, true, null],
       attemptsPerVariantMax: [0, 1, 2],
-      forwardModeCyclesMax: [0, 1, 2],
-      argsCountMax        : [0, 1, 2, 3],
-      valuesPerArgMax     : [0, 1, 2],
-      valuesCountMax      : [1, 5],
+      forwardModeCyclesMax : [0, 1, 2],
+      argsCountMax         : [0, 1, 2, 3],
+      valuesPerArgMax      : [0, 1, 2],
+      valuesCountMax       : [1, 5],
       // Parallel: false/1 = sequential, 4/8 = concurrent, true = max parallel, null = random
-      parallel            : [false, 1, 4, 8, true, null],
-      errorPosition       : ['none', 'first', 'last', null],
+      parallel             : [false, 1, 4, 8, true, null],
+      errorPosition        : ['none', 'first', 'last', null],
       // Mode configuration: 'single' uses one mode, 'multi' uses forward+backward for position persistence testing
-      modeConfig          : ['single', 'multi', null],
+      modeConfig           : ['single', 'multi', null],
     })({
       // limitTests: 127_000,
       limitTime    : 2 * 60 * 1000,
@@ -1385,8 +1389,10 @@ describe('test-variants > createTestVariants variants', function () {
         limitArgOnError: true,
       },
       saveErrorVariants: {
-        dir              : 'tmp/test/createTestVariants/variants',
+        dir               : 'tmp/test/createTestVariants/variants',
         attemptsPerVariant: 10,
+        // Never use it here. findBestError with limitArgOnError is completely enough here.
+        useToFindBestError: false,
       },
       iterationModes: [
         {
@@ -1398,8 +1404,8 @@ describe('test-variants > createTestVariants variants', function () {
           limitTests: 100,
         },
         {
-          mode      : 'backward',
-          limitTests: 1,
+          mode              : 'backward',
+          limitTests        : 1,
           attemptsPerVariant: 10,
         },
       ],
