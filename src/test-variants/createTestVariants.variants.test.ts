@@ -1404,7 +1404,7 @@ describe('test-variants > createTestVariants variants', function () {
       iterationModes: [
         {
           mode      : 'forward',
-          limitTests: 100,
+          limitTests: 10,
         },
         {
           mode      : 'random',
