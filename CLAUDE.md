@@ -20,3 +20,11 @@
 
 @ai/project/base/docs/Decision_Map.md
 @ai/project/test-variants/docs/Decision_Map.md
+
+## After Autocompaction
+
+When context contains text "This session is being continued from a previous conversation that ran out of context", immediately read these files before any other action:
+1. `@/ai/project/test-variants/tasks/README_Compliance.md` - active task specification
+2. `@/README.md` - authoritative API specification
+
+Continue executing README_Compliance task
