@@ -29,7 +29,7 @@ export type TestVariantsTestRun<Args extends Obj> =(
 
 export type TestVariantsTestResult = number | void | TestVariantsTestRunResult
 
-export type TestVariantsTest<Args extends Obj> = (args: Args & { seed?: null | number }, abortSignal: IAbortSignalFast)
+export type TestVariantsTest<Args extends Obj> = (args: Args, abortSignal: IAbortSignalFast)
   => PromiseOrValue<TestVariantsTestResult>
 
 export function testVariantsCreateTestRun<Args extends Obj>(
@@ -42,7 +42,6 @@ export function testVariantsCreateTestRun<Args extends Obj>(
     : log === true || log == null
       ? true
       : log.error ?? true
-  let debugIteration = 0
 
   let errorEvent: ErrorEvent<Args> | null = null
 
@@ -59,17 +58,6 @@ export function testVariantsCreateTestRun<Args extends Obj>(
     if (logError) {
       console.error(`[test-variants] error variant: ${tests}\n${argsToString(args)}`)
       console.error(error)
-    }
-
-    // Rerun failed variant 5 times for debug
-    const time0 = Date.now()
-    // Will stop execution right before next error iteration for step-by-step debugging
-    // eslint-disable-next-line no-debugger
-    // debugger
-    if (Date.now() - time0 > 50 && debugIteration < 5) {
-      console.log('[test-variants] DEBUG ITERATION: ' + debugIteration)
-      debugIteration++
-      return
     }
 
     if (options.onError) {
@@ -89,10 +77,11 @@ export function testVariantsCreateTestRun<Args extends Obj>(
 
       if (isPromiseLike(promiseOrIterations)) {
         return promiseOrIterations.then(value => {
+          // README: "number is equivalent to iterationsSync" - applies regardless of async/sync test
           if (typeof value === 'number') {
             return {
-              iterationsAsync: value,
-              iterationsSync : 0,
+              iterationsAsync: 0,
+              iterationsSync : value,
             }
           }
           if (value !== null && typeof value === 'object') {

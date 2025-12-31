@@ -253,6 +253,18 @@ const result = await testVariants({
 }
 ```
 
+### Logs format
+```
+[test-variants] start, memory: 143MB
+[test-variants] mode[0]: random
+[test-variants] variants: 0, tests: 120, async: 120, memory: 146MB (+3.6MB)
+[test-variants] mode[1]: backward, limitTests=10
+[test-variants] variants: 15, tests: 120, async: 120, memory: 143MB (-3.0MB)
+[test-variants] mode[2]: forward, limitTests=100, limitTime=10.9m
+[test-variants] end, memory: 140MB (-3.0MB)
+...
+```
+
 # License
 
 [Unlimited Free](LICENSE)
