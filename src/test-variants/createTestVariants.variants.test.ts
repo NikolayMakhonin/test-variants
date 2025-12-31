@@ -1419,16 +1419,18 @@ describe('test-variants > createTestVariants variants', function () {
     })
 
     // Validate stress test execution time
-    const elapsedSeconds = (Date.now() - startTime) / 1000
-    if (elapsedSeconds < LIMIT_TIME_MIN) {
+    const elapsedMs = Date.now() - startTime
+    const elapsedSeconds = elapsedMs / 1000
+    const limitTimeSeconds = limitTime / 1000
+    if (elapsedMs < LIMIT_TIME_MIN) {
       throw new Error(
-        `Stress test completed too fast: ${elapsedSeconds.toFixed(1)}s (expected ${limitTime}s)\n`
+        `Stress test completed too fast: ${elapsedSeconds.toFixed(1)}s (expected ${limitTimeSeconds}s)\n`
         + `Possible cause: false positive result, not all iterations executed, early termination bug, etc`,
       )
     }
-    if (elapsedSeconds > LIMIT_TIME_MAX) {
+    if (elapsedMs > LIMIT_TIME_MAX) {
       throw new Error(
-        `Stress test took too long: ${elapsedSeconds.toFixed(1)}s (expected ${limitTime}s)\n`
+        `Stress test took too long: ${elapsedSeconds.toFixed(1)}s (expected ${limitTimeSeconds}s)\n`
         + `Possible cause: hang, infinite loop, non-working time limit, etc`,
       )
     }
