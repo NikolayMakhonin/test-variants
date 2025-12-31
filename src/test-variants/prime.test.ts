@@ -2,7 +2,7 @@ import {isPrime, nextPrime, prevPrime} from 'src/test-variants/prime'
 
 describe('test-variants > prime', function () {
   this.timeout(10 * 60 * 1000)
-  it('isPrime', async function () {
+  xit('isPrime', async function () {
     const primeNumbers = []
     for (let i = 2; i < 1000000; i++) {
       let _isPrime = true

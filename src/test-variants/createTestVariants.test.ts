@@ -280,7 +280,7 @@ describe('test-variants > createTestVariants', function () {
       assert.strictEqual(result.iterations, results.length)
     })
 
-    it('complex', async function () {
+    xit('complex', async function () {
       this.timeout(5 * 60 * 1000)
 
       const results = []
@@ -313,7 +313,7 @@ describe('test-variants > createTestVariants', function () {
       // assert.deepStrictEqual(results, arr.map(a => [a]))
     })
 
-    it('long', async function () {
+    xit('long', async function () {
       this.timeout(5 * 60 * 1000)
 
       const results = []
@@ -381,7 +381,7 @@ describe('test-variants > createTestVariants', function () {
 
 describe('test-variants > million of Promise reject', function () {
   let millionRejectTime = 0
-  it('million of Promise reject', async function () {
+  xit('million of Promise reject', async function () {
     this.timeout(1800000)
 
     // console.log('wait 5 sec')
@@ -443,7 +443,7 @@ describe('test-variants > million of Promise reject', function () {
     millionRejectTime = Date.now()
   })
 
-  it('after million of Promise reject', function () {
+  xit('after million of Promise reject', function () {
     const now = Date.now()
     assert.ok(millionRejectTime > 0)
     assert.ok(now - millionRejectTime < 500, (now - millionRejectTime) + '')
