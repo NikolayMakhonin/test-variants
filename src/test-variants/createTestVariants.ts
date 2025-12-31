@@ -35,6 +35,9 @@ export function createTestVariants<Args extends Obj>(
         log    : options?.log,
       })
 
+      const logOpts = options?.log
+      const logDebug = logOpts && typeof logOpts === 'object' ? logOpts.debug : false
+
       const variants = testVariantsIterator<Args>({
         argsTemplates      : args as any,
         getSeed            : options?.getSeed,
@@ -43,6 +46,7 @@ export function createTestVariants<Args extends Obj>(
         limitArgOnError    : options?.findBestError?.limitArgOnError,
         includeErrorVariant: options?.findBestError?.includeErrorVariant,
         timeController     : options?.timeController,
+        logDebug,
       })
 
       return testVariantsRun(testRun, variants, options)

@@ -18,6 +18,7 @@ const logOptionsDefault: Required<TestVariantsLogOptions> = {
   completed       : true,
   error           : true,
   modeChange      : true,
+  debug           : false,
 }
 
 const logOptionsDisabled: TestVariantsLogOptions = {
@@ -26,6 +27,7 @@ const logOptionsDisabled: TestVariantsLogOptions = {
   completed       : false,
   error           : false,
   modeChange      : false,
+  debug           : false,
 }
 
 function formatDuration(ms: number): string {
@@ -182,6 +184,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   const logInterval = logOpts.progressInterval ?? logOptionsDefault.progressInterval
   const logCompleted = logOpts.completed ?? logOptionsDefault.completed
   const logModeChange = logOpts.modeChange ?? logOptionsDefault.modeChange
+  const logDebug = logOpts.debug ?? logOptionsDefault.debug
 
   const abortSignalExternal = options.abortSignal
   const findBestError = options.findBestError

@@ -57,70 +57,26 @@
 
 import {createTestVariants as createTestVariantsStable} from 'dist/lib/index.mjs'
 import {createTestVariants} from 'src/test-variants/createTestVariants'
-import {objectToString} from 'src/test-variants/format/objectToString'
 import {getRandomSeed, Random} from 'src/test-variants/random/Random'
 import {randomBoolean, randomInt} from 'src/test-variants/random/helpers'
 import {deepClone} from 'src/helpers/deepClone'
 import {deepEqual} from 'src/helpers/deepEqual'
+import {log, traceLog, traceEnter, traceExit, formatValue, getLogLast, resetLog} from 'src/helpers/log'
 import type {TestVariantsRunOptions, TestVariantsRunResult} from 'src/test-variants/testVariantsRun'
 import type {ModeConfig} from 'src/test-variants/testVariantsIterator'
 
 // region Debug Logging
 
 let logEnabled = false
-let traceIndent = 0
-
-const LOG_LAST_MAX = 1000
-const logLast: string[] = []
-
-function formatValue(value: unknown): string {
-  return objectToString(value, {maxDepth: 3, maxItems: 20})
-}
-
-function formatObject(obj: unknown): string {
-  return objectToString(obj, {pretty: true, maxDepth: 5, maxItems: 50})
-}
-
-function log(...args: unknown[]): void {
-  const message = args.map(a => typeof a === 'string' ? a : formatObject(a)).join(' ')
-  logLast.push(message)
-  if (logLast.length > LOG_LAST_MAX) {
-    logLast.shift()
-  }
-  console.log(message)
-}
-
-function traceLog(message: string): void {
-  log('  '.repeat(traceIndent) + message)
-}
-
-function traceEnter(message: string): void {
-  traceLog('> ' + message)
-  traceIndent++
-}
-
-function traceExit(message: string): void {
-  traceIndent--
-  traceLog('< ' + message)
-}
-
-function getLogLast(): string {
-  return logLast.join('\n')
-}
-
-// eslint-disable-next-line no-undef
-(globalThis as any).__getStressTestLogLast = getLogLast
 
 async function runWithLogs<T>(fn: () => T | Promise<T>): Promise<T> {
   logEnabled = true
-  traceIndent = 0
-  logLast.length = 0
+  resetLog()
   try {
     return await fn()
   }
   finally {
     logEnabled = false
-    traceIndent = 0
   }
 }
 

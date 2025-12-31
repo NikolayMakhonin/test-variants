@@ -12,6 +12,8 @@ export type TestVariantsLogOptions = {
   error?: null | boolean
   /** Log mode changes with all parameters; default true */
   modeChange?: null | boolean
+  /** Debug logging for internal behavior; default false */
+  debug?: null | boolean
 }
 
 /** Options for generating error variant file path */
