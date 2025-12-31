@@ -5,35 +5,34 @@
 
 # @flemist/test-variants
 
-TypeScript библиотека для комбинаторного рандомизированного тестирования - запускает тестовую функцию со всеми возможными комбинациями параметров
+TypeScript library for combinatorial randomized testing - runs a test function with all possible parameter combinations
 
-## Термины
+## Terms
 
-- `тест` - функция, которая тестируется с разными комбинациями параметров
-- `createTestVariants` - функция, которая создает функцию testVariants
-- `testVariants` - функция, которая запускает тест с перебором комбинаций параметров
-- `вариант` - конкретная комбинация параметров для теста
-- `шаблон параметров` - объект, в котором каждому параметру теста соответствует массив возможных значений
-- `seed` - значение для инициализации псевдослучайного генератора внутри теста, для воспроизводимости рандомизированных тестов
-- `итерация` - один запуск теста с конкретной комбинацией параметров
-- `итерирование` - перебор комбинаций параметров (прямой, обратный, случайный)
-- `асинхронная итерация` - итерация, в которой тестовая функция возвращает Promise
-- `синхронная итерация` - итерация, в которой тестовая функция возвращает void или значение
-- `режим итерирования` - способ перебора вариантов (прямой, обратный, случайный)
-- `полный перебор` - когда все возможные в рамках ограничений варианты параметров были использованы хотя бы по одному разу (возможен только для прямого и обратного режимов итерирования)
-- `попытки варианта` - количество запусков теста с одним и тем же вариантом параметров до перехода к следующему варианту
-- `цикл` - полный перебор всех вариантов параметров
-вариантов, количество полных переборов, количество попыток варианта)
-- `лучшая ошибка` - ошибка, которая произошла на наименьшем в лексикографическом порядке варианте параметров, т.е. самая удобная для отладки
-- `IAbortSignalFast` - интерфейс для прерывания асинхронных операций (см. @flemist/abort-controller-fast)
+- `test` - function being tested with different parameter combinations
+- `createTestVariants` - function that creates the testVariants function
+- `testVariants` - function that runs the test iterating through parameter combinations
+- `variant` - specific combination of parameters for the test
+- `parameter template` - object where each test parameter corresponds to an array of possible values
+- `seed` - value for initializing the pseudo-random generator inside the test, for reproducibility of randomized tests
+- `iteration` - single test run with a specific parameter combination
+- `iterating` - traversing parameter combinations (forward, backward, random)
+- `async iteration` - iteration where the test function returns Promise
+- `sync iteration` - iteration where the test function returns void or a value
+- `iteration mode` - method of traversing variants (forward, backward, random)
+- `full pass` - when all possible variants within constraints have been used at least once (possible only for forward and backward iteration modes)
+- `variant attempts` - number of test runs with the same parameter variant before moving to the next variant
+- `cycle` - full pass through all parameter variants
+- `best error` - error that occurred on the lexicographically smallest parameter variant, i.e., the most convenient for debugging
+- `IAbortSignalFast` - interface for aborting async operations (see @flemist/abort-controller-fast)
 
-## Публичное API
+## Public API
 
 ```ts
-// создает функцию для запуска тестов с перебором всех комбинаций параметров
-// в параметры передается функция теста, она может быть: синхронной, асинхронной или гибридной
+// creates a function for running tests with all parameter combinations
+// the test function is passed as parameter, it can be: sync, async, or hybrid
 const testVariants = createTestVariants(async (
-  // параметры теста, которые будут перебираться
+  // test parameters that will be iterated
   {
     arg1,
     arg2,
@@ -43,215 +42,212 @@ const testVariants = createTestVariants(async (
     arg1: Type1,
     arg2: Type2,
     arg3: Type3,
-    // seed генерируется автоматически или функцией getSeed,
-    // может быть любого типа: число, строка, объект, функция и т.д.
-    // предназначен для псевдослучайного генератора и воспроизводимости рандомизированных тестов
+    // seed is generated automatically or by getSeed function,
+    // can be any type: number, string, object, function, etc.
+    // intended for pseudo-random generator and reproducibility of randomized tests
     seed?: number | null,
   },
   abortSignal: IAbortSignalFast,
 ) => {
-  // тело теста
+  // test body
 
-  // возвращает: void | number | { iterationsAsync: number, iterationsSync: number }
-  // возвращай iterationsAsync и iterationsSync, если нужно посчитать общее количество
-  // асинхронных и синхронных итераций внутри теста
-  // number равносилен iterationsSync
+  // returns: void | number | { iterationsAsync: number, iterationsSync: number }
+  // return iterationsAsync and iterationsSync if you need to count the total number
+  // of async and sync iterations inside the test
+  // number is equivalent to iterationsSync
 })
-  
+
 const result = await testVariants({
-  // шаблоны параметров
+  // parameter templates
   arg1: [value1, value2, value3],
-  arg2: (args) => [valueA, valueB],  // args: { arg1 } - уже присвоенные параметры
+  arg2: (args) => [valueA, valueB],  // args: { arg1 } - already assigned parameters
   arg3: [valueX],
 })({
-  // все параметры опциональны
-  // отсутствующие значения или null означают, что используется значение по умолчанию
+  // all parameters are optional
+  // missing values or null mean default value is used
 
-  // автоматической сборка мусора после N итераций или через интервал времени
-  // полезно для предотвращения timeout в karma для синхронных тестов,
-  // или предотвращения зависаний в Node.js из-за багов с Promise
+  // automatic garbage collection after N iterations or after time interval
+  // useful for preventing timeout in karma for sync tests,
+  // or preventing hangs in Node.js due to Promise bugs
   GC_Iterations: number,      // default: 1000000
   GC_IterationsAsync: number, // default: 10000
   GC_Interval: number,        // default: 1000 (milliseconds)
 
-  // параметры вывода в консоль. default: true
-  log: true, // все параметры вывода в консоль по умолчанию
+  // console output parameters. default: true
+  log: true, // all console output parameters default
   log: boolean | {
-    // сообщение о начале теста
+    // message about test start
     start: boolean,           // default: true
-    // каждые N миллисекунд показыввает информацию о прогрессе и статистику
+    // every N milliseconds shows progress info and statistics
     progressInterval: number, // default: 5000 (milliseconds)
-    // сообщение о начале теста
+    // message about test completion
     completed: boolean,       // default: true
-    // полный лог ошибки вместе со stack trace
+    // full error log with stack trace
     error: boolean,           // default: true
-    // сообщение о смене режима итерирования, с информацией о текущем режиме
+    // message about iteration mode change, with info about current mode
     modeChange: boolean,      // default: true
   },
 
-  // для прерывания асинхронных операций внутри теста
+  // for aborting async operations inside the test
   abortSignal: IAbortSignalFast,
 
-  // параллельное выполнение (для асинхронных тестов)
+  // parallel execution (for async tests)
   parallel: boolean | number, // default: 1 - no parallel
-  parallel: true,             // все параллельно
-  parallel: 4,                // максимум 4 параллельно
-  parallel: false | 1,        // последовательно
+  parallel: true,             // all parallel
+  parallel: 4,                // maximum 4 parallel
+  parallel: false | 1,        // sequential
 
-  // Общие лимиты
-  // Максимальное суммарное количество запущенных тестов (с учетом repeatsPerVariant)
-  limitVariantsCount: number, // default: null - unlimited (TODO: rename to limitTests)
-  // Максимальное время работы всего testVariants
+  // Global limits
+  // Maximum total number of tests run (including attemptsPerVariant)
+  limitTests: number,         // default: null - unlimited
+  // Maximum total runtime of testVariants
   limitTime: number,          // default: null - unlimited, (milliseconds)
-  // Тест завершается, если следующие условия выполнятся для всех режимов итерирования:
-  // 1) для `forward` и `backward` - количество полных переборов всех вариантов достигло cycles
-  // 2) для `random` - количество перебраных вариантов достигло cycles (без учета repeatsPerVariant)
-  // Пока эти условия не выполнены, режимы итерирования будут сменять друг друга по кругу.
-  // Если в последнем проходе какой либо режим не выполнил ни одного теста,
-  // то он не учитывается в проверке выполнения условия завершения
-  // Если ни один из режимов не выполнил ни одного теста в последнем проходе,
-  // то цикл завершается
+  // Test terminates if the following conditions are met for all iteration modes:
+  // 1) for `forward` and `backward` - number of full passes of all variants reached cycles
+  // 2) for `random` - number of picked variants reached cycles (without counting attemptsPerVariant)
+  // Until these conditions are met, iteration modes will switch in a circle.
+  // If in the last pass any mode executed zero tests,
+  // it is not counted in termination condition check
+  // If none of the modes executed any test in the last pass,
+  // the cycle terminates
   cycles: 3,
 
-  // Режимы итерирования (перебора вариантов). default: forward // TODO: rename to iterationModes
-  // Все режимы сохраняют свои текущие позиции между сменами режимов,
-  // так что при многократном их выполнении, они в итоге переберут все варианты.
-  // Когда перебор дошел до последнего варианта и никакие условия завершения не выполнены,
-  // то перебор начинается заново
-  modes: [
+  // Iteration modes (variant traversal). default: forward
+  // All modes preserve their current positions between mode switches,
+  // so with multiple executions, they will eventually traverse all variants.
+  // When traversal reaches the last variant and no termination conditions are met,
+  // traversal starts over
+  iterationModes: [
     {
-      // лексикограцический перебор вариантов (как числовой счет)
-      // от первого (самый последний аргумент в шаблоне)
-      // до последнего (самый первый аргумент в шаблоне) либо до достижения ограничений
+      // lexicographic traversal of variants (like numeric counting)
+      // from first (the very last argument in template)
+      // to last (the very first argument in template) or until limits reached
       mode: 'forward',
-      // количество тестов каждого варианта перед тем как перейти к следующему варианту
-      repeatsPerVariant: number, // default: 1 (TODO: rename to attemptsPerVariant)
-      // максимально количество понытных полных переборов всех вариантов, до смены режима
-      cycles: number,            // default: 1
-      // максимальное время работы до смены режима
-      limitTime: number,         // default: null - unlimited, (milliseconds)
-      // максимальное количество запущенных тестов до смены режима (с учетом repeatsPerVariant)
-      limitCount: number,        // default: null - unlimited (TODO: rename to limitTests)
+      // number of tests for each variant before moving to the next variant
+      attemptsPerVariant: number, // default: 1
+      // maximum number of attempted full passes of all variants, before mode switch
+      cycles: number,             // default: 1
+      // maximum runtime before mode switch
+      limitTime: number,          // default: null - unlimited, (milliseconds)
+      // maximum number of tests run before mode switch (including attemptsPerVariant)
+      limitTests: number,         // default: null - unlimited
     },
     {
-      // лексикограцический перебор вариантов в обратном порядке
-      // от последнего возможного или от текущего ограничения до первого варианта
-      // те же параметры что и для 'forward'
+      // lexicographic traversal of variants in reverse order
+      // from the last possible or from current constraint to the first variant
+      // same parameters as for 'forward'
       mode: 'backward',
       cycles: number,
-      repeatsPerVariant: number,
+      attemptsPerVariant: number,
       limitTime: number,
-      limitPickCount: number, // (TODO: rename to limitTests)
+      limitTests: number,
     },
     {
-      // случайный перебор вариантов в рамках текущих ограничений
+      // random traversal of variants within current constraints
       mode: 'random',
       limitTime: 10000,
-      limitPickCount: 1000, // (TODO: rename to limitTests)
+      limitTests: 1000,
     },
   ],
 
-  // Режимы итерирования целесообразно использовать в тандеме поиском лучшей ошибки
-  // Лучшей ошибкой считается ошибка та которая произошла на наименьшем в лексикографическом порядке варианте
-  // В идеале лучшей ошибкой будет вариант со значениями всех аргументов
-  // равными первому значению в шаблоне
-  // Поиск производится путем многократного итерирования и введения новых ограничений
-  // при обнаружении ошибки, таким образом количество вариантов все время уменьшается,
-  // а тесты выполняются все быстрее
+  // Iteration modes are best used in tandem with best error search
+  // Best error is the error that occurred on the lexicographically smallest variant
+  // Ideally the best error will be a variant with all argument values
+  // equal to the first value in the template
+  // Search is performed by repeated iteration and introducing new constraints
+  // when an error is found, thus the number of variants constantly decreases,
+  // and tests run faster
   findBestError: {
     equals: (a, b) => boolean,
-    // указыввет, что значения каждого аргумента не должно превышать
-    // значения аргумента последнего варианта вызвавшего ошибку
+    // specifies that each argument value must not exceed
+    // the argument value of the last variant that caused an error
     limitArgOnError: boolean | Function,  // default: false
-    limitArgOnError: true,                // правило применяется ко всем аргументам
-    // кастомное правило, ограничивать ли значение аргумента
+    limitArgOnError: true,                // rule applies to all arguments
+    // custom rule, whether to limit argument value
     limitArgOnError: ({
-      name,          // имя аргумента
-      valueIndex,    // индекс значения аргумента в шаблоне
-      values,        // все возможные значения аргумента в шаблоне
-      maxValueIndex, // индекс значения аргумента в шаблоне вызвавшего ошибку
+      name,          // argument name
+      valueIndex,    // argument value index in template
+      values,        // all possible argument values in template
+      maxValueIndex, // argument value index in template that caused the error
     }) => boolean,
-    // следующее равносильно limitArgOnError: true
+    // the following is equivalent to limitArgOnError: true
     limitArgOnError: ({ valueIndex, maxValueIndex }) => valueIndex >= maxValueIndex,
-  
-    // опция предназначена только для проверки системы
-    // если true, итерирование будет включать в себя последний ошибочный вариант
+
+    // option intended only for system verification
+    // if true, iteration will include the last error variant
     includeErrorVariant: boolean, // default: false
-    
-    // если true, то при завершении всего testVariants, если была найдена ошибка,
-    // то не будет выброшено исключение, а вместо этого
-    // вся информация об ошибке будет возвращена в результате
+
+    // if true, when testVariants completes, if an error was found,
+    // no exception will be thrown, instead
+    // all error info will be returned in the result
     dontThrowIfError: false,
   },
 
-  // генерация seed для псевдослучайного генератора
-  // seed будет подставлен в параметры теста как поле seed, даже если он null или undefined
-  // в дальнейшем этот seed будет использован для точного воспроизведения псевдослучайного поведения внутри теста
-  getSeed: ({ // default: null - seed отключен, и не устанавливается в аргументы теста
-    // (TODO: rename to tests) - общее количество запущенных тестов
-    variantIndex,
-    // (TODO: rename to cycles) - количество полных переборов всех вариантов
-    cycleIndex,
-    // (TODO: rename to repeats) - количество повторов текущего варианта
-    repeatIndex,
+  // seed generation for pseudo-random generator
+  // seed will be set in test parameters as seed field, even if it's null or undefined
+  // this seed will be used for exact reproduction of pseudo-random behavior inside the test
+  getSeed: ({ // default: null - seed disabled, not set in test arguments
+    // total number of tests run
+    tests,
+    // number of full passes of all variants
+    cycles,
+    // number of repeats of current variant
+    repeats,
   }) => any,
-  getSeed: () => Math.random() * 0xFFFFFFFF, // пример - случайный числовой seed
+  getSeed: () => Math.random() * 0xFFFFFFFF, // example - random numeric seed
 
-  // Сохранение ошибочных вариантов в файлы для последующих проверок
-  // или продолжения поиска лучших ошибок
-  // Перед перебором всех вариантов, сначала будут проверены сохраненные варианты из файлов
-  // в порядке убывания их даты сохранения (сначала самые свежие)
+  // Saving error variants to files for subsequent checks
+  // or continuing best error search
+  // Before iterating all variants, saved variants from files will be checked first
+  // in descending order of their save date (newest first)
   saveErrorVariants: {
     dir: './error-variants',
-    // Максимлаьное количество проверок каждого сохраненного варианта
-    // Полезно когда ошибка воспроизводится не с первого раза
-    // из-за не зависящих от параметров или случайного генератора факторов
-    // Если ошибка найдена, то по-умолчанию бросается исключение и testVariants завершается
-    retriesPerVariant: 1, // default: 1 (TODO: rename to attemptsPerVariant)
-    // Кастомная генерация пути к файлу для сохранения варианта
-    // Либо относительно папки dir, либо абсолютный путь
+    // Maximum number of checks for each saved variant
+    // Useful when error doesn't reproduce on first try
+    // due to factors independent of parameters or random generator
+    // If error is found, exception is thrown by default and testVariants terminates
+    attemptsPerVariant: 1, // default: 1
+    // Custom file path generation for saving variant
+    // Either relative to dir folder, or absolute path
     // default: 2025-12-30_12-34-37_vw3h626wg7m.json
     getFilePath: ({ sessionDate }) => string | null,
-    // Кастомная сериализация, на случай если аргументами являются экземпляры классов
+    // Custom serialization, in case arguments are class instances
     argsToJson: (args) => string | SavedArgs,
-    // Кастомная десериализация
+    // Custom deserialization
     jsonToArgs: (json) => Args,
-    // Если true и включен findBestError, то проверяются все файлы,
-    // собираются все ошибки из них и используются как начальные ограничения для findBestError
-    // Полезно, когда нужно продолжить поиск лучшей ошибки после перезапуска testVariants
+    // If true and findBestError is enabled, all files are checked,
+    // all errors from them are collected and used as initial constraints for findBestError
+    // Useful when you need to continue best error search after testVariants restart
     useToFindBestError: false,
   },
 
-  // Вызывается при возникновении ошибки в тесте
-  // до логирования и бросания исключения
+  // Called when an error occurs in the test
+  // before logging and throwing exception
   onError: ({
-    error,  // сама ошибка пойманная через try..catch
-    args,   // параметры теста вызвавшие ошибку
-    index,  // количество запущенных тестов до ошибки (с учетом repeatsPerVariant) TODO: rename to tests
+    error,  // the error caught via try..catch
+    args,   // test parameters that caused the error
+    tests,  // number of tests run before the error (including attemptsPerVariant)
   }) => void | Promise<void>,
-  
-  // @deprecated мусор, удалить, заменить на log.error
-  logError: true,
-  
-  // контроллер времени для всех внутренних задержек, таймаутов и получения текущего времени
-  // используется внутри testVariants вместо прямого вызова setTimeout, Date.now и т.д.
-  // предназначен только для тестирования и отладки самой библиотеки test-variants
+
+  // time controller for all internal delays, timeouts and getting current time
+  // used inside testVariants instead of direct setTimeout, Date.now calls, etc.
+  // intended only for testing and debugging the test-variants library itself
   timeController: ITimeController, // default: null - use timeControllerDefault
 })
 
 // result:
 {
   iterations: number,
-  // найденная лучшая ошибка, если включен findBestError и выключен dontThrowIfError
+  // found best error, if findBestError is enabled and dontThrowIfError is disabled
   bestError: null | {
-    error: any, // сама ошибка пойманная через try..catch
-    args: { // параметры теста вызвавшие ошибку
+    error: any, // the error caught via try..catch
+    args: { // test parameters that caused the error
       arg1: Type1,
       arg2: Type2,
       arg3: Type3,
       seed?: number | null,
     },
-    index: number, // количество запущенных тестов до ошибки (с учетом repeatsPerVariant) TODO: rename to tests
+    tests: number, // number of tests run before the error (including attemptsPerVariant)
   },
 }
 ```
