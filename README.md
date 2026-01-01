@@ -1,7 +1,7 @@
 [![NPM Version][npm-image]][npm-url]
 [![NPM Downloads][downloads-image]][downloads-url]
 [![Build Status][github-image]][github-url]
-[![Test Coverage][coveralls-image]][coveralls-url]
+<!-- [![Test Coverage][coveralls-image]][coveralls-url] -->
 
 # @flemist/test-variants
 
