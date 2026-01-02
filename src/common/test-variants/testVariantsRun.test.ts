@@ -1,7 +1,6 @@
-/* eslint-disable @typescript-eslint/no-shadow */
-import {testVariantsRun} from 'src/common/test-variants/testVariantsRun'
-import {testVariantsIterator} from 'src/common/test-variants/testVariantsIterator'
-import {TestVariantsTestRun} from './testVariantsCreateTestRun'
+import { testVariantsRun } from 'src/common/test-variants/testVariantsRun'
+import { testVariantsIterator } from 'src/common/test-variants/testVariantsIterator'
+import { TestVariantsTestRun } from './testVariantsCreateTestRun'
 
 describe('test-variants > testVariantsRun', function () {
   this.timeout(10 * 60 * 1000)
@@ -26,13 +25,13 @@ describe('test-variants > testVariantsRun', function () {
 
     const variants = testVariantsIterator({
       argsTemplates: {
-        a: Array.from({length: 100}).map((_, i) => i),
-        b: Array.from({length: 100}).map((_, i) => i),
+        a: Array.from({ length: 100 }).map((_, i) => i),
+        b: Array.from({ length: 100 }).map((_, i) => i),
       },
       limitArgOnError: true,
     })
 
-    const testRun = (_args: { a: number, b: number }, index: number) => {
+    const testRun = (_args: { a: number; b: number }, index: number) => {
       const cycleIndex = variants.cycleIndex
       if (cycleVariants[cycleIndex] == null) {
         cycleVariants[cycleIndex] = 0
@@ -44,7 +43,7 @@ describe('test-variants > testVariantsRun', function () {
         throw new Error(`Error at index ${index}`)
       }
       return {
-        iterationsSync : 1,
+        iterationsSync: 1,
         iterationsAsync: 0,
       }
     }
@@ -59,7 +58,10 @@ describe('test-variants > testVariantsRun', function () {
 
     // Verify error was found
     assert.ok(result.bestError, 'bestError should not be null')
-    assert.strictEqual(result.bestError.error.message, `Error at index ${errorAtVariantIndex}`)
+    assert.strictEqual(
+      result.bestError.error.message,
+      `Error at index ${errorAtVariantIndex}`,
+    )
 
     console.log({
       cycleVariants,
@@ -98,13 +100,14 @@ describe('test-variants > testVariantsRun', function () {
     // Total variants without limits: sum of (a+10) for a in 0..9 = 10+11+...+19 = 145
     const variants = testVariantsIterator({
       argsTemplates: {
-        a: Array.from({length: 10}).map((_, i) => i), // 0-9
-        b: (args: {a: number}) => Array.from({length: args.a + 10}).map((_, i) => i), // 0 to (a+9)
+        a: Array.from({ length: 10 }).map((_, i) => i), // 0-9
+        b: (args: { a: number }) =>
+          Array.from({ length: args.a + 10 }).map((_, i) => i), // 0 to (a+9)
       },
       limitArgOnError: true,
     })
 
-    const testRun = (args: { a: number, b: number }) => {
+    const testRun = (args: { a: number; b: number }) => {
       const cycleIndex = variants.cycleIndex
       if (cycleVariants[cycleIndex] == null) {
         cycleVariants[cycleIndex] = 0
@@ -116,7 +119,7 @@ describe('test-variants > testVariantsRun', function () {
         throw new Error(`Error at a=${args.a}, b=${args.b}`)
       }
       return {
-        iterationsSync : 1,
+        iterationsSync: 1,
         iterationsAsync: 0,
       }
     }
@@ -131,7 +134,10 @@ describe('test-variants > testVariantsRun', function () {
 
     // Verify error was found
     assert.ok(result.bestError, 'bestError should not be null')
-    assert.strictEqual(result.bestError.error.message, `Error at a=${errorAtA}, b=${errorAtB}`)
+    assert.strictEqual(
+      result.bestError.error.message,
+      `Error at a=${errorAtA}, b=${errorAtB}`,
+    )
 
     console.log({
       cycleVariants,
@@ -171,14 +177,14 @@ describe('test-variants > testVariantsRun', function () {
     // Large parameter space: 100 * 100 = 10000 variants
     const variants = testVariantsIterator({
       argsTemplates: {
-        a: Array.from({length: 100}).map((_, i) => i),
-        b: Array.from({length: 100}).map((_, i) => i),
+        a: Array.from({ length: 100 }).map((_, i) => i),
+        b: Array.from({ length: 100 }).map((_, i) => i),
       },
       limitArgOnError: true,
-      getSeed        : ({cycles, tests}) => cycles * 10000 + tests,
+      getSeed: ({ cycles, tests }) => cycles * 10000 + tests,
     })
 
-    const testRun = (args: { a: number, b: number, seed: number }) => {
+    const testRun = (args: { a: number; b: number; seed: number }) => {
       const cycleIndex = variants.cycleIndex
       if (cycleVariants[cycleIndex] == null) {
         cycleVariants[cycleIndex] = 0
@@ -190,7 +196,7 @@ describe('test-variants > testVariantsRun', function () {
         throw new Error(`Error at a=${args.a}, b=${args.b}, seed=${args.seed}`)
       }
       return {
-        iterationsSync : 1,
+        iterationsSync: 1,
         iterationsAsync: 0,
       }
     }
@@ -238,11 +244,11 @@ describe('test-variants > testVariantsRun', function () {
     let errorCount = 0
 
     // Object values - these are the SAME references across calls
-    const objA1 = {id: 'a1'}
-    const objA2 = {id: 'a2'}
-    const objB1 = {id: 'b1'}
-    const objB2 = {id: 'b2'}
-    const objB3 = {id: 'b3'}
+    const objA1 = { id: 'a1' }
+    const objA2 = { id: 'a2' }
+    const objB1 = { id: 'b1' }
+    const objB2 = { id: 'b2' }
+    const objB3 = { id: 'b3' }
 
     const variants = testVariantsIterator({
       argsTemplates: {
@@ -252,7 +258,7 @@ describe('test-variants > testVariantsRun', function () {
       limitArgOnError: true,
     })
 
-    const testRun = (args: { a: {id: string}, b: {id: string} }) => {
+    const testRun = (args: { a: { id: string }; b: { id: string } }) => {
       const cycleIndex = variants.cycleIndex
       if (cycleVariants[cycleIndex] == null) {
         cycleVariants[cycleIndex] = 0
@@ -265,7 +271,7 @@ describe('test-variants > testVariantsRun', function () {
         throw new Error(`Error at a=${args.a.id}, b=${args.b.id}`)
       }
       return {
-        iterationsSync : 1,
+        iterationsSync: 1,
         iterationsAsync: 0,
       }
     }
@@ -312,14 +318,14 @@ describe('test-variants > testVariantsRun', function () {
     // Dynamic template that creates NEW objects on each call
     const variants = testVariantsIterator({
       argsTemplates: {
-        a: Array.from({length: 10}).map((_, i) => i),
+        a: Array.from({ length: 10 }).map((_, i) => i),
         // This creates NEW object instances on each call!
-        b: () => Array.from({length: 10}).map((_, i) => ({value: i})),
+        b: () => Array.from({ length: 10 }).map((_, i) => ({ value: i })),
       },
       limitArgOnError: true,
     })
 
-    const testRun = (args: { a: number, b: {value: number} }) => {
+    const testRun = (args: { a: number; b: { value: number } }) => {
       const cycleIndex = variants.cycleIndex
       if (cycleVariants[cycleIndex] == null) {
         cycleVariants[cycleIndex] = 0
@@ -332,7 +338,7 @@ describe('test-variants > testVariantsRun', function () {
         throw new Error(`Error at a=${args.a}, b.value=${args.b.value}`)
       }
       return {
-        iterationsSync : 1,
+        iterationsSync: 1,
         iterationsAsync: 0,
       }
     }
@@ -375,28 +381,35 @@ describe('test-variants > testVariantsRun', function () {
     const cycles = 10
     const variantsCount = 1000
 
-    for (let expectedIndex = 0; expectedIndex <= variantsCount; expectedIndex++) {
-      const expectedArgs = expectedIndex < variantsCount ? {i: expectedIndex} : null
+    for (
+      let expectedIndex = 0;
+      expectedIndex <= variantsCount;
+      expectedIndex++
+    ) {
+      const expectedArgs =
+        expectedIndex < variantsCount ? { i: expectedIndex } : null
 
-      const testRun: TestVariantsTestRun<typeof expectedArgs> = (args: { i: number }) => {
+      const testRun: TestVariantsTestRun<typeof expectedArgs> = (args: {
+        i: number
+      }) => {
         if (
-          expectedArgs != null && args.i === expectedArgs.i
-          || args.i > (expectedIndex + variantsCount) / 2
+          (expectedArgs != null && args.i === expectedArgs.i) ||
+          args.i > (expectedIndex + variantsCount) / 2
         ) {
           throw new Error(`Error at index ${expectedIndex}`)
         }
         return {
-          iterationsSync : 1,
+          iterationsSync: 1,
           iterationsAsync: 0,
         }
       }
 
       const variants = testVariantsIterator({
         argsTemplates: {
-          i: Array.from({length: variantsCount}).map((_, i) => i),
+          i: Array.from({ length: variantsCount }).map((_, i) => i),
         },
-        getSeed       : ({cycles}) => cycles,
-        iterationModes: [{mode: 'forward', attemptsPerVariant: 1}],
+        getSeed: ({ cycles }) => cycles,
+        iterationModes: [{ mode: 'forward', attemptsPerVariant: 1 }],
       })
 
       const result = await testVariantsRun(testRun, variants, {
@@ -410,16 +423,17 @@ describe('test-variants > testVariantsRun', function () {
       try {
         if (expectedIndex >= variantsCount) {
           assert.ok(result.bestError == null)
-        }
-        else {
+        } else {
           assert.ok(result.bestError)
           assert.strictEqual(result.bestError.args.i, expectedArgs.i)
-          assert.strictEqual(result.bestError.error.message, `Error at index ${expectedIndex}`)
+          assert.strictEqual(
+            result.bestError.error.message,
+            `Error at index ${expectedIndex}`,
+          )
         }
         // assert.ok(result.iterations >= 5)
         // console.log(result.iterations)
-      }
-      catch (err) {
+      } catch (err) {
         console.error({
           expectedIndex,
           result,

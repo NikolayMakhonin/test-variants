@@ -17,9 +17,7 @@ export {
   type TestVariantsTemplate,
   type TestVariantsTemplates,
 } from 'src/common/test-variants/types'
-export {
-  generateErrorVariantFilePath,
-} from 'src/common/test-variants/saveErrorVariants'
+export { generateErrorVariantFilePath } from 'src/common/test-variants/saveErrorVariants'
 export {
   type ErrorEvent,
   type OnErrorCallback,
@@ -35,6 +33,4 @@ export {
   type TestVariantsCall,
   createTestVariants,
 } from './test-variants/createTestVariants'
-export {
-  testVariantsIterator,
-} from 'src/common/test-variants/testVariantsIterator'
+export { testVariantsIterator } from 'src/common/test-variants/testVariantsIterator'

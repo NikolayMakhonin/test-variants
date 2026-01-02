@@ -1,5 +1,8 @@
-import type {Obj} from '@flemist/simple-utils'
-import type {LimitArgOnError, TestVariantsTemplate} from 'src/common/test-variants/types'
+import type { Obj } from '@flemist/simple-utils'
+import type {
+  LimitArgOnError,
+  TestVariantsTemplate,
+} from 'src/common/test-variants/types'
 
 /** State required for variant navigation */
 export type NavigationState<Args extends Obj> = {
@@ -22,8 +25,7 @@ export function calcTemplateValues<Args extends Obj>(
   let values: any[]
   if (typeof template === 'function') {
     values = template(args)
-  }
-  else {
+  } else {
     values = template
   }
   // Append extra values from saved variants
@@ -37,7 +39,10 @@ export function calcTemplateValues<Args extends Obj>(
 /** Get effective max index for an arg (considering argLimit)
  * argLimit is INCLUSIVE upper bound; returns EXCLUSIVE upper bound for iteration
  */
-export function getMaxIndex(state: NavigationState<any>, keyIndex: number): number {
+export function getMaxIndex(
+  state: NavigationState<any>,
+  keyIndex: number,
+): number {
   const valuesLen = state.argValues[keyIndex].length
   const argLimit = state.argLimits[keyIndex]
   if (argLimit == null) {
@@ -110,7 +115,12 @@ export function advanceVariant<Args extends Obj>(
         delete state.args[keys[i]]
       }
       for (keyIndex++; keyIndex < keysCount; keyIndex++) {
-        state.argValues[keyIndex] = calcTemplateValues(state, templates, state.args, keyIndex)
+        state.argValues[keyIndex] = calcTemplateValues(
+          state,
+          templates,
+          state.args,
+          keyIndex,
+        )
         const keyMaxIndex = getMaxIndex(state, keyIndex)
         if (keyMaxIndex <= 0) {
           break
@@ -143,7 +153,12 @@ export function retreatVariant<Args extends Obj>(
         delete state.args[keys[i]]
       }
       for (keyIndex++; keyIndex < keysCount; keyIndex++) {
-        state.argValues[keyIndex] = calcTemplateValues(state, templates, state.args, keyIndex)
+        state.argValues[keyIndex] = calcTemplateValues(
+          state,
+          templates,
+          state.args,
+          keyIndex,
+        )
         const maxIndex = getMaxIndex(state, keyIndex) - 1
         if (maxIndex < 0) {
           break
@@ -202,7 +217,12 @@ export function randomPickVariant<Args extends Obj>(
       state.args[keys[i]] = state.argValues[i][state.indexes[i]]
       // Calculate only next argValues; subsequent ones calculated when their turn comes
       if (i + 1 < keysCount) {
-        state.argValues[i + 1] = calcTemplateValues(state, templates, state.args, i + 1)
+        state.argValues[i + 1] = calcTemplateValues(
+          state,
+          templates,
+          state.args,
+          i + 1,
+        )
       }
     }
     return true
@@ -221,7 +241,12 @@ export function randomPickVariant<Args extends Obj>(
       state.args[keys[i]] = state.argValues[i][state.indexes[i]]
       // Calculate only next argValues; subsequent ones calculated when their turn comes
       if (i + 1 < keysCount) {
-        state.argValues[i + 1] = calcTemplateValues(state, templates, state.args, i + 1)
+        state.argValues[i + 1] = calcTemplateValues(
+          state,
+          templates,
+          state.args,
+          i + 1,
+        )
       }
     }
     return true
@@ -238,8 +263,7 @@ export function randomPickVariant<Args extends Obj>(
     let maxIndex: number
     if (belowMax) {
       maxIndex = len - 1
-    }
-    else {
+    } else {
       maxIndex = limit != null ? Math.min(limit, len - 1) : len - 1
     }
     state.indexes[i] = Math.floor(Math.random() * (maxIndex + 1))
@@ -251,7 +275,12 @@ export function randomPickVariant<Args extends Obj>(
 
     // Calculate only next argValues; subsequent ones calculated when their turn comes
     if (i + 1 < keysCount) {
-      state.argValues[i + 1] = calcTemplateValues(state, templates, state.args, i + 1)
+      state.argValues[i + 1] = calcTemplateValues(
+        state,
+        templates,
+        state.args,
+        i + 1,
+      )
     }
   }
 

@@ -1,4 +1,4 @@
-import {formatAny} from '@flemist/simple-utils'
+import { formatAny } from '@flemist/simple-utils'
 
 let traceIndent = 0
 
@@ -6,15 +6,17 @@ const LOG_LAST_MAX = 1000
 const logLast: string[] = []
 
 export function formatValue(value: unknown): string {
-  return formatAny(value, {maxDepth: 3, maxItems: 20})
+  return formatAny(value, { maxDepth: 3, maxItems: 20 })
 }
 
 export function formatObject(obj: unknown): string {
-  return formatAny(obj, {pretty: true, maxDepth: 5, maxItems: 50})
+  return formatAny(obj, { pretty: true, maxDepth: 5, maxItems: 50 })
 }
 
 export function log(...args: unknown[]): void {
-  const message = args.map(a => typeof a === 'string' ? a : formatObject(a)).join(' ')
+  const message = args
+    .map(a => (typeof a === 'string' ? a : formatObject(a)))
+    .join(' ')
   logLast.push(message)
   if (logLast.length > LOG_LAST_MAX) {
     logLast.shift()
@@ -23,19 +25,25 @@ export function log(...args: unknown[]): void {
 }
 
 export function traceLog(...args: unknown[]): void {
-  const message = args.map(a => typeof a === 'string' ? a : formatValue(a)).join(' ')
+  const message = args
+    .map(a => (typeof a === 'string' ? a : formatValue(a)))
+    .join(' ')
   log('  '.repeat(traceIndent) + message)
 }
 
 export function traceEnter(...args: unknown[]): void {
-  const message = args.map(a => typeof a === 'string' ? a : formatValue(a)).join(' ')
+  const message = args
+    .map(a => (typeof a === 'string' ? a : formatValue(a)))
+    .join(' ')
   traceLog('> ' + message)
   traceIndent++
 }
 
 export function traceExit(...args: unknown[]): void {
   traceIndent--
-  const message = args.map(a => typeof a === 'string' ? a : formatValue(a)).join(' ')
+  const message = args
+    .map(a => (typeof a === 'string' ? a : formatValue(a)))
+    .join(' ')
   traceLog('< ' + message)
 }
 
@@ -48,5 +56,4 @@ export function resetLog(): void {
   logLast.length = 0
 }
 
-// eslint-disable-next-line no-undef
-(globalThis as any).__getStressTestLogLast = getLogLast
+;(globalThis as any).__getStressTestLogLast = getLogLast

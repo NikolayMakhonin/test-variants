@@ -1,8 +1,8 @@
 import * as fs from 'fs'
 import * as path from 'path'
-import {formatDateFileName} from '@flemist/simple-utils'
-import type {Obj} from '@flemist/simple-utils'
-import type {GenerateErrorVariantFilePathOptions} from 'src/common/test-variants/types'
+import { formatDateFileName } from '@flemist/simple-utils'
+import type { Obj } from '@flemist/simple-utils'
+import type { GenerateErrorVariantFilePathOptions } from 'src/common/test-variants/types'
 
 /** Reads saved error variant files from directory, sorted by filename descending (newest first) */
 export async function readErrorVariantFiles(dir: string): Promise<string[]> {
@@ -17,7 +17,7 @@ export async function readErrorVariantFiles(dir: string): Promise<string[]> {
   const files = await fs.promises.readdir(dir)
   const jsonFiles = files
     .filter(file => file.endsWith('.json'))
-    .sort((a, b) => a > b ? -1 : a < b ? 1 : 0)
+    .sort((a, b) => (a > b ? -1 : a < b ? 1 : 0))
 
   return jsonFiles.map(file => path.join(dir, file))
 }
@@ -31,17 +31,17 @@ export async function parseErrorVariantFile<Args extends Obj, SavedArgs>(
   let json: SavedArgs
   try {
     json = JSON.parse(content)
-  }
-  catch (err) {
+  } catch (err) {
     throw new Error(`[saveErrorVariants] invalid JSON in file: ${filePath}`)
   }
 
   if (jsonToArgs) {
     try {
       return jsonToArgs(json)
-    }
-    catch (err) {
-      throw new Error(`[saveErrorVariants] jsonToArgs failed for file: ${filePath}`)
+    } catch (err) {
+      throw new Error(
+        `[saveErrorVariants] jsonToArgs failed for file: ${filePath}`,
+      )
     }
   }
 
@@ -67,15 +67,13 @@ export async function saveErrorVariantFile<Args extends Obj, SavedArgs>(
     const result = argsToJson(args)
     if (typeof result === 'string') {
       content = result
-    }
-    else {
+    } else {
       content = JSON.stringify(result, null, 2)
     }
-  }
-  else {
+  } else {
     content = JSON.stringify(args, null, 2)
   }
 
-  await fs.promises.mkdir(path.dirname(filePath), {recursive: true})
+  await fs.promises.mkdir(path.dirname(filePath), { recursive: true })
   await fs.promises.writeFile(filePath, content, 'utf-8')
 }

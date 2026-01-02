@@ -1,10 +1,13 @@
-import type {Obj} from '@flemist/simple-utils'
+import type { Obj } from '@flemist/simple-utils'
 import type {
   LimitArgOnError,
   TestVariantsIteratorLimit,
   TestVariantsTemplate,
 } from 'src/common/test-variants/types'
-import {calcTemplateValues, type NavigationState} from 'src/common/test-variants/variantNavigation'
+import {
+  calcTemplateValues,
+  type NavigationState,
+} from 'src/common/test-variants/variantNavigation'
 
 /** Pending limit waiting for position match during iteration */
 export type PendingLimit<Args> = {
@@ -104,7 +107,11 @@ export function isPositionReached<Args extends Obj>(
   for (let i = 0; i < keysCount; i++) {
     const currentValueIndex = state.indexes[i]
     const pendingValue = pendingArgs[keys[i]]
-    const pendingValueIndex = findValueIndex(state.argValues[i], pendingValue, equals)
+    const pendingValueIndex = findValueIndex(
+      state.argValues[i],
+      pendingValue,
+      equals,
+    )
 
     // Dynamic template value not found - skip this arg from comparison
     if (pendingValueIndex < 0) {
@@ -172,7 +179,11 @@ export function filterPendingLimits<Args extends Obj>(
 ): void {
   const pendingLimits = state.pendingLimits
   let writeIndex = 0
-  for (let readIndex = 0, len = pendingLimits.length; readIndex < len; readIndex++) {
+  for (
+    let readIndex = 0, len = pendingLimits.length;
+    readIndex < len;
+    readIndex++
+  ) {
     const pending = pendingLimits[readIndex]
     let keep = true
     for (let i = 0; i < keysCount; i++) {
@@ -213,14 +224,26 @@ export function updateArgLimits<Args extends Obj>(
 
   // Use precomputed indexes if provided (from state.indexes during iteration),
   // otherwise calculate from args (for saved error variants where we need to find indexes)
-  const newIndexes = precomputedIndexes ?? calcArgIndexes(state, limitArgs, templates, keys, keysCount, equals)
+  const newIndexes =
+    precomputedIndexes ??
+    calcArgIndexes(state, limitArgs, templates, keys, keysCount, equals)
   if (!newIndexes) {
     return false
   }
 
   if (oldLimitArgs) {
-    const currentIndexes = calcArgIndexes(state, oldLimitArgs, templates, keys, keysCount, equals)
-    if (currentIndexes && compareLexicographic(newIndexes, currentIndexes) >= 0) {
+    const currentIndexes = calcArgIndexes(
+      state,
+      oldLimitArgs,
+      templates,
+      keys,
+      keysCount,
+      equals,
+    )
+    if (
+      currentIndexes &&
+      compareLexicographic(newIndexes, currentIndexes) >= 0
+    ) {
       return false
     }
   }
@@ -229,9 +252,9 @@ export function updateArgLimits<Args extends Obj>(
     const valueIndex = newIndexes[i]
     if (typeof limitArgOnError === 'function') {
       const shouldLimit = limitArgOnError({
-        name         : keys[i] as string,
+        name: keys[i] as string,
         valueIndex,
-        values       : calcTemplateValues(state, templates, limitArgs, i),
+        values: calcTemplateValues(state, templates, limitArgs, i),
         maxValueIndex: state.argLimits[i],
       })
       if (!shouldLimit) {
@@ -248,8 +271,11 @@ export function updateArgLimits<Args extends Obj>(
 }
 
 /** Create limit object with optional error */
-export function createLimit<Args>(args: Args, error?: unknown): TestVariantsIteratorLimit<Args> {
-  return error !== void 0 ? {args, error} : {args}
+export function createLimit<Args>(
+  args: Args,
+  error?: unknown,
+): TestVariantsIteratorLimit<Args> {
+  return error !== void 0 ? { args, error } : { args }
 }
 
 /** Process pending limits at current position; returns true if limit was applied */
@@ -270,8 +296,7 @@ export function processPendingLimits<Args extends Obj>(
     const pending = pendingLimits[i]
     if (isPositionReached(state, pending.args, keys, keysCount, equals)) {
       lastReached = pending
-    }
-    else {
+    } else {
       pendingLimits[writeIndex] = pending
       writeIndex++
     }
@@ -287,7 +312,16 @@ export function processPendingLimits<Args extends Obj>(
     const oldLimitArgs = state.limit?.args ?? null
     state.count = includeErrorVariant ? state.index + 1 : state.index
     state.limit = createLimit(lastReached.args, lastReached.error)
-    updateArgLimits(state, lastReached.args, oldLimitArgs, templates, keys, keysCount, equals, limitArgOnError)
+    updateArgLimits(
+      state,
+      lastReached.args,
+      oldLimitArgs,
+      templates,
+      keys,
+      keysCount,
+      equals,
+      limitArgOnError,
+    )
     return true
   }
 

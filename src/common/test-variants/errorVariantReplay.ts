@@ -1,8 +1,14 @@
-import type {Obj} from '@flemist/simple-utils'
-import {isPromiseLike} from '@flemist/async-utils'
-import type {TestVariantsIterator, SaveErrorVariantsOptions} from 'src/common/test-variants/types'
-import type {TestVariantsTestRun} from 'src/common/test-variants/testVariantsCreateTestRun'
-import {parseErrorVariantFile, readErrorVariantFiles} from 'src/common/test-variants/saveErrorVariants'
+import type { Obj } from '@flemist/simple-utils'
+import { isPromiseLike } from '@flemist/async-utils'
+import type {
+  TestVariantsIterator,
+  SaveErrorVariantsOptions,
+} from 'src/common/test-variants/types'
+import type { TestVariantsTestRun } from 'src/common/test-variants/testVariantsCreateTestRun'
+import {
+  parseErrorVariantFile,
+  readErrorVariantFiles,
+} from 'src/common/test-variants/saveErrorVariants'
 
 /** Options for replaying saved error variants */
 export type ReplayErrorVariantsOptions<Args extends Obj, SavedArgs> = {
@@ -37,9 +43,16 @@ export async function replayErrorVariants<Args extends Obj, SavedArgs = Args>(
   const attemptsPerVariant = saveErrorVariants.attemptsPerVariant ?? 1
 
   const files = await readErrorVariantFiles(saveErrorVariants.dir)
-  for (let fileIndex = 0, filesLen = files.length; fileIndex < filesLen; fileIndex++) {
+  for (
+    let fileIndex = 0, filesLen = files.length;
+    fileIndex < filesLen;
+    fileIndex++
+  ) {
     const filePath = files[fileIndex]
-    const args = await parseErrorVariantFile<Args, SavedArgs>(filePath, saveErrorVariants.jsonToArgs)
+    const args = await parseErrorVariantFile<Args, SavedArgs>(
+      filePath,
+      saveErrorVariants.jsonToArgs,
+    )
     for (let retry = 0; retry < attemptsPerVariant; retry++) {
       try {
         // During replay, no regular tests have run yet, so tests count is 0
@@ -47,14 +60,12 @@ export async function replayErrorVariants<Args extends Obj, SavedArgs = Args>(
         if (isPromiseLike(promiseOrResult)) {
           await promiseOrResult
         }
-      }
-      catch (error) {
+      } catch (error) {
         if (useToFindBestError && findBestErrorEnabled) {
           // Store as pending limit for findBestError cycle
-          variants.addLimit({args, error})
+          variants.addLimit({ args, error })
           break // Exit retry loop, continue to next file
-        }
-        else {
+        } else {
           throw error
         }
       }

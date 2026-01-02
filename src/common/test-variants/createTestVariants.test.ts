@@ -1,14 +1,15 @@
-/* eslint-disable @typescript-eslint/no-shadow */
-import {createTestVariants} from './createTestVariants'
-import {delay} from '@flemist/async-utils'
+import { createTestVariants } from './createTestVariants'
+import { delay } from '@flemist/async-utils'
 
 describe('test-variants > createTestVariants', function () {
   describe('sync', function () {
     it('base', async function () {
       const results = []
-      const result = await createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
-        results.push([a, b, c])
-      })({
+      const result = await createTestVariants(
+        ({ a, b, c }: { a: number; b: string; c: boolean }) => {
+          results.push([a, b, c])
+        },
+      )({
         a: [1, 2],
         b: ['3', '4'],
         c: [true, false],
@@ -29,9 +30,11 @@ describe('test-variants > createTestVariants', function () {
 
     it('empty end', async function () {
       const results = []
-      const result = await createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
-        results.push([a, b, c])
-      })({
+      const result = await createTestVariants(
+        ({ a, b, c }: { a: number; b: string; c: boolean }) => {
+          results.push([a, b, c])
+        },
+      )({
         a: [1, 2],
         b: ['3', '4'],
         c: [],
@@ -43,9 +46,11 @@ describe('test-variants > createTestVariants', function () {
 
     it('empty middle', async function () {
       const results = []
-      const test = createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
-        results.push([a, b, c])
-      })
+      const test = createTestVariants(
+        ({ a, b, c }: { a: number; b: string; c: boolean }) => {
+          results.push([a, b, c])
+        },
+      )
       const result = await test({
         a: [1, 2],
         b: [],
@@ -59,9 +64,11 @@ describe('test-variants > createTestVariants', function () {
 
     it('empty start', async function () {
       const results = []
-      const result = await createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
-        results.push([a, b, c])
-      })({
+      const result = await createTestVariants(
+        ({ a, b, c }: { a: number; b: string; c: boolean }) => {
+          results.push([a, b, c])
+        },
+      )({
         a: [],
         b: ['3', '4'],
         c: [false, true],
@@ -73,14 +80,14 @@ describe('test-variants > createTestVariants', function () {
 
     it('calculated', async function () {
       const results = []
-      const result = await createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
-        results.push([a, b, c])
-      })({
+      const result = await createTestVariants(
+        ({ a, b, c }: { a: number; b: string; c: boolean }) => {
+          results.push([a, b, c])
+        },
+      )({
         a: () => [1, 2],
-        b: ({a}) => a === 1 ? ['2', '3', '4'] : ['2'],
-        c: ({b}) => b === '2' ? [false, true]
-          : b === '3' ? []
-            : [true],
+        b: ({ a }) => (a === 1 ? ['2', '3', '4'] : ['2']),
+        c: ({ b }) => (b === '2' ? [false, true] : b === '3' ? [] : [true]),
       })()
 
       assert.deepStrictEqual(results, [
@@ -97,9 +104,11 @@ describe('test-variants > createTestVariants', function () {
   describe('async as sync', function () {
     it('base', async function () {
       const results = []
-      const result = await createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
-        results.push([a, b, c])
-      })({
+      const result = await createTestVariants(
+        ({ a, b, c }: { a: number; b: string; c: boolean }) => {
+          results.push([a, b, c])
+        },
+      )({
         a: [1, 2],
         b: ['3', '4'],
         c: [true, false],
@@ -120,9 +129,11 @@ describe('test-variants > createTestVariants', function () {
 
     it('empty end', async function () {
       const results = []
-      const result = await createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
-        results.push([a, b, c])
-      })({
+      const result = await createTestVariants(
+        ({ a, b, c }: { a: number; b: string; c: boolean }) => {
+          results.push([a, b, c])
+        },
+      )({
         a: [1, 2],
         b: ['3', '4'],
         c: [],
@@ -134,9 +145,11 @@ describe('test-variants > createTestVariants', function () {
 
     it('empty middle', async function () {
       const results = []
-      const test = createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
-        results.push([a, b, c])
-      })
+      const test = createTestVariants(
+        ({ a, b, c }: { a: number; b: string; c: boolean }) => {
+          results.push([a, b, c])
+        },
+      )
       const result = await test({
         a: [1, 2],
         b: [],
@@ -150,9 +163,11 @@ describe('test-variants > createTestVariants', function () {
 
     it('empty start', async function () {
       const results = []
-      const result = await createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
-        results.push([a, b, c])
-      })({
+      const result = await createTestVariants(
+        ({ a, b, c }: { a: number; b: string; c: boolean }) => {
+          results.push([a, b, c])
+        },
+      )({
         a: [],
         b: ['3', '4'],
         c: [false, true],
@@ -164,14 +179,14 @@ describe('test-variants > createTestVariants', function () {
 
     it('calculated', async function () {
       const results = []
-      const result = await createTestVariants(({a, b, c}: { a: number, b: string, c: boolean }) => {
-        results.push([a, b, c])
-      })({
+      const result = await createTestVariants(
+        ({ a, b, c }: { a: number; b: string; c: boolean }) => {
+          results.push([a, b, c])
+        },
+      )({
         a: () => [1, 2],
-        b: ({a}) => a === 1 ? ['2', '3', '4'] : ['2'],
-        c: ({b}) => b === '2' ? [false, true]
-          : b === '3' ? []
-            : [true],
+        b: ({ a }) => (a === 1 ? ['2', '3', '4'] : ['2']),
+        c: ({ b }) => (b === '2' ? [false, true] : b === '3' ? [] : [true]),
       })()
 
       assert.deepStrictEqual(results, [
@@ -188,10 +203,12 @@ describe('test-variants > createTestVariants', function () {
   describe('async', async function () {
     it('base', async function () {
       const results = []
-      const result = await createTestVariants(async ({a, b, c}: { a: number, b: string, c: boolean }) => {
-        await delay(100)
-        results.push([a, b, c])
-      })({
+      const result = await createTestVariants(
+        async ({ a, b, c }: { a: number; b: string; c: boolean }) => {
+          await delay(100)
+          results.push([a, b, c])
+        },
+      )({
         a: [1, 2],
         b: ['3', '4'],
         c: [true, false],
@@ -212,10 +229,12 @@ describe('test-variants > createTestVariants', function () {
 
     it('empty end', async function () {
       const results = []
-      const result = await createTestVariants(async ({a, b, c}: { a: number, b: string, c: boolean }) => {
-        await delay(100)
-        results.push([a, b, c])
-      })({
+      const result = await createTestVariants(
+        async ({ a, b, c }: { a: number; b: string; c: boolean }) => {
+          await delay(100)
+          results.push([a, b, c])
+        },
+      )({
         a: [1, 2],
         b: ['3', '4'],
         c: [],
@@ -227,10 +246,12 @@ describe('test-variants > createTestVariants', function () {
 
     it('empty middle', async function () {
       const results = []
-      const test = createTestVariants(async ({a, b, c}: { a: number, b: string, c: boolean }) => {
-        await delay(100)
-        results.push([a, b, c])
-      })
+      const test = createTestVariants(
+        async ({ a, b, c }: { a: number; b: string; c: boolean }) => {
+          await delay(100)
+          results.push([a, b, c])
+        },
+      )
       const result = await test({
         a: [1, 2],
         b: [],
@@ -244,10 +265,12 @@ describe('test-variants > createTestVariants', function () {
 
     it('empty start', async function () {
       const results = []
-      const result = await createTestVariants(async ({a, b, c}: { a: number, b: string, c: boolean }) => {
-        await delay(100)
-        results.push([a, b, c])
-      })({
+      const result = await createTestVariants(
+        async ({ a, b, c }: { a: number; b: string; c: boolean }) => {
+          await delay(100)
+          results.push([a, b, c])
+        },
+      )({
         a: [],
         b: ['3', '4'],
         c: [false, true],
@@ -259,15 +282,15 @@ describe('test-variants > createTestVariants', function () {
 
     it('calculated', async function () {
       const results = []
-      const result = await createTestVariants(async ({a, b, c}: { a: number, b: string, c: boolean }) => {
-        await delay(100)
-        results.push([a, b, c])
-      })({
+      const result = await createTestVariants(
+        async ({ a, b, c }: { a: number; b: string; c: boolean }) => {
+          await delay(100)
+          results.push([a, b, c])
+        },
+      )({
         a: () => [1, 2],
-        b: ({a}) => a === 1 ? ['2', '3', '4'] : ['2'],
-        c: ({b}) => b === '2' ? [false, true]
-          : b === '3' ? []
-            : [true],
+        b: ({ a }) => (a === 1 ? ['2', '3', '4'] : ['2']),
+        c: ({ b }) => (b === '2' ? [false, true] : b === '3' ? [] : [true]),
       })()
 
       assert.deepStrictEqual(results, [
@@ -284,20 +307,22 @@ describe('test-variants > createTestVariants', function () {
       this.timeout(5 * 60 * 1000)
 
       const results = []
-      const result = await createTestVariants(async (args: {
-        op: number
-        a0: boolean
-        a1: boolean
-        a2: boolean
-        a3: boolean
-        a4: boolean
-        a5: boolean
-        b: number
-        c: number
-      }) => {
-        await delay(100)
-        results.push(args)
-      })({
+      const result = await createTestVariants(
+        async (args: {
+          op: number
+          a0: boolean
+          a1: boolean
+          a2: boolean
+          a3: boolean
+          a4: boolean
+          a5: boolean
+          b: number
+          c: number
+        }) => {
+          await delay(100)
+          results.push(args)
+        },
+      )({
         op: [1, 2, 3, 4, 5],
         a0: ({ op }) => [op === 0],
         a1: ({ op }) => [op === 1],
@@ -305,8 +330,8 @@ describe('test-variants > createTestVariants', function () {
         a3: ({ op }) => [op === 3],
         a4: ({ op }) => [op === 4],
         a5: ({ op }) => [op === 5],
-        b : [1, 2, 3],
-        c : [1, 2, 3, 4, 5],
+        b: [1, 2, 3],
+        c: [1, 2, 3, 4, 5],
       })()
 
       assert.strictEqual(result.iterations, 75)
@@ -317,7 +342,7 @@ describe('test-variants > createTestVariants', function () {
       this.timeout(5 * 60 * 1000)
 
       const results = []
-      const result = await createTestVariants(async ({a}: { a: number }) => {
+      const result = await createTestVariants(async ({ a }: { a: number }) => {
         await delay(3000)
         results.push([a])
       })({
@@ -325,10 +350,7 @@ describe('test-variants > createTestVariants', function () {
       })()
 
       assert.strictEqual(result.iterations, 2)
-      assert.deepStrictEqual(results, [
-        [1],
-        [2],
-      ])
+      assert.deepStrictEqual(results, [[1], [2]])
     })
   })
 
@@ -337,22 +359,31 @@ describe('test-variants > createTestVariants', function () {
       const countParallel = 3
       let countInProcess = 0
       const results = []
-      const result = await createTestVariants(async ({a, b, c}: {
-        a: number,
-        b: string,
-        c: boolean
-      }, abortSignal) => {
-        countInProcess++
-        console.log(`${a} ${b} ${c} ${countInProcess} START`)
-        assert.ok(countInProcess <= countParallel)
-        if (c) {
-          await delay(100, abortSignal)
-        }
-        results.push([a, b, c])
+      const result = await createTestVariants(
+        async (
+          {
+            a,
+            b,
+            c,
+          }: {
+            a: number
+            b: string
+            c: boolean
+          },
+          abortSignal,
+        ) => {
+          countInProcess++
+          console.log(`${a} ${b} ${c} ${countInProcess} START`)
+          assert.ok(countInProcess <= countParallel)
+          if (c) {
+            await delay(100, abortSignal)
+          }
+          results.push([a, b, c])
 
-        countInProcess--
-        console.log(`${a} ${b} ${c} ${countInProcess} END`)
-      })({
+          countInProcess--
+          console.log(`${a} ${b} ${c} ${countInProcess} END`)
+        },
+      )({
         a: [1, 2, 3],
         b: ['3', '4'],
         c: [true, false],
@@ -393,33 +424,37 @@ describe('test-variants > million of Promise reject', function () {
     //   setTimeout(resolve, 1000)
     // })
 
-    await createTestVariants(async ({
-      a,
-      b,
-      c,
-      d,
-      e,
-      f,
-      g,
-    }: {
-      a: number,
-      b: number,
-      c: number,
-      d: number,
-      e: number,
-      f: number,
-      g: number,
-    }) => {
-      await Promise.resolve({
-        then(resolve, reject) {
-          reject('err')
-        },
-      })
-        .then(o => {}, o => {})
+    await createTestVariants(
+      async ({
+        a,
+        b,
+        c,
+        d,
+        e,
+        f,
+        g,
+      }: {
+        a: number
+        b: number
+        c: number
+        d: number
+        e: number
+        f: number
+        g: number
+      }) => {
+        await Promise.resolve({
+          then(resolve, reject) {
+            reject('err')
+          },
+        }).then(
+          o => {},
+          o => {},
+        )
 
-      // await Promise.reject('err')
-      //   .then(o => {}, o => {})
-    })({
+        // await Promise.reject('err')
+        //   .then(o => {}, o => {})
+      },
+    )({
       a: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
       b: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
       c: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
@@ -446,7 +481,7 @@ describe('test-variants > million of Promise reject', function () {
   xit('after million of Promise reject', function () {
     const now = Date.now()
     assert.ok(millionRejectTime > 0)
-    assert.ok(now - millionRejectTime < 500, (now - millionRejectTime) + '')
+    assert.ok(now - millionRejectTime < 500, now - millionRejectTime + '')
     console.log('millionRejectTime: ' + (now - millionRejectTime))
   })
 })

@@ -1,10 +1,10 @@
-import type {Obj} from '@flemist/simple-utils'
+import type { Obj } from '@flemist/simple-utils'
 import type {
   ModeConfig,
   TestVariantsTemplate,
   LimitArgOnError,
 } from 'src/common/test-variants/types'
-import type {NavigationState} from 'src/common/test-variants/variantNavigation'
+import type { NavigationState } from 'src/common/test-variants/variantNavigation'
 import {
   advanceVariant,
   randomPickVariant,
@@ -43,7 +43,10 @@ export function isSequentialMode(modeConfig: ModeConfig): boolean {
 /** Get attemptsPerVariant for mode; returns 1 for random mode */
 export function getModeRepeatsPerVariant(modeConfig: ModeConfig): number {
   if (isSequentialMode(modeConfig)) {
-    return (modeConfig as {attemptsPerVariant?: number | null}).attemptsPerVariant ?? 1
+    return (
+      (modeConfig as { attemptsPerVariant?: number | null })
+        .attemptsPerVariant ?? 1
+    )
   }
   return 1
 }
@@ -51,20 +54,33 @@ export function getModeRepeatsPerVariant(modeConfig: ModeConfig): number {
 /** Get cycles for sequential modes; returns 1 for random mode */
 export function getModeCycles(modeConfig: ModeConfig): number {
   if (isSequentialMode(modeConfig)) {
-    return (modeConfig as {cycles?: number | null}).cycles ?? 1
+    return (modeConfig as { cycles?: number | null }).cycles ?? 1
   }
   return 1
 }
 
 /** Check if current mode has reached its limits */
-export function isModeExhausted(modeConfig: ModeConfig, modeState: ModeState, now: number): boolean {
-  if (getModeRepeatsPerVariant(modeConfig) <= 0 || getModeCycles(modeConfig) <= 0) {
+export function isModeExhausted(
+  modeConfig: ModeConfig,
+  modeState: ModeState,
+  now: number,
+): boolean {
+  if (
+    getModeRepeatsPerVariant(modeConfig) <= 0 ||
+    getModeCycles(modeConfig) <= 0
+  ) {
     return true
   }
-  if (modeConfig.limitTests != null && modeState.pickCount >= modeConfig.limitTests) {
+  if (
+    modeConfig.limitTests != null &&
+    modeState.pickCount >= modeConfig.limitTests
+  ) {
     return true
   }
-  if (modeConfig.limitTime != null && now - modeState.startTime >= modeConfig.limitTime) {
+  if (
+    modeConfig.limitTime != null &&
+    now - modeState.startTime >= modeConfig.limitTime
+  ) {
     return true
   }
   return false
@@ -154,20 +170,36 @@ export function advanceByMode<Args extends Obj>(
     return randomPickVariant(state, templates, keys, keysCount, limitArgOnError)
   }
   if (modeConfig.mode === 'backward') {
-    return advanceBackwardMode(state, modeState, templates, keys, keysCount, getModeCycles(modeConfig), index)
+    return advanceBackwardMode(
+      state,
+      modeState,
+      templates,
+      keys,
+      keysCount,
+      getModeCycles(modeConfig),
+      index,
+    )
   }
-  return advanceForwardMode(state, modeState, templates, keys, keysCount, getModeCycles(modeConfig), index)
+  return advanceForwardMode(
+    state,
+    modeState,
+    templates,
+    keys,
+    keysCount,
+    getModeCycles(modeConfig),
+    index,
+  )
 }
 
 /** Create initial mode state */
 export function createModeState(): ModeState {
   return {
-    savedPosition             : null,
-    completedCount            : 0,
-    pickCount                 : 0,
-    startTime                 : 0,
-    cycle                     : 0,
-    hadProgressInCycle        : false,
+    savedPosition: null,
+    completedCount: 0,
+    pickCount: 0,
+    startTime: 0,
+    cycle: 0,
+    hadProgressInCycle: false,
     hadProgressInPreviousCycle: true,
   }
 }

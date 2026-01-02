@@ -1,5 +1,5 @@
-import type {Obj} from '@flemist/simple-utils'
-import {timeControllerDefault} from '@flemist/time-controller'
+import type { Obj } from '@flemist/simple-utils'
+import { timeControllerDefault } from '@flemist/time-controller'
 import type {
   GetSeedParams,
   ModeConfig,
@@ -27,7 +27,7 @@ import {
   isSequentialMode,
   type ModeState,
 } from 'src/common/test-variants/modeHandling'
-import {log} from 'src/common/helpers/log'
+import { log } from 'src/common/helpers/log'
 
 /** Iterator internal state; extends LimitState with additional iterator-specific fields */
 type IteratorState<Args extends Obj> = LimitState<Args> & {
@@ -47,7 +47,6 @@ type IteratorState<Args extends Obj> = LimitState<Args> & {
   modesState: ModeState[]
 }
 
-
 /** Reset iterator state for new external cycle (via start()) */
 function resetIteratorState<Args extends Obj>(
   state: IteratorState<Args>,
@@ -60,9 +59,8 @@ function resetIteratorState<Args extends Obj>(
   resetIterationPositionToStart(state, templates, keys, keysCount)
 }
 
-
 /** Default modes: single forward pass */
-const DEFAULT_MODES: ModeConfig[] = [{mode: 'forward'}]
+const DEFAULT_MODES: ModeConfig[] = [{ mode: 'forward' }]
 
 /** Save current position for a sequential mode */
 function saveModePosition<Args extends Obj>(
@@ -78,13 +76,13 @@ function saveModePosition<Args extends Obj>(
   modeState.savedPosition = {
     indexes,
     repeatIndex: state.repeatIndex,
-    cycle      : modeState.cycle,
+    cycle: modeState.cycle,
   }
 }
 
 /** Try to restore saved position; returns true if successful, false if position is invalid */
 function tryRestoreSavedPosition<Args extends Obj>(
-  saved: {indexes: number[], repeatIndex: number, cycle: number},
+  saved: { indexes: number[]; repeatIndex: number; cycle: number },
   state: IteratorState<Args>,
   modeState: ModeState,
   templates: TestVariantsTemplate<Args, any>[],
@@ -135,7 +133,9 @@ function switchToNextMode<Args extends Obj>(
   const currentModeState = state.modesState[currentModeIndex]
 
   if (logDebug) {
-    log(`[debug:iter] switchToNextMode: mode[${currentModeIndex}]=${currentMode?.mode}, savePosition=${savePosition}, pickCount=${currentModeState?.pickCount}, hadProgressInCycle=${currentModeState?.hadProgressInCycle}`)
+    log(
+      `[debug:iter] switchToNextMode: mode[${currentModeIndex}]=${currentMode?.mode}, savePosition=${savePosition}, pickCount=${currentModeState?.pickCount}, hadProgressInCycle=${currentModeState?.hadProgressInCycle}`,
+    )
   }
 
   // For sequential modes: save position when interrupted by limits (only if made progress), clear when naturally completed
@@ -145,24 +145,29 @@ function switchToNextMode<Args extends Obj>(
       // Only save position if mode actually yielded tests; otherwise nothing to resume
       saveModePosition(state, currentModeIndex, keysCount)
       if (logDebug) {
-        log(`[debug:iter] saved position for mode[${currentModeIndex}], completedCount stays ${currentModeState.completedCount}`)
+        log(
+          `[debug:iter] saved position for mode[${currentModeIndex}], completedCount stays ${currentModeState.completedCount}`,
+        )
       }
-    }
-    else {
+    } else {
       // Mode completed naturally - count if made progress:
       // - hadProgressInCycle: yielded at least one variant this entry
       // - savedPosition != null: had progress from previous entries (position was saved, meaning tests were yielded before interruption)
-      const hadProgress = currentModeState.hadProgressInCycle
-        || currentModeState.savedPosition != null
+      const hadProgress =
+        currentModeState.hadProgressInCycle ||
+        currentModeState.savedPosition != null
       currentModeState.savedPosition = null
       if (hadProgress) {
         currentModeState.completedCount++
         if (logDebug) {
-          log(`[debug:iter] mode[${currentModeIndex}] completed naturally, completedCount++ → ${currentModeState.completedCount}`)
+          log(
+            `[debug:iter] mode[${currentModeIndex}] completed naturally, completedCount++ → ${currentModeState.completedCount}`,
+          )
         }
-      }
-      else if (logDebug) {
-        log(`[debug:iter] mode[${currentModeIndex}] completed but no progress, completedCount stays ${currentModeState.completedCount}`)
+      } else if (logDebug) {
+        log(
+          `[debug:iter] mode[${currentModeIndex}] completed but no progress, completedCount stays ${currentModeState.completedCount}`,
+        )
       }
     }
   }
@@ -184,22 +189,28 @@ function switchToNextMode<Args extends Obj>(
       resetIteratorState(state, templates, keys, keysCount)
       const saved = nextModeState.savedPosition
       if (saved) {
-        tryRestoreSavedPosition(saved, state, nextModeState, templates, keys, keysCount)
+        tryRestoreSavedPosition(
+          saved,
+          state,
+          nextModeState,
+          templates,
+          keys,
+          keysCount,
+        )
         // If restore failed, state remains in fresh position from resetIteratorState
         if (logDebug) {
           log(`[debug:iter] restored position for mode[${state.modeIndex}]`)
         }
-      }
-      else {
+      } else {
         nextModeState.cycle = 0
       }
-    }
-    else {
+    } else {
       nextModeState.cycle = 0
     }
-  }
-  else if (logDebug) {
-    log(`[debug:iter] all modes exhausted, modeIndex=${state.modeIndex} >= modes.length=${state.modes.length}`)
+  } else if (logDebug) {
+    log(
+      `[debug:iter] all modes exhausted, modeIndex=${state.modeIndex} >= modes.length=${state.modes.length}`,
+    )
   }
 }
 
@@ -208,12 +219,18 @@ export function testVariantsIterator<Args extends Obj>(
   options: TestVariantsIteratorOptions<Args>,
 ): TestVariantsIterator<Args> {
   const {
-    argsTemplates, getSeed, equals, limitArgOnError, includeErrorVariant, logDebug,
+    argsTemplates,
+    getSeed,
+    equals,
+    limitArgOnError,
+    includeErrorVariant,
+    logDebug,
   } = options
   const modes = options.iterationModes ?? DEFAULT_MODES
   const timeController = options.timeController ?? timeControllerDefault
   const keys = Object.keys(argsTemplates) as (keyof Args)[]
-  const templates: TestVariantsTemplate<Args, any>[] = Object.values(argsTemplates)
+  const templates: TestVariantsTemplate<Args, any>[] =
+    Object.values(argsTemplates)
   const keysCount = keys.length
   const keySet = new Set(keys as string[])
 
@@ -236,29 +253,29 @@ export function testVariantsIterator<Args extends Obj>(
   }
 
   const state: IteratorState<Args> = {
-    args           : {} as Args,
+    args: {} as Args,
     indexes,
     argValues,
     argLimits,
     extraValues,
-    index          : -1,
-    cycleIndex     : -1,
-    repeatIndex    : 0,
-    testsCount     : 0,
-    count          : null,
+    index: -1,
+    cycleIndex: -1,
+    repeatIndex: 0,
+    testsCount: 0,
+    count: null,
     countIsExplicit: false,
-    limit          : null,
-    started        : false,
-    currentArgs    : null,
-    pendingLimits  : [],
+    limit: null,
+    started: false,
+    currentArgs: null,
+    pendingLimits: [],
     modes,
-    modeIndex      : 0,
+    modeIndex: 0,
     modesState,
   }
 
   // Pre-allocated object for getSeed params - mutated and reused on each call
   // Safe because getSeed is expected to extract values immediately (per README examples)
-  const seedParams: GetSeedParams = {tests: 0, cycles: 0, repeats: 0}
+  const seedParams: GetSeedParams = { tests: 0, cycles: 0, repeats: 0 }
 
   function buildCurrentArgs(): Args {
     if (getSeed) {
@@ -266,9 +283,9 @@ export function testVariantsIterator<Args extends Obj>(
       seedParams.cycles = state.cycleIndex
       seedParams.repeats = state.repeatIndex
       const seed = getSeed(seedParams)
-      return {...state.args, seed} as Args
+      return { ...state.args, seed } as Args
     }
-    return {...state.args}
+    return { ...state.args }
   }
 
   const iterator: TestVariantsIterator<Args> = {
@@ -305,7 +322,9 @@ export function testVariantsIterator<Args extends Obj>(
       for (let i = 0; i < state.modesState.length; i++) {
         const modeState = state.modesState[i]
         if (logDebug) {
-          log(`[debug:iter] mode[${i}]: hadProgressInPreviousCycle=${modeState.hadProgressInPreviousCycle}, completedCount=${modeState.completedCount}`)
+          log(
+            `[debug:iter] mode[${i}]: hadProgressInPreviousCycle=${modeState.hadProgressInPreviousCycle}, completedCount=${modeState.completedCount}`,
+          )
         }
         if (modeState.hadProgressInPreviousCycle) {
           anyModeHadProgress = true
@@ -318,7 +337,9 @@ export function testVariantsIterator<Args extends Obj>(
       // Initial state has hadProgressInPreviousCycle = true to allow first cycle to start
       if (!anyModeHadProgress) {
         if (logDebug) {
-          log(`[debug:iter] minCompletedCount: no mode had progress, returning Infinity`)
+          log(
+            `[debug:iter] minCompletedCount: no mode had progress, returning Infinity`,
+          )
         }
         return Infinity
       }
@@ -334,7 +355,9 @@ export function testVariantsIterator<Args extends Obj>(
       // addLimit() or addLimit({error}) - uses current args and index
       if (!hasArgs && !hasIndex) {
         if (state.index < 0) {
-          throw new Error('[testVariantsIterator] addLimit() requires at least one next() call')
+          throw new Error(
+            '[testVariantsIterator] addLimit() requires at least one next() call',
+          )
         }
         const oldLimitArgs = state.limit?.args ?? null
         const isEarlierIndex = state.count == null || state.index < state.count
@@ -361,8 +384,7 @@ export function testVariantsIterator<Args extends Obj>(
             state.count = includeErrorVariant ? state.index + 1 : state.index
             state.countIsExplicit = true
           }
-        }
-        else if (isEarlierIndex) {
+        } else if (isEarlierIndex) {
           // Earlier index but not lexicographically smaller (or limitArgOnError disabled)
           state.count = includeErrorVariant ? state.index + 1 : state.index
           state.countIsExplicit = true
@@ -386,7 +408,14 @@ export function testVariantsIterator<Args extends Obj>(
           return
         }
         // Extend templates with missing values from saved args
-        extendTemplatesForArgs(state, options.args, templates, keys, keysCount, equals)
+        extendTemplatesForArgs(
+          state,
+          options.args,
+          templates,
+          keys,
+          keysCount,
+          equals,
+        )
         const oldLimitArgs = state.limit?.args ?? null
         const updated = updateArgLimits(
           state,
@@ -402,8 +431,7 @@ export function testVariantsIterator<Args extends Obj>(
           const limit = createLimit(options.args, options.error)
           state.limit = limit
           state.pendingLimits.push(limit)
-        }
-        else if (!limitArgOnError) {
+        } else if (!limitArgOnError) {
           // When limitArgOnError is false, still set state.limit for error retrieval
           // and add to pendingLimits for next cycle index limiting
           const limit = createLimit(options.args, options.error)
@@ -425,11 +453,27 @@ export function testVariantsIterator<Args extends Obj>(
           return
         }
         // Extend templates with missing values from saved args
-        extendTemplatesForArgs(state, options.args, templates, keys, keysCount, equals)
+        extendTemplatesForArgs(
+          state,
+          options.args,
+          templates,
+          keys,
+          keysCount,
+          equals,
+        )
         if (isEarliest) {
           const oldLimitArgs = state.limit?.args ?? null
           state.limit = createLimit(options.args, options.error)
-          updateArgLimits(state, options.args, oldLimitArgs, templates, keys, keysCount, equals, limitArgOnError)
+          updateArgLimits(
+            state,
+            options.args,
+            oldLimitArgs,
+            templates,
+            keys,
+            keysCount,
+            equals,
+            limitArgOnError,
+          )
         }
       }
     },
@@ -443,7 +487,8 @@ export function testVariantsIterator<Args extends Obj>(
       // On subsequent starts, save current progress before resetting
       for (let i = 0; i < state.modesState.length; i++) {
         if (state.cycleIndex >= 0) {
-          state.modesState[i].hadProgressInPreviousCycle = state.modesState[i].hadProgressInCycle
+          state.modesState[i].hadProgressInPreviousCycle =
+            state.modesState[i].hadProgressInCycle
         }
         state.modesState[i].hadProgressInCycle = false
       }
@@ -467,13 +512,18 @@ export function testVariantsIterator<Args extends Obj>(
         if (mode0 && isSequentialMode(mode0)) {
           const saved = mode0State.savedPosition
           if (saved) {
-            tryRestoreSavedPosition(saved, state, mode0State, templates, keys, keysCount)
-          }
-          else {
+            tryRestoreSavedPosition(
+              saved,
+              state,
+              mode0State,
+              templates,
+              keys,
+              keysCount,
+            )
+          } else {
             mode0State.cycle = 0
           }
-        }
-        else {
+        } else {
           mode0State.cycle = 0
         }
       }
@@ -481,7 +531,9 @@ export function testVariantsIterator<Args extends Obj>(
     },
     next() {
       if (!state.started) {
-        throw new Error('[testVariantsIterator] start() must be called before next()')
+        throw new Error(
+          '[testVariantsIterator] start() must be called before next()',
+        )
       }
 
       // Check if all modes exhausted
@@ -512,7 +564,9 @@ export function testVariantsIterator<Args extends Obj>(
       // Check if current mode is exhausted - switch to next mode (save position since interrupted by limit)
       if (isModeExhausted(modeConfig, modeState, now)) {
         if (logDebug) {
-          log(`[debug:iter] mode exhausted (limits): mode[${state.modeIndex}]=${modeConfig.mode}, limitTests=${modeConfig.limitTests}, pickCount=${modeState.pickCount}`)
+          log(
+            `[debug:iter] mode exhausted (limits): mode[${state.modeIndex}]=${modeConfig.mode}, limitTests=${modeConfig.limitTests}, pickCount=${modeState.pickCount}`,
+          )
         }
         switchToNextMode(state, templates, keys, keysCount, true, now, logDebug)
         return this.next()
@@ -534,9 +588,19 @@ export function testVariantsIterator<Args extends Obj>(
       if (!success) {
         // Current mode naturally completed - switch to next mode (don't save position)
         if (logDebug) {
-          log(`[debug:iter] mode completed naturally: mode[${state.modeIndex}]=${modeConfig.mode}, cycle=${modeState.cycle}, index=${state.index}`)
+          log(
+            `[debug:iter] mode completed naturally: mode[${state.modeIndex}]=${modeConfig.mode}, cycle=${modeState.cycle}, index=${state.index}`,
+          )
         }
-        switchToNextMode(state, templates, keys, keysCount, false, now, logDebug)
+        switchToNextMode(
+          state,
+          templates,
+          keys,
+          keysCount,
+          false,
+          now,
+          logDebug,
+        )
         return this.next()
       }
 
@@ -545,13 +609,23 @@ export function testVariantsIterator<Args extends Obj>(
 
       // Process pending limits at new position
       if (state.pendingLimits.length > 0) {
-        processPendingLimits(state, templates, keys, keysCount, equals, limitArgOnError, includeErrorVariant)
+        processPendingLimits(
+          state,
+          templates,
+          keys,
+          keysCount,
+          equals,
+          limitArgOnError,
+          includeErrorVariant,
+        )
       }
 
       // Check count limit - end cycle (count is a global limit, not per-mode)
       if (state.count != null && state.index >= state.count) {
         if (logDebug) {
-          log(`[debug:iter] count limit reached: index=${state.index} >= count=${state.count}`)
+          log(
+            `[debug:iter] count limit reached: index=${state.index} >= count=${state.count}`,
+          )
         }
         // Only count completion if mode actually yielded tests in this cycle
         // README: "If in the last pass any mode executed zero tests, it is not counted in termination condition check"

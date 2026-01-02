@@ -1,7 +1,6 @@
-/* eslint-disable @typescript-eslint/no-shadow */
-import type {Obj} from '@flemist/simple-utils'
-import type {TestVariantsIteratorOptions} from './types'
-import {testVariantsIterator} from './testVariantsIterator'
+import type { Obj } from '@flemist/simple-utils'
+import type { TestVariantsIteratorOptions } from './types'
+import { testVariantsIterator } from './testVariantsIterator'
 
 describe('test-variants > testVariantsIterator', function () {
   this.timeout(10 * 60 * 1000)
@@ -29,18 +28,18 @@ describe('test-variants > testVariantsIterator', function () {
     })
 
     assert.deepStrictEqual(results, [
-      {a: 1, b: 'x', c: true},
-      {a: 1, b: 'x', c: false},
-      {a: 1, b: 'y', c: true},
-      {a: 1, b: 'y', c: false},
-      {a: 1, b: 'z', c: true},
-      {a: 1, b: 'z', c: false},
-      {a: 2, b: 'x', c: true},
-      {a: 2, b: 'x', c: false},
-      {a: 2, b: 'y', c: true},
-      {a: 2, b: 'y', c: false},
-      {a: 2, b: 'z', c: true},
-      {a: 2, b: 'z', c: false},
+      { a: 1, b: 'x', c: true },
+      { a: 1, b: 'x', c: false },
+      { a: 1, b: 'y', c: true },
+      { a: 1, b: 'y', c: false },
+      { a: 1, b: 'z', c: true },
+      { a: 1, b: 'z', c: false },
+      { a: 2, b: 'x', c: true },
+      { a: 2, b: 'x', c: false },
+      { a: 2, b: 'y', c: true },
+      { a: 2, b: 'y', c: false },
+      { a: 2, b: 'z', c: true },
+      { a: 2, b: 'z', c: false },
     ])
   })
 
@@ -129,15 +128,15 @@ describe('test-variants > testVariantsIterator', function () {
       },
     })
 
-    iterator.addLimit({index: 2})
+    iterator.addLimit({ index: 2 })
     assert.strictEqual(iterator.count, 2)
 
     iterator.start()
     const result1 = iterator.next()
-    assert.deepStrictEqual(result1, {a: 1, b: 'x'})
+    assert.deepStrictEqual(result1, { a: 1, b: 'x' })
 
     const result2 = iterator.next()
-    assert.deepStrictEqual(result2, {a: 1, b: 'y'})
+    assert.deepStrictEqual(result2, { a: 1, b: 'y' })
 
     const result3 = iterator.next()
     assert.strictEqual(result3, null)
@@ -171,7 +170,7 @@ describe('test-variants > testVariantsIterator', function () {
     iterator.addLimit()
 
     assert.strictEqual(iterator.count, 2)
-    assert.deepStrictEqual(iterator.limit, {args: {a: 2, b: 'x'}})
+    assert.deepStrictEqual(iterator.limit, { args: { a: 2, b: 'x' } })
 
     // Should stop at index 2
     const result = iterator.next()
@@ -190,10 +189,10 @@ describe('test-variants > testVariantsIterator', function () {
     iterator.start()
     iterator.next() // index 0: {a: 1}
 
-    iterator.addLimit({error: testError})
+    iterator.addLimit({ error: testError })
 
     assert.strictEqual(iterator.count, 0)
-    assert.deepStrictEqual(iterator.limit?.args, {a: 1})
+    assert.deepStrictEqual(iterator.limit?.args, { a: 1 })
     assert.strictEqual(iterator.limit?.error, testError)
   })
 
@@ -226,10 +225,10 @@ describe('test-variants > testVariantsIterator', function () {
     iterator.addLimit() // sets limit at index 2
 
     assert.strictEqual(iterator.count, 2)
-    assert.deepStrictEqual(iterator.limit?.args, {a: 3})
+    assert.deepStrictEqual(iterator.limit?.args, { a: 3 })
 
     // Try to add a later limit - should be ignored
-    iterator.addLimit({index: 3})
+    iterator.addLimit({ index: 3 })
 
     assert.strictEqual(iterator.count, 2) // unchanged
   })
@@ -242,10 +241,10 @@ describe('test-variants > testVariantsIterator', function () {
       },
     })
 
-    const savedArgs = {a: 1, b: 'y'}
+    const savedArgs = { a: 1, b: 'y' }
     const testError = new Error('saved error')
 
-    iterator.addLimit({args: savedArgs, index: 1, error: testError})
+    iterator.addLimit({ args: savedArgs, index: 1, error: testError })
 
     assert.strictEqual(iterator.count, 1)
     assert.deepStrictEqual(iterator.limit?.args, savedArgs)
@@ -257,16 +256,16 @@ describe('test-variants > testVariantsIterator', function () {
       argsTemplates: {
         a: [1, 2],
       },
-      getSeed: ({tests, cycles, repeats}) => `${cycles}-${tests}-${repeats}`,
+      getSeed: ({ tests, cycles, repeats }) => `${cycles}-${tests}-${repeats}`,
     })
 
     iterator.start()
 
     const result1 = iterator.next()
-    assert.deepStrictEqual(result1, {a: 1, seed: '0-0-0'})
+    assert.deepStrictEqual(result1, { a: 1, seed: '0-0-0' })
 
     const result2 = iterator.next()
-    assert.deepStrictEqual(result2, {a: 2, seed: '0-1-0'})
+    assert.deepStrictEqual(result2, { a: 2, seed: '0-1-0' })
   })
 
   it('attemptsPerVariant repeats each variant', async function () {
@@ -274,21 +273,21 @@ describe('test-variants > testVariantsIterator', function () {
       argsTemplates: {
         a: [1, 2],
       },
-      getSeed       : ({tests, cycles, repeats}) => `${cycles}-${tests}-${repeats}`,
-      iterationModes: [{mode: 'forward', attemptsPerVariant: 3}],
+      getSeed: ({ tests, cycles, repeats }) => `${cycles}-${tests}-${repeats}`,
+      iterationModes: [{ mode: 'forward', attemptsPerVariant: 3 }],
     })
 
     iterator.start()
 
     // Variant 0, repeats 0-2 (tests=0,1,2 because tests is total tests run, not variant index)
-    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '0-0-0'})
-    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '0-1-1'})
-    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '0-2-2'})
+    assert.deepStrictEqual(iterator.next(), { a: 1, seed: '0-0-0' })
+    assert.deepStrictEqual(iterator.next(), { a: 1, seed: '0-1-1' })
+    assert.deepStrictEqual(iterator.next(), { a: 1, seed: '0-2-2' })
 
     // Variant 1, repeats 0-2 (tests=3,4,5)
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '0-3-0'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '0-4-1'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '0-5-2'})
+    assert.deepStrictEqual(iterator.next(), { a: 2, seed: '0-3-0' })
+    assert.deepStrictEqual(iterator.next(), { a: 2, seed: '0-4-1' })
+    assert.deepStrictEqual(iterator.next(), { a: 2, seed: '0-5-2' })
 
     // Done
     assert.strictEqual(iterator.next(), null)
@@ -299,24 +298,24 @@ describe('test-variants > testVariantsIterator', function () {
       argsTemplates: {
         a: [1, 2],
       },
-      getSeed       : ({tests, cycles, repeats}) => `${cycles}-${tests}-${repeats}`,
-      iterationModes: [{mode: 'forward', attemptsPerVariant: 2}],
+      getSeed: ({ tests, cycles, repeats }) => `${cycles}-${tests}-${repeats}`,
+      iterationModes: [{ mode: 'forward', attemptsPerVariant: 2 }],
     })
 
     // Cycle 0 (tests=0,1,2,3 - testsCount increments per test, including attemptsPerVariant)
     iterator.start()
-    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '0-0-0'})
-    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '0-1-1'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '0-2-0'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '0-3-1'})
+    assert.deepStrictEqual(iterator.next(), { a: 1, seed: '0-0-0' })
+    assert.deepStrictEqual(iterator.next(), { a: 1, seed: '0-1-1' })
+    assert.deepStrictEqual(iterator.next(), { a: 2, seed: '0-2-0' })
+    assert.deepStrictEqual(iterator.next(), { a: 2, seed: '0-3-1' })
     assert.strictEqual(iterator.next(), null)
 
     // Cycle 1 (testsCount resets on start(), so tests=0,1,2,3 again)
     iterator.start()
-    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '1-0-0'})
-    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '1-1-1'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '1-2-0'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '1-3-1'})
+    assert.deepStrictEqual(iterator.next(), { a: 1, seed: '1-0-0' })
+    assert.deepStrictEqual(iterator.next(), { a: 1, seed: '1-1-1' })
+    assert.deepStrictEqual(iterator.next(), { a: 2, seed: '1-2-0' })
+    assert.deepStrictEqual(iterator.next(), { a: 2, seed: '1-3-1' })
     assert.strictEqual(iterator.next(), null)
   })
 
@@ -325,16 +324,16 @@ describe('test-variants > testVariantsIterator', function () {
       argsTemplates: {
         a: [1, 2],
       },
-      iterationModes: [{mode: 'forward', cycles: 2}],
+      iterationModes: [{ mode: 'forward', cycles: 2 }],
     })
 
     iterator.start()
     // Cycle 0
-    assert.deepStrictEqual(iterator.next(), {a: 1})
-    assert.deepStrictEqual(iterator.next(), {a: 2})
+    assert.deepStrictEqual(iterator.next(), { a: 1 })
+    assert.deepStrictEqual(iterator.next(), { a: 2 })
     // Cycle 1
-    assert.deepStrictEqual(iterator.next(), {a: 1})
-    assert.deepStrictEqual(iterator.next(), {a: 2})
+    assert.deepStrictEqual(iterator.next(), { a: 1 })
+    assert.deepStrictEqual(iterator.next(), { a: 2 })
     // Done
     assert.strictEqual(iterator.next(), null)
   })
@@ -344,21 +343,21 @@ describe('test-variants > testVariantsIterator', function () {
       argsTemplates: {
         a: [1, 2],
       },
-      getSeed       : ({tests, repeats}) => `${tests}-${repeats}`,
-      iterationModes: [{mode: 'forward', cycles: 2, attemptsPerVariant: 2}],
+      getSeed: ({ tests, repeats }) => `${tests}-${repeats}`,
+      iterationModes: [{ mode: 'forward', cycles: 2, attemptsPerVariant: 2 }],
     })
 
     iterator.start()
     // Mode cycle 0 (tests counts all tests including attemptsPerVariant)
-    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '0-0'})
-    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '1-1'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '2-0'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '3-1'})
+    assert.deepStrictEqual(iterator.next(), { a: 1, seed: '0-0' })
+    assert.deepStrictEqual(iterator.next(), { a: 1, seed: '1-1' })
+    assert.deepStrictEqual(iterator.next(), { a: 2, seed: '2-0' })
+    assert.deepStrictEqual(iterator.next(), { a: 2, seed: '3-1' })
     // Mode cycle 1 (testsCount continues within same external cycle)
-    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '4-0'})
-    assert.deepStrictEqual(iterator.next(), {a: 1, seed: '5-1'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '6-0'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: '7-1'})
+    assert.deepStrictEqual(iterator.next(), { a: 1, seed: '4-0' })
+    assert.deepStrictEqual(iterator.next(), { a: 1, seed: '5-1' })
+    assert.deepStrictEqual(iterator.next(), { a: 2, seed: '6-0' })
+    assert.deepStrictEqual(iterator.next(), { a: 2, seed: '7-1' })
     // Done
     assert.strictEqual(iterator.next(), null)
   })
@@ -370,7 +369,7 @@ describe('test-variants > testVariantsIterator', function () {
       argsTemplates: {
         a: [1, 2, 3],
       },
-      iterationModes: [{mode: 'random', limitTests: pickCount}],
+      iterationModes: [{ mode: 'random', limitTests: pickCount }],
     })
 
     iterator.start()
@@ -382,7 +381,10 @@ describe('test-variants > testVariantsIterator', function () {
       seen.add(result.a)
     }
     // After 30 random picks, should have seen at least 2 different values
-    assert.ok(seen.size >= 2, `Expected at least 2 different values, got ${seen.size}`)
+    assert.ok(
+      seen.size >= 2,
+      `Expected at least 2 different values, got ${seen.size}`,
+    )
     // Next pick should return null (limitTests reached)
     assert.strictEqual(iterator.next(), null)
   })
@@ -392,7 +394,7 @@ describe('test-variants > testVariantsIterator', function () {
       argsTemplates: {
         a: [1, 2, 3],
       },
-      iterationModes: [{mode: 'random', limitTime: 10}],
+      iterationModes: [{ mode: 'random', limitTime: 10 }],
     })
 
     iterator.start()
@@ -415,16 +417,13 @@ describe('test-variants > testVariantsIterator', function () {
       argsTemplates: {
         a: [1, 2],
       },
-      iterationModes: [
-        {mode: 'forward'},
-        {mode: 'random', limitTests: 3},
-      ],
+      iterationModes: [{ mode: 'forward' }, { mode: 'random', limitTests: 3 }],
     })
 
     iterator.start()
     // Forward mode first
-    assert.deepStrictEqual(iterator.next(), {a: 1})
-    assert.deepStrictEqual(iterator.next(), {a: 2})
+    assert.deepStrictEqual(iterator.next(), { a: 1 })
+    assert.deepStrictEqual(iterator.next(), { a: 2 })
     // Then random mode - 3 picks
     const result1 = iterator.next()
     assert.ok(result1 !== null, 'Random mode pick 1 should not be null')
@@ -445,29 +444,29 @@ describe('test-variants > testVariantsIterator', function () {
         a: [1, 2, 3, 4],
       },
       iterationModes: [
-        {mode: 'forward', limitTests: 2},
-        {mode: 'backward', limitTests: 2},
+        { mode: 'forward', limitTests: 2 },
+        { mode: 'backward', limitTests: 2 },
       ],
     })
 
     iterator.start()
     // Forward mode: picks 2 variants (a=1, a=2), interrupted by limit, saves position at a=2
-    assert.deepStrictEqual(iterator.next(), {a: 1})
-    assert.deepStrictEqual(iterator.next(), {a: 2})
+    assert.deepStrictEqual(iterator.next(), { a: 1 })
+    assert.deepStrictEqual(iterator.next(), { a: 2 })
     // Backward mode: picks 2 variants from end (a=4, a=3), interrupted by limit, saves position at a=3
-    assert.deepStrictEqual(iterator.next(), {a: 4})
-    assert.deepStrictEqual(iterator.next(), {a: 3})
+    assert.deepStrictEqual(iterator.next(), { a: 4 })
+    assert.deepStrictEqual(iterator.next(), { a: 3 })
     // Done for this cycle
     assert.strictEqual(iterator.next(), null)
 
     // New external cycle - positions persist because modes were interrupted by limits
     iterator.start()
     // Forward mode: continues from saved position (a=2), picks a=3, a=4
-    assert.deepStrictEqual(iterator.next(), {a: 3})
-    assert.deepStrictEqual(iterator.next(), {a: 4})
+    assert.deepStrictEqual(iterator.next(), { a: 3 })
+    assert.deepStrictEqual(iterator.next(), { a: 4 })
     // Backward mode: continues from saved position (a=3), picks a=2, a=1
-    assert.deepStrictEqual(iterator.next(), {a: 2})
-    assert.deepStrictEqual(iterator.next(), {a: 1})
+    assert.deepStrictEqual(iterator.next(), { a: 2 })
+    assert.deepStrictEqual(iterator.next(), { a: 1 })
     // Done
     assert.strictEqual(iterator.next(), null)
   })
@@ -478,20 +477,20 @@ describe('test-variants > testVariantsIterator', function () {
         a: [1, 2],
       },
       iterationModes: [
-        {mode: 'forward'}, // No limits - will complete naturally
+        { mode: 'forward' }, // No limits - will complete naturally
       ],
     })
 
     iterator.start()
     // Forward mode: completes all variants naturally
-    assert.deepStrictEqual(iterator.next(), {a: 1})
-    assert.deepStrictEqual(iterator.next(), {a: 2})
+    assert.deepStrictEqual(iterator.next(), { a: 1 })
+    assert.deepStrictEqual(iterator.next(), { a: 2 })
     assert.strictEqual(iterator.next(), null)
 
     // Second cycle: starts from beginning (position not saved because naturally completed)
     iterator.start()
-    assert.deepStrictEqual(iterator.next(), {a: 1})
-    assert.deepStrictEqual(iterator.next(), {a: 2})
+    assert.deepStrictEqual(iterator.next(), { a: 1 })
+    assert.deepStrictEqual(iterator.next(), { a: 2 })
     assert.strictEqual(iterator.next(), null)
   })
 
@@ -501,9 +500,10 @@ describe('test-variants > testVariantsIterator', function () {
         a: [1, 2, 3],
       },
       // Note: tests resets on each start() call, so use cycles to distinguish cycles
-      getSeed       : ({tests, cycles, repeats}) => `c${cycles}-v${tests}-r${repeats}`,
+      getSeed: ({ tests, cycles, repeats }) =>
+        `c${cycles}-v${tests}-r${repeats}`,
       iterationModes: [
-        {mode: 'forward', limitTests: 4, attemptsPerVariant: 2},
+        { mode: 'forward', limitTests: 4, attemptsPerVariant: 2 },
       ],
     })
 
@@ -511,10 +511,10 @@ describe('test-variants > testVariantsIterator', function () {
     // First cycle: 4 picks = 2 variants * 2 repeats, interrupted by limit
     // Position saved at a=2 (indexes=[1], repeatIndex=1)
     // tests=0,1,2,3 (total tests count, not variant index)
-    assert.deepStrictEqual(iterator.next(), {a: 1, seed: 'c0-v0-r0'})
-    assert.deepStrictEqual(iterator.next(), {a: 1, seed: 'c0-v1-r1'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: 'c0-v2-r0'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: 'c0-v3-r1'})
+    assert.deepStrictEqual(iterator.next(), { a: 1, seed: 'c0-v0-r0' })
+    assert.deepStrictEqual(iterator.next(), { a: 1, seed: 'c0-v1-r1' })
+    assert.deepStrictEqual(iterator.next(), { a: 2, seed: 'c0-v2-r0' })
+    assert.deepStrictEqual(iterator.next(), { a: 2, seed: 'c0-v3-r1' })
     assert.strictEqual(iterator.next(), null)
 
     iterator.start()
@@ -522,18 +522,18 @@ describe('test-variants > testVariantsIterator', function () {
     // Advances to a=3, gets 2 repeats, then no more variants - mode naturally completes
     // Natural completion clears saved position
     // testsCount resets on start(), so tests=0,1
-    assert.deepStrictEqual(iterator.next(), {a: 3, seed: 'c1-v0-r0'})
-    assert.deepStrictEqual(iterator.next(), {a: 3, seed: 'c1-v1-r1'})
+    assert.deepStrictEqual(iterator.next(), { a: 3, seed: 'c1-v0-r0' })
+    assert.deepStrictEqual(iterator.next(), { a: 3, seed: 'c1-v1-r1' })
     // No more variants after a=3, mode naturally completes
     assert.strictEqual(iterator.next(), null)
 
     iterator.start()
     // Third cycle: no saved position (was cleared), starts fresh from beginning
     // testsCount resets on start(), so tests=0,1,2,3
-    assert.deepStrictEqual(iterator.next(), {a: 1, seed: 'c2-v0-r0'})
-    assert.deepStrictEqual(iterator.next(), {a: 1, seed: 'c2-v1-r1'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: 'c2-v2-r0'})
-    assert.deepStrictEqual(iterator.next(), {a: 2, seed: 'c2-v3-r1'})
+    assert.deepStrictEqual(iterator.next(), { a: 1, seed: 'c2-v0-r0' })
+    assert.deepStrictEqual(iterator.next(), { a: 1, seed: 'c2-v1-r1' })
+    assert.deepStrictEqual(iterator.next(), { a: 2, seed: 'c2-v2-r0' })
+    assert.deepStrictEqual(iterator.next(), { a: 2, seed: 'c2-v3-r1' })
     assert.strictEqual(iterator.next(), null)
   })
 
@@ -546,17 +546,17 @@ describe('test-variants > testVariantsIterator', function () {
     })
 
     // Add pending limit for {a: 1, b: 'y'} (index 1)
-    iterator.addLimit({args: {a: 1, b: 'y'}})
+    iterator.addLimit({ args: { a: 1, b: 'y' } })
 
     iterator.start()
     const result1 = iterator.next() // index 0: {a: 1, b: 'x'}
-    assert.deepStrictEqual(result1, {a: 1, b: 'x'})
+    assert.deepStrictEqual(result1, { a: 1, b: 'x' })
 
     const result2 = iterator.next() // index 1: {a: 1, b: 'y'} - pending limit applies
     assert.strictEqual(result2, null)
 
     assert.strictEqual(iterator.count, 1)
-    assert.deepStrictEqual(iterator.limit, {args: {a: 1, b: 'y'}})
+    assert.deepStrictEqual(iterator.limit, { args: { a: 1, b: 'y' } })
   })
 
   it('addLimit({args, error}) stores pending error', async function () {
@@ -568,7 +568,7 @@ describe('test-variants > testVariantsIterator', function () {
     })
 
     const testError = new Error('pending error')
-    iterator.addLimit({args: {a: 2, b: 'x'}, error: testError})
+    iterator.addLimit({ args: { a: 2, b: 'x' }, error: testError })
 
     iterator.start()
     iterator.next() // 0
@@ -577,7 +577,7 @@ describe('test-variants > testVariantsIterator', function () {
     assert.strictEqual(result, null)
 
     assert.strictEqual(iterator.count, 2)
-    assert.deepStrictEqual(iterator.limit?.args, {a: 2, b: 'x'})
+    assert.deepStrictEqual(iterator.limit?.args, { a: 2, b: 'x' })
     assert.strictEqual(iterator.limit?.error, testError)
   })
 
@@ -590,7 +590,7 @@ describe('test-variants > testVariantsIterator', function () {
     })
 
     // Extra key 'c' - should be discarded
-    iterator.addLimit({args: {a: 1, b: 'x', c: true} as any})
+    iterator.addLimit({ args: { a: 1, b: 'x', c: true } as any })
 
     iterator.start()
     iterator.next()
@@ -611,7 +611,7 @@ describe('test-variants > testVariantsIterator', function () {
     })
 
     // Value 'z' not in template - template should be extended with 'z'
-    iterator.addLimit({args: {a: 1, b: 'z'}})
+    iterator.addLimit({ args: { a: 1, b: 'z' } })
 
     iterator.start()
     // After template extension: a=[1,2], b=['x','y','z']
@@ -626,8 +626,8 @@ describe('test-variants > testVariantsIterator', function () {
     // Limit at [0, 2] means count = 2 (index 0 is {a:1,b:'x'}, index 1 is {a:1,b:'y'})
     assert.strictEqual(iterator.count, 2)
     assert.deepStrictEqual(results, [
-      {a: 1, b: 'x'},
-      {a: 1, b: 'y'},
+      { a: 1, b: 'x' },
+      { a: 1, b: 'y' },
     ])
   })
 
@@ -640,7 +640,7 @@ describe('test-variants > testVariantsIterator', function () {
     })
 
     // Args with seed key - seed should be ignored in validation
-    iterator.addLimit({args: {a: 1, b: 'y', seed: 'test-seed'} as any})
+    iterator.addLimit({ args: { a: 1, b: 'y', seed: 'test-seed' } as any })
 
     iterator.start()
     iterator.next() // 0
@@ -649,7 +649,11 @@ describe('test-variants > testVariantsIterator', function () {
 
     assert.strictEqual(iterator.count, 1)
     // limit.args preserves original args including seed
-    assert.deepStrictEqual(iterator.limit?.args, {a: 1, b: 'y', seed: 'test-seed'})
+    assert.deepStrictEqual(iterator.limit?.args, {
+      a: 1,
+      b: 'y',
+      seed: 'test-seed',
+    })
   })
 
   it('addLimit({args, index}) applies both index and limit with template extension', async function () {
@@ -661,10 +665,10 @@ describe('test-variants > testVariantsIterator', function () {
     })
 
     // Value 'z' not in template - template extended, both index and limit applied
-    iterator.addLimit({args: {a: 1, b: 'z'}, index: 2})
+    iterator.addLimit({ args: { a: 1, b: 'z' }, index: 2 })
 
     assert.strictEqual(iterator.count, 2) // Index applied
-    assert.deepStrictEqual(iterator.limit?.args, {a: 1, b: 'z'}) // Limit set after template extension
+    assert.deepStrictEqual(iterator.limit?.args, { a: 1, b: 'z' }) // Limit set after template extension
   })
 
   it('multiple pending limits apply at different positions', async function () {
@@ -676,8 +680,8 @@ describe('test-variants > testVariantsIterator', function () {
     })
 
     // Add two pending limits
-    iterator.addLimit({args: {a: 2, b: 'x'}}) // position 2
-    iterator.addLimit({args: {a: 1, b: 'y'}}) // position 1 - should win
+    iterator.addLimit({ args: { a: 2, b: 'x' } }) // position 2
+    iterator.addLimit({ args: { a: 1, b: 'y' } }) // position 1 - should win
 
     iterator.start()
     iterator.next() // 0
@@ -685,7 +689,7 @@ describe('test-variants > testVariantsIterator', function () {
     assert.strictEqual(result, null)
 
     assert.strictEqual(iterator.count, 1)
-    assert.deepStrictEqual(iterator.limit?.args, {a: 1, b: 'y'})
+    assert.deepStrictEqual(iterator.limit?.args, { a: 1, b: 'y' })
   })
 
   it('limitArgOnError limits per-arg indexes', async function () {
@@ -725,9 +729,9 @@ describe('test-variants > testVariantsIterator', function () {
     }
 
     assert.deepStrictEqual(results, [
-      {a: 1, b: 'x'},
-      {a: 1, b: 'y'},
-      {a: 2, b: 'x'},
+      { a: 1, b: 'x' },
+      { a: 1, b: 'y' },
+      { a: 2, b: 'x' },
       // {a: 2, b: 'y'} excluded - error variant
     ])
   })
@@ -766,9 +770,7 @@ describe('test-variants > testVariantsIterator', function () {
     }
 
     // Only {a: 1, b: 'x'} is valid (error variant {a: 1, b: 'y'} is excluded by count)
-    assert.deepStrictEqual(results, [
-      {a: 1, b: 'x'},
-    ])
+    assert.deepStrictEqual(results, [{ a: 1, b: 'x' }])
   })
 
   it('limitArgOnError with callback', async function () {
@@ -777,7 +779,7 @@ describe('test-variants > testVariantsIterator', function () {
         a: [1, 2, 3],
         b: ['x', 'y', 'z'],
       },
-      limitArgOnError: ({name}) => name === 'b', // Only limit 'b' arg
+      limitArgOnError: ({ name }) => name === 'b', // Only limit 'b' arg
     })
 
     iterator.start()
@@ -806,10 +808,10 @@ describe('test-variants > testVariantsIterator', function () {
     // a is not limited so all a values are valid
     // Total 6 variants, but count=4 limits to first 4
     assert.deepStrictEqual(results, [
-      {a: 1, b: 'x'},
-      {a: 1, b: 'y'},
-      {a: 2, b: 'x'},
-      {a: 2, b: 'y'},
+      { a: 1, b: 'x' },
+      { a: 1, b: 'y' },
+      { a: 2, b: 'x' },
+      { a: 2, b: 'y' },
     ])
   })
 
@@ -831,18 +833,18 @@ describe('test-variants > testVariantsIterator', function () {
     })
 
     // File 1: a=0, b=2 (indexes: [0, 2])
-    iterator.addLimit({args: {a: 0, b: 2}, error: new Error('file1')})
+    iterator.addLimit({ args: { a: 0, b: 2 }, error: new Error('file1') })
 
     // File 2: a=3, b=1 (indexes: [3, 1])
     // Lexicographic compare: [3, 1] vs [0, 2] -> at position 0: 3 > 0
     // File 2 is lexicographically LARGER, reject
-    iterator.addLimit({args: {a: 3, b: 1}, error: new Error('file2')})
+    iterator.addLimit({ args: { a: 3, b: 1 }, error: new Error('file2') })
 
     iterator.start()
     const results: any[] = []
     let args: any
     while ((args = iterator.next()) != null) {
-      results.push({...args})
+      results.push({ ...args })
     }
 
     // argLimits from file1: [0, 2] (INCLUSIVE)
@@ -867,20 +869,26 @@ describe('test-variants > testVariantsIterator', function () {
     })
 
     // File 1: a=0, b=2, c=false (indexes: [0, 2, 0])
-    iterator.addLimit({args: {a: 0, b: 2, c: false}, error: new Error('file1')})
+    iterator.addLimit({
+      args: { a: 0, b: 2, c: false },
+      error: new Error('file1'),
+    })
 
     // File 2: a=0, b=1, c=true (indexes: [0, 1, 1])
     // Lexicographic compare: [0, 1, 1] vs [0, 2, 0]
     // - a: 0 == 0, continue
     // - b: 1 < 2, file2 wins!
     // File 2 is lexicographically SMALLER, accept
-    iterator.addLimit({args: {a: 0, b: 1, c: true}, error: new Error('file2')})
+    iterator.addLimit({
+      args: { a: 0, b: 1, c: true },
+      error: new Error('file2'),
+    })
 
     iterator.start()
     const results: any[] = []
     let args: any
     while ((args = iterator.next()) != null) {
-      results.push({...args})
+      results.push({ ...args })
     }
 
     // argLimits from file2: [0, 1, 1] (INCLUSIVE)
@@ -907,18 +915,18 @@ describe('test-variants > testVariantsIterator', function () {
 
     // File 1: a=0, b=2 (indexes: [0, 2])
     // a is at index 0 - argLimits[a] = 0 (restricts to 1 value)
-    iterator.addLimit({args: {a: 0, b: 2}, error: new Error('file1')})
+    iterator.addLimit({ args: { a: 0, b: 2 }, error: new Error('file1') })
 
     // File 2: a=1, b=0 (indexes: [1, 0])
     // Lexicographic compare: [1, 0] vs [0, 2] -> at position 0: 1 > 0
     // File 2 is lexicographically LARGER, reject
-    iterator.addLimit({args: {a: 1, b: 0}, error: new Error('file2')})
+    iterator.addLimit({ args: { a: 1, b: 0 }, error: new Error('file2') })
 
     iterator.start()
     const results: any[] = []
     let args: any
     while ((args = iterator.next()) != null) {
-      results.push({...args})
+      results.push({ ...args })
     }
 
     // argLimits from file1: [0, 2] (INCLUSIVE)
@@ -937,20 +945,20 @@ describe('test-variants > testVariantsIterator', function () {
     const iterator = testVariantsIterator({
       argsTemplates: {
         a: [false, true],
-        b: ({a}) => a ? [1, 2] : [3, 4, 5], // Dynamic: depends on a
+        b: ({ a }) => (a ? [1, 2] : [3, 4, 5]), // Dynamic: depends on a
       },
       limitArgOnError: true,
     })
 
     // With a=false, b template is [3, 4, 5]
     // b=4 is at index 1 in [3, 4, 5]
-    iterator.addLimit({args: {a: false, b: 4}, error: new Error('file1')})
+    iterator.addLimit({ args: { a: false, b: 4 }, error: new Error('file1') })
 
     iterator.start()
     const results: any[] = []
     let args: any
     while ((args = iterator.next()) != null) {
-      results.push({...args})
+      results.push({ ...args })
     }
 
     // argLimits: [0 (a at 0), 1 (b at 1)] (INCLUSIVE)
@@ -960,9 +968,7 @@ describe('test-variants > testVariantsIterator', function () {
     // Total: 1 * 2 = 2, minus error variant {a: false, b: 4} = 1 variant
 
     assert.strictEqual(results.length, 1)
-    assert.deepStrictEqual(results, [
-      {a: false, b: 3},
-    ])
+    assert.deepStrictEqual(results, [{ a: false, b: 3 }])
   })
 
   it('addLimit({args}) extends dynamic template with missing value', async function () {
@@ -972,20 +978,20 @@ describe('test-variants > testVariantsIterator', function () {
     const iterator = testVariantsIterator({
       argsTemplates: {
         a: [false, true],
-        b: ({a}) => a ? [1, 2] : [3, 4], // Dynamic: depends on a
+        b: ({ a }) => (a ? [1, 2] : [3, 4]), // Dynamic: depends on a
       },
       limitArgOnError: true,
     })
 
     // With a=false, b template is [3, 4]
     // b=10 is NOT in template - should be extended
-    iterator.addLimit({args: {a: false, b: 10}, error: new Error('file1')})
+    iterator.addLimit({ args: { a: false, b: 10 }, error: new Error('file1') })
 
     iterator.start()
     const results: any[] = []
     let args: any
     while ((args = iterator.next()) != null) {
-      results.push({...args})
+      results.push({ ...args })
     }
 
     // After extension: b template for a=false is [3, 4, 10]
@@ -997,8 +1003,8 @@ describe('test-variants > testVariantsIterator', function () {
 
     assert.strictEqual(results.length, 2)
     assert.deepStrictEqual(results, [
-      {a: false, b: 3},
-      {a: false, b: 4},
+      { a: false, b: 3 },
+      { a: false, b: 4 },
     ])
   })
 
@@ -1014,17 +1020,17 @@ describe('test-variants > testVariantsIterator', function () {
     })
 
     // File 1: [2, 2, 2]
-    iterator.addLimit({args: {a: 2, b: 2, c: 2}, error: new Error('file1')})
+    iterator.addLimit({ args: { a: 2, b: 2, c: 2 }, error: new Error('file1') })
 
     // File 2: [1, 1, 1] - lexicographically smaller (at position 0: 1 < 2)
     // Should be accepted and replace file1
-    iterator.addLimit({args: {a: 1, b: 1, c: 1}, error: new Error('file2')})
+    iterator.addLimit({ args: { a: 1, b: 1, c: 1 }, error: new Error('file2') })
 
     iterator.start()
     const results: any[] = []
     let args: any
     while ((args = iterator.next()) != null) {
-      results.push({...args})
+      results.push({ ...args })
     }
 
     // argLimits from file2: [1, 1, 1] (INCLUSIVE)
@@ -1038,98 +1044,98 @@ describe('test-variants > testVariantsIterator', function () {
 
   it('lexicographic comparison with 3 error files', async function () {
     const file1Args = {
-      returnReadableResolved : false,
-      dependencyFactory      : false,
-      returnObservable       : false,
-      injectorInjectionsMax  : 3,
-      injectorValueStoresMax : 1,
-      valueStoresMax         : 2,
-      changesPerIterationMax : 1,
-      dependencyValueStore   : true,
-      dependencyObservable   : true,
-      useInjectorDefault     : false,
-      injectorsMax           : 3,
+      returnReadableResolved: false,
+      dependencyFactory: false,
+      returnObservable: false,
+      injectorInjectionsMax: 3,
+      injectorValueStoresMax: 1,
+      valueStoresMax: 2,
+      changesPerIterationMax: 1,
+      dependencyValueStore: true,
+      dependencyObservable: true,
+      useInjectorDefault: false,
+      injectorsMax: 3,
       injectorDependenciesMax: 3,
-      injectionsMax          : 2,
-      factoriesMax           : 3,
-      injectorFactoriesMax   : 2,
-      dependencyCountMax     : 1,
-      checksPerIterationMax  : 1,
-      iterations             : 10,
+      injectionsMax: 2,
+      factoriesMax: 3,
+      injectorFactoriesMax: 2,
+      dependencyCountMax: 1,
+      checksPerIterationMax: 1,
+      iterations: 10,
     }
 
     const file2Args = {
-      returnReadableResolved : false,
-      dependencyFactory      : false,
-      returnObservable       : false,
-      injectorInjectionsMax  : 0,
-      injectorValueStoresMax : 1,
-      valueStoresMax         : 0,
-      changesPerIterationMax : 1,
-      dependencyValueStore   : false,
-      dependencyObservable   : true,
-      useInjectorDefault     : false,
-      injectorsMax           : 3,
+      returnReadableResolved: false,
+      dependencyFactory: false,
+      returnObservable: false,
+      injectorInjectionsMax: 0,
+      injectorValueStoresMax: 1,
+      valueStoresMax: 0,
+      changesPerIterationMax: 1,
+      dependencyValueStore: false,
+      dependencyObservable: true,
+      useInjectorDefault: false,
+      injectorsMax: 3,
       injectorDependenciesMax: 1,
-      injectionsMax          : 2,
-      factoriesMax           : 3,
-      injectorFactoriesMax   : 3,
-      dependencyCountMax     : 3,
-      checksPerIterationMax  : 1,
-      iterations             : 10,
+      injectionsMax: 2,
+      factoriesMax: 3,
+      injectorFactoriesMax: 3,
+      dependencyCountMax: 3,
+      checksPerIterationMax: 1,
+      iterations: 10,
     }
 
     const file3Args = {
-      returnReadableResolved : false,
-      dependencyFactory      : false,
-      returnObservable       : false,
-      injectorInjectionsMax  : 0,
-      injectorValueStoresMax : 2,
-      valueStoresMax         : 3,
-      changesPerIterationMax : 1,
-      dependencyValueStore   : false,
-      dependencyObservable   : true,
-      useInjectorDefault     : false,
-      injectorsMax           : 3,
+      returnReadableResolved: false,
+      dependencyFactory: false,
+      returnObservable: false,
+      injectorInjectionsMax: 0,
+      injectorValueStoresMax: 2,
+      valueStoresMax: 3,
+      changesPerIterationMax: 1,
+      dependencyValueStore: false,
+      dependencyObservable: true,
+      useInjectorDefault: false,
+      injectorsMax: 3,
       injectorDependenciesMax: 1,
-      injectionsMax          : 1,
-      factoriesMax           : 3,
-      injectorFactoriesMax   : 3,
-      dependencyCountMax     : 1,
-      checksPerIterationMax  : 1,
-      iterations             : 10,
+      injectionsMax: 1,
+      factoriesMax: 3,
+      injectorFactoriesMax: 3,
+      dependencyCountMax: 1,
+      checksPerIterationMax: 1,
+      iterations: 10,
     }
 
     const iterator = testVariantsIterator({
       argsTemplates: {
         returnReadableResolved: [false, true, null],
-        dependencyFactory     : [false, true],
-        returnObservable      : ({dependencyFactory}) => {
+        dependencyFactory: [false, true],
+        returnObservable: ({ dependencyFactory }) => {
           return dependencyFactory ? [true] : [false, true]
         },
-        injectorInjectionsMax  : [0, 1, 2, 3],
-        injectorValueStoresMax : [0, 1, 2, 3],
-        valueStoresMax         : [0, 1, 2, 3],
-        changesPerIterationMax : [0, 1],
-        dependencyValueStore   : [false, true],
-        dependencyObservable   : [false, true],
-        useInjectorDefault     : [false, true, null],
-        injectorsMax           : [1, 2, 3],
+        injectorInjectionsMax: [0, 1, 2, 3],
+        injectorValueStoresMax: [0, 1, 2, 3],
+        valueStoresMax: [0, 1, 2, 3],
+        changesPerIterationMax: [0, 1],
+        dependencyValueStore: [false, true],
+        dependencyObservable: [false, true],
+        useInjectorDefault: [false, true, null],
+        injectorsMax: [1, 2, 3],
         injectorDependenciesMax: [0, 1, 2, 3],
-        injectionsMax          : [1, 2, 3],
-        factoriesMax           : [0, 1, 2, 3],
-        injectorFactoriesMax   : [0, 1, 2, 3],
-        dependencyCountMax     : [0, 1, 2, 3],
-        checksPerIterationMax  : [1],
-        iterations             : [1, 2, 10],
+        injectionsMax: [1, 2, 3],
+        factoriesMax: [0, 1, 2, 3],
+        injectorFactoriesMax: [0, 1, 2, 3],
+        dependencyCountMax: [0, 1, 2, 3],
+        checksPerIterationMax: [1],
+        iterations: [1, 2, 10],
       },
       limitArgOnError: true,
     })
 
     // Add all 3 files - order doesn't matter, lexicographically smallest wins
-    iterator.addLimit({args: file1Args, error: new Error('file1')})
-    iterator.addLimit({args: file2Args, error: new Error('file2')})
-    iterator.addLimit({args: file3Args, error: new Error('file3')})
+    iterator.addLimit({ args: file1Args, error: new Error('file1') })
+    iterator.addLimit({ args: file2Args, error: new Error('file2') })
+    iterator.addLimit({ args: file3Args, error: new Error('file3') })
 
     // File 2 should win (lexicographically smallest)
     // File 1 indexes: [0, 0, 0, 3, 1, 2, 1, 1, 1, 0, 2, 3, 1, 3, 2, 1, 0, 2]
@@ -1158,18 +1164,18 @@ describe('test-variants > testVariantsIterator', function () {
         a: [0, 1, 2],
         b: [0, 1, 2],
       },
-      limitArgOnError    : true,
+      limitArgOnError: true,
       includeErrorVariant: true,
     })
 
     // Error at [1, 1]
-    iterator.addLimit({args: {a: 1, b: 1}, error: new Error('error')})
+    iterator.addLimit({ args: { a: 1, b: 1 }, error: new Error('error') })
 
     iterator.start()
     const results: any[] = []
     let args: any
     while ((args = iterator.next()) != null) {
-      results.push({...args})
+      results.push({ ...args })
     }
 
     // argLimits: [1, 1] (INCLUSIVE)
@@ -1177,10 +1183,10 @@ describe('test-variants > testVariantsIterator', function () {
     // Total: 2 * 2 = 4, WITH error variant included
     assert.strictEqual(results.length, 4)
     assert.deepStrictEqual(results, [
-      {a: 0, b: 0},
-      {a: 0, b: 1},
-      {a: 1, b: 0},
-      {a: 1, b: 1}, // Error variant IS included
+      { a: 0, b: 0 },
+      { a: 0, b: 1 },
+      { a: 1, b: 0 },
+      { a: 1, b: 1 }, // Error variant IS included
     ])
   })
 
@@ -1190,7 +1196,7 @@ describe('test-variants > testVariantsIterator', function () {
         a: [0, 1, 2],
         b: [0, 1, 2],
       },
-      limitArgOnError    : true,
+      limitArgOnError: true,
       includeErrorVariant: true,
     })
 
@@ -1198,10 +1204,10 @@ describe('test-variants > testVariantsIterator', function () {
     const results: any[] = []
     let args: any
     while ((args = iterator.next()) != null) {
-      results.push({...args})
+      results.push({ ...args })
       // Trigger error at {a: 1, b: 1}
       if (args.a === 1 && args.b === 1) {
-        iterator.addLimit({error: new Error('error')})
+        iterator.addLimit({ error: new Error('error') })
       }
     }
 
@@ -1211,11 +1217,11 @@ describe('test-variants > testVariantsIterator', function () {
     // Variants: (0,0), (0,1), (0,2), (1,0), (1,1) = 5
     assert.strictEqual(results.length, 5)
     assert.deepStrictEqual(results, [
-      {a: 0, b: 0},
-      {a: 0, b: 1},
-      {a: 0, b: 2}, // Past variant, already iterated
-      {a: 1, b: 0},
-      {a: 1, b: 1}, // Error variant IS included
+      { a: 0, b: 0 },
+      { a: 0, b: 1 },
+      { a: 0, b: 2 }, // Past variant, already iterated
+      { a: 1, b: 0 },
+      { a: 1, b: 1 }, // Error variant IS included
     ])
   })
 
@@ -1239,7 +1245,7 @@ describe('test-variants > testVariantsIterator', function () {
     let args: any
     while ((args = iterator.next()) != null) {
       if (args.a === 0 && args.b === 0 && args.c === 3 && args.d === 3) {
-        iterator.addLimit({error: new Error('error1')})
+        iterator.addLimit({ error: new Error('error1') })
         break
       }
     }
@@ -1252,7 +1258,7 @@ describe('test-variants > testVariantsIterator', function () {
     iterator.start()
     while ((args = iterator.next()) != null) {
       if (args.a === 0 && args.b === 0 && args.c === 1 && args.d === 1) {
-        iterator.addLimit({error: new Error('error2')})
+        iterator.addLimit({ error: new Error('error2') })
         break
       }
     }
@@ -1297,10 +1303,17 @@ describe('test-variants > testVariantsIterator', function () {
 
     // Error 1: [0, 0, 0, 3, 3, 3]
     // Limits: 1 * 1 * 1 * 4 * 4 * 4 = 64
-    iterator.addLimit({args: {
-      a: 0, b: 0, c: 0, d: 3, e: 3, f: 3,
-    },
-    error: new Error('error1')})
+    iterator.addLimit({
+      args: {
+        a: 0,
+        b: 0,
+        c: 0,
+        d: 3,
+        e: 3,
+        f: 3,
+      },
+      error: new Error('error1'),
+    })
 
     iterator.start()
     let count1 = 0
@@ -1312,10 +1325,17 @@ describe('test-variants > testVariantsIterator', function () {
 
     // Error 2: [0, 0, 0, 3, 1, 1] - lexicographically smaller at position 4 (1 < 3)
     // Limits: 1 * 1 * 1 * 4 * 2 * 2 = 16
-    iterator.addLimit({args: {
-      a: 0, b: 0, c: 0, d: 3, e: 1, f: 1,
-    },
-    error: new Error('error2')})
+    iterator.addLimit({
+      args: {
+        a: 0,
+        b: 0,
+        c: 0,
+        d: 3,
+        e: 1,
+        f: 1,
+      },
+      error: new Error('error2'),
+    })
 
     iterator.start()
     let count2 = 0
@@ -1328,10 +1348,17 @@ describe('test-variants > testVariantsIterator', function () {
 
     // Error 3: [0, 0, 0, 1, 1, 1] - lexicographically smaller at position 3 (1 < 3)
     // Limits: 1 * 1 * 1 * 2 * 2 * 2 = 8
-    iterator.addLimit({args: {
-      a: 0, b: 0, c: 0, d: 1, e: 1, f: 1,
-    },
-    error: new Error('error3')})
+    iterator.addLimit({
+      args: {
+        a: 0,
+        b: 0,
+        c: 0,
+        d: 1,
+        e: 1,
+        f: 1,
+      },
+      error: new Error('error3'),
+    })
 
     iterator.start()
     let count3 = 0
@@ -1356,25 +1383,25 @@ describe('test-variants > testVariantsIterator', function () {
     const iterator = testVariantsIterator({
       argsTemplates: {
         returnReadableResolved: [false, true, null],
-        dependencyFactory     : [false, true],
-        returnObservable      : ({dependencyFactory}) => {
+        dependencyFactory: [false, true],
+        returnObservable: ({ dependencyFactory }) => {
           return dependencyFactory ? [true] : [false, true]
         },
-        injectorInjectionsMax  : [0, 1, 2, 3],
-        injectorValueStoresMax : [0, 1, 2, 3],
-        valueStoresMax         : [0, 1, 2, 3],
-        changesPerIterationMax : [0, 1],
-        dependencyValueStore   : [false, true],
-        dependencyObservable   : [false, true],
-        useInjectorDefault     : [false, true, null],
-        injectorsMax           : [1, 2, 3],
+        injectorInjectionsMax: [0, 1, 2, 3],
+        injectorValueStoresMax: [0, 1, 2, 3],
+        valueStoresMax: [0, 1, 2, 3],
+        changesPerIterationMax: [0, 1],
+        dependencyValueStore: [false, true],
+        dependencyObservable: [false, true],
+        useInjectorDefault: [false, true, null],
+        injectorsMax: [1, 2, 3],
         injectorDependenciesMax: [0, 1, 2, 3],
-        injectionsMax          : [1, 2, 3],
-        factoriesMax           : [0, 1, 2, 3],
-        injectorFactoriesMax   : [0, 1, 2, 3],
-        dependencyCountMax     : [0, 1, 2, 3],
-        checksPerIterationMax  : [1],
-        iterations             : [1, 2, 10],
+        injectionsMax: [1, 2, 3],
+        factoriesMax: [0, 1, 2, 3],
+        injectorFactoriesMax: [0, 1, 2, 3],
+        dependencyCountMax: [0, 1, 2, 3],
+        checksPerIterationMax: [1],
+        iterations: [1, 2, 10],
       },
       limitArgOnError: true,
     })
@@ -1383,24 +1410,24 @@ describe('test-variants > testVariantsIterator', function () {
     // File 1 args
     iterator.addLimit({
       args: {
-        returnReadableResolved : false,
-        dependencyFactory      : false,
-        returnObservable       : false,
-        injectorInjectionsMax  : 3,
-        injectorValueStoresMax : 1,
-        valueStoresMax         : 2,
-        changesPerIterationMax : 1,
-        dependencyValueStore   : true,
-        dependencyObservable   : true,
-        useInjectorDefault     : false,
-        injectorsMax           : 3,
+        returnReadableResolved: false,
+        dependencyFactory: false,
+        returnObservable: false,
+        injectorInjectionsMax: 3,
+        injectorValueStoresMax: 1,
+        valueStoresMax: 2,
+        changesPerIterationMax: 1,
+        dependencyValueStore: true,
+        dependencyObservable: true,
+        useInjectorDefault: false,
+        injectorsMax: 3,
         injectorDependenciesMax: 3,
-        injectionsMax          : 2,
-        factoriesMax           : 3,
-        injectorFactoriesMax   : 2,
-        dependencyCountMax     : 1,
-        checksPerIterationMax  : 1,
-        iterations             : 10,
+        injectionsMax: 2,
+        factoriesMax: 3,
+        injectorFactoriesMax: 2,
+        dependencyCountMax: 1,
+        checksPerIterationMax: 1,
+        iterations: 10,
       },
       error: new Error('error1'),
     })
@@ -1408,24 +1435,24 @@ describe('test-variants > testVariantsIterator', function () {
     // File 2 args - lexicographically smallest at injectorInjectionsMax (0 < 3)
     iterator.addLimit({
       args: {
-        returnReadableResolved : false,
-        dependencyFactory      : false,
-        returnObservable       : false,
-        injectorInjectionsMax  : 0,
-        injectorValueStoresMax : 1,
-        valueStoresMax         : 0,
-        changesPerIterationMax : 1,
-        dependencyValueStore   : false,
-        dependencyObservable   : true,
-        useInjectorDefault     : false,
-        injectorsMax           : 3,
+        returnReadableResolved: false,
+        dependencyFactory: false,
+        returnObservable: false,
+        injectorInjectionsMax: 0,
+        injectorValueStoresMax: 1,
+        valueStoresMax: 0,
+        changesPerIterationMax: 1,
+        dependencyValueStore: false,
+        dependencyObservable: true,
+        useInjectorDefault: false,
+        injectorsMax: 3,
         injectorDependenciesMax: 1,
-        injectionsMax          : 2,
-        factoriesMax           : 3,
-        injectorFactoriesMax   : 3,
-        dependencyCountMax     : 3,
-        checksPerIterationMax  : 1,
-        iterations             : 10,
+        injectionsMax: 2,
+        factoriesMax: 3,
+        injectorFactoriesMax: 3,
+        dependencyCountMax: 3,
+        checksPerIterationMax: 1,
+        iterations: 10,
       },
       error: new Error('error2'),
     })
@@ -1433,24 +1460,24 @@ describe('test-variants > testVariantsIterator', function () {
     // File 3 args
     iterator.addLimit({
       args: {
-        returnReadableResolved : false,
-        dependencyFactory      : false,
-        returnObservable       : false,
-        injectorInjectionsMax  : 0,
-        injectorValueStoresMax : 2,
-        valueStoresMax         : 3,
-        changesPerIterationMax : 1,
-        dependencyValueStore   : false,
-        dependencyObservable   : true,
-        useInjectorDefault     : false,
-        injectorsMax           : 3,
+        returnReadableResolved: false,
+        dependencyFactory: false,
+        returnObservable: false,
+        injectorInjectionsMax: 0,
+        injectorValueStoresMax: 2,
+        valueStoresMax: 3,
+        changesPerIterationMax: 1,
+        dependencyValueStore: false,
+        dependencyObservable: true,
+        useInjectorDefault: false,
+        injectorsMax: 3,
         injectorDependenciesMax: 1,
-        injectionsMax          : 1,
-        factoriesMax           : 3,
-        injectorFactoriesMax   : 3,
-        dependencyCountMax     : 1,
-        checksPerIterationMax  : 1,
-        iterations             : 10,
+        injectionsMax: 1,
+        factoriesMax: 3,
+        injectorFactoriesMax: 3,
+        dependencyCountMax: 1,
+        checksPerIterationMax: 1,
+        iterations: 10,
       },
       error: new Error('error3'),
     })
@@ -1482,24 +1509,24 @@ describe('test-variants > testVariantsIterator', function () {
     // Reduction: 4/2 * 4/2 = 4x smaller
     iterator.addLimit({
       args: {
-        returnReadableResolved : false,
-        dependencyFactory      : false,
-        returnObservable       : false,
-        injectorInjectionsMax  : 0,
-        injectorValueStoresMax : 1,
-        valueStoresMax         : 0,
-        changesPerIterationMax : 1,
-        dependencyValueStore   : false,
-        dependencyObservable   : true,
-        useInjectorDefault     : false,
-        injectorsMax           : 3,
+        returnReadableResolved: false,
+        dependencyFactory: false,
+        returnObservable: false,
+        injectorInjectionsMax: 0,
+        injectorValueStoresMax: 1,
+        valueStoresMax: 0,
+        changesPerIterationMax: 1,
+        dependencyValueStore: false,
+        dependencyObservable: true,
+        useInjectorDefault: false,
+        injectorsMax: 3,
         injectorDependenciesMax: 1,
-        injectionsMax          : 2,
-        factoriesMax           : 3,
-        injectorFactoriesMax   : 1, // Reduced from 3 to 1
-        dependencyCountMax     : 1, // Reduced from 3 to 1
-        checksPerIterationMax  : 1,
-        iterations             : 10,
+        injectionsMax: 2,
+        factoriesMax: 3,
+        injectorFactoriesMax: 1, // Reduced from 3 to 1
+        dependencyCountMax: 1, // Reduced from 3 to 1
+        checksPerIterationMax: 1,
+        iterations: 10,
       },
       error: new Error('error4'),
     })
@@ -1518,24 +1545,24 @@ describe('test-variants > testVariantsIterator', function () {
     // Reduction: 2x smaller
     iterator.addLimit({
       args: {
-        returnReadableResolved : false,
-        dependencyFactory      : false,
-        returnObservable       : false,
-        injectorInjectionsMax  : 0,
-        injectorValueStoresMax : 1,
-        valueStoresMax         : 0,
-        changesPerIterationMax : 1,
-        dependencyValueStore   : false,
-        dependencyObservable   : true,
-        useInjectorDefault     : false,
-        injectorsMax           : 3,
+        returnReadableResolved: false,
+        dependencyFactory: false,
+        returnObservable: false,
+        injectorInjectionsMax: 0,
+        injectorValueStoresMax: 1,
+        valueStoresMax: 0,
+        changesPerIterationMax: 1,
+        dependencyValueStore: false,
+        dependencyObservable: true,
+        useInjectorDefault: false,
+        injectorsMax: 3,
         injectorDependenciesMax: 1,
-        injectionsMax          : 1, // Reduced from 2 to 1
-        factoriesMax           : 3,
-        injectorFactoriesMax   : 1,
-        dependencyCountMax     : 1,
-        checksPerIterationMax  : 1,
-        iterations             : 10,
+        injectionsMax: 1, // Reduced from 2 to 1
+        factoriesMax: 3,
+        injectorFactoriesMax: 1,
+        dependencyCountMax: 1,
+        checksPerIterationMax: 1,
+        iterations: 10,
       },
       error: new Error('error5'),
     })

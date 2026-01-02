@@ -1,23 +1,26 @@
-import type {ModeConfig, TestVariantsLogOptions} from 'src/common/test-variants/types'
+import type {
+  ModeConfig,
+  TestVariantsLogOptions,
+} from 'src/common/test-variants/types'
 
 /** Default log options when logging is enabled */
 export const logOptionsDefault: Required<TestVariantsLogOptions> = {
-  start           : true,
+  start: true,
   progressInterval: 5000,
-  completed       : true,
-  error           : true,
-  modeChange      : true,
-  debug           : false,
+  completed: true,
+  error: true,
+  modeChange: true,
+  debug: false,
 }
 
 /** Log options when logging is disabled */
 export const logOptionsDisabled: TestVariantsLogOptions = {
-  start           : false,
+  start: false,
   progressInterval: false,
-  completed       : false,
-  error           : false,
-  modeChange      : false,
-  debug           : false,
+  completed: false,
+  error: false,
+  modeChange: false,
+  debug: false,
 }
 
 /** Format duration in human-readable form */
@@ -53,8 +56,7 @@ export function getMemoryUsage(): number | null {
   if (typeof process !== 'undefined' && process.memoryUsage) {
     try {
       return process.memoryUsage().heapUsed
-    }
-    catch {
+    } catch {
       // ignore
     }
   }
@@ -62,8 +64,7 @@ export function getMemoryUsage(): number | null {
   if (typeof performance !== 'undefined' && (performance as any).memory) {
     try {
       return (performance as any).memory.usedJSHeapSize
-    }
-    catch {
+    } catch {
       // ignore
     }
   }
@@ -71,7 +72,10 @@ export function getMemoryUsage(): number | null {
 }
 
 /** Format mode config for logging */
-export function formatModeConfig(modeConfig: ModeConfig | null, modeIndex: number): string {
+export function formatModeConfig(
+  modeConfig: ModeConfig | null,
+  modeIndex: number,
+): string {
   if (!modeConfig) {
     return `mode[${modeIndex}]: null`
   }

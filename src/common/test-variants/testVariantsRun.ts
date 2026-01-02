@@ -1,21 +1,24 @@
-import type {TestVariantsTestRun} from './testVariantsCreateTestRun'
-import {AbortControllerFast} from '@flemist/abort-controller-fast'
-import {combineAbortSignals, isPromiseLike} from '@flemist/async-utils'
-import {type IPool, Pool, poolWait} from '@flemist/time-limits'
-import {garbageCollect} from 'src/common/garbage-collect/garbageCollect'
-import type {Obj} from '@flemist/simple-utils'
+import type { TestVariantsTestRun } from './testVariantsCreateTestRun'
+import { AbortControllerFast } from '@flemist/abort-controller-fast'
+import { combineAbortSignals, isPromiseLike } from '@flemist/async-utils'
+import { type IPool, Pool, poolWait } from '@flemist/time-limits'
+import { garbageCollect } from 'src/common/garbage-collect/garbageCollect'
+import type { Obj } from '@flemist/simple-utils'
 import type {
   TestVariantsBestError,
   TestVariantsIterator,
   TestVariantsRunOptions,
   TestVariantsRunResult,
 } from 'src/common/test-variants/types'
-import {generateErrorVariantFilePath, saveErrorVariantFile} from 'src/common/test-variants/saveErrorVariants'
-import {deepEqualJsonLike} from '@flemist/simple-utils'
-import {fileLock} from '@flemist/simple-utils/node'
-import {log} from 'src/common/helpers/log'
+import {
+  generateErrorVariantFilePath,
+  saveErrorVariantFile,
+} from 'src/common/test-variants/saveErrorVariants'
+import { deepEqualJsonLike } from '@flemist/simple-utils'
+import { fileLock } from '@flemist/simple-utils/node'
+import { log } from 'src/common/helpers/log'
 import * as path from 'path'
-import {timeControllerDefault} from '@flemist/time-controller'
+import { timeControllerDefault } from '@flemist/time-controller'
 import {
   formatBytes,
   formatDuration,
@@ -24,8 +27,7 @@ import {
   logOptionsDefault,
   resolveLogOptions,
 } from 'src/common/test-variants/progressLogging'
-import {replayErrorVariants} from 'src/common/test-variants/errorVariantReplay'
-
+import { replayErrorVariants } from 'src/common/test-variants/errorVariantReplay'
 
 export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   testRun: TestVariantsTestRun<Args>,
@@ -36,9 +38,10 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   const sessionDate = new Date()
   const errorVariantFilePath = saveErrorVariants
     ? path.resolve(
-      saveErrorVariants.dir,
-      saveErrorVariants.getFilePath?.({sessionDate}) ?? generateErrorVariantFilePath({sessionDate}),
-    )
+        saveErrorVariants.dir,
+        saveErrorVariants.getFilePath?.({ sessionDate }) ??
+          generateErrorVariantFilePath({ sessionDate }),
+      )
     : null
 
   const GC_Iterations = options.GC_Iterations ?? 1000000
@@ -47,7 +50,8 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
 
   const logOpts = resolveLogOptions(options.log)
   const logStart = logOpts.start ?? logOptionsDefault.start
-  const logInterval = logOpts.progressInterval ?? logOptionsDefault.progressInterval
+  const logInterval =
+    logOpts.progressInterval ?? logOptionsDefault.progressInterval
   const logCompleted = logOpts.completed ?? logOptionsDefault.completed
   const logModeChange = logOpts.modeChange ?? logOptionsDefault.modeChange
   const logDebug = logOpts.debug ?? logOptionsDefault.debug
@@ -59,15 +63,16 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   const limitTime = options.limitTime
   const timeController = options.timeController ?? timeControllerDefault
 
-  const parallel = options.parallel === true
-    ? 2 ** 31
-    : !options.parallel || options.parallel <= 0
-      ? 1
-      : options.parallel
+  const parallel =
+    options.parallel === true
+      ? 2 ** 31
+      : !options.parallel || options.parallel <= 0
+        ? 1
+        : options.parallel
 
   // Apply initial limits
   if (options.limitTests != null) {
-    variants.addLimit({index: options.limitTests})
+    variants.addLimit({ index: options.limitTests })
   }
 
   // Replay phase: run previously saved error variants before normal iteration
@@ -76,7 +81,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
       testRun,
       variants,
       saveErrorVariants,
-      useToFindBestError  : saveErrorVariants.useToFindBestError,
+      useToFindBestError: saveErrorVariants.useToFindBestError,
       findBestErrorEnabled: !!findBestError,
     })
   }
@@ -87,7 +92,10 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   let cycleStartTime = startTime
 
   const abortControllerParallel = new AbortControllerFast()
-  const abortSignalParallel = combineAbortSignals(abortSignalExternal, abortControllerParallel.signal)
+  const abortSignalParallel = combineAbortSignals(
+    abortSignalExternal,
+    abortControllerParallel.signal,
+  )
   const abortSignalAll = abortSignalParallel
 
   const startMemory = getMemoryUsage()
@@ -106,9 +114,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   let prevModeIndex = -1
   let modeChanged = false
 
-  const pool: IPool = parallel <= 1
-    ? null
-    : new Pool(parallel)
+  const pool: IPool = parallel <= 1 ? null : new Pool(parallel)
 
   // Track last saved error args to prevent duplicate writes
   let lastSavedLimitArgs: Args | null = null
@@ -122,10 +128,15 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     if (deepEqualJsonLike(currentArgs, lastSavedLimitArgs)) {
       return
     }
-    lastSavedLimitArgs = {...currentArgs}
+    lastSavedLimitArgs = { ...currentArgs }
     await fileLock({
       filePath: errorVariantFilePath,
-      func    : () => saveErrorVariantFile(currentArgs, errorVariantFilePath, saveErrorVariants.argsToJson),
+      func: () =>
+        saveErrorVariantFile(
+          currentArgs,
+          errorVariantFilePath,
+          saveErrorVariants.argsToJson,
+        ),
     })
   }
 
@@ -148,16 +159,22 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   let timeLimitExceeded = false
   variants.start()
   if (logDebug) {
-    log(`[debug] start() called: cycleIndex=${variants.cycleIndex}, modeIndex=${variants.modeIndex}, minCompletedCount=${variants.minCompletedCount}, cycles=${cycles}`)
+    log(
+      `[debug] start() called: cycleIndex=${variants.cycleIndex}, modeIndex=${variants.modeIndex}, minCompletedCount=${variants.minCompletedCount}, cycles=${cycles}`,
+    )
   }
   // Always show current mode at start
   if (logModeChange) {
     prevModeIndex = variants.modeIndex
-    log(`[test-variants] ${formatModeConfig(variants.modeConfig, variants.modeIndex)}`)
+    log(
+      `[test-variants] ${formatModeConfig(variants.modeConfig, variants.modeIndex)}`,
+    )
   }
   while (variants.minCompletedCount < cycles && !timeLimitExceeded) {
     if (logDebug) {
-      log(`[debug] outer loop: minCompletedCount=${variants.minCompletedCount} < cycles=${cycles}`)
+      log(
+        `[debug] outer loop: minCompletedCount=${variants.minCompletedCount} < cycles=${cycles}`,
+      )
     }
     // Check time limit at start of each round
     if (limitTime && timeController.now() - startTime >= limitTime) {
@@ -166,18 +183,24 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     }
 
     let args: Args | null
-    while (!abortSignalExternal?.aborted && (debug || (args = variants.next()) != null)) {
+    while (
+      !abortSignalExternal?.aborted &&
+      (debug || (args = variants.next()) != null)
+    ) {
       const _args = args
 
       if (variants.modeIndex !== prevModeIndex) {
         if (logDebug) {
-          log(`[debug] mode switch: modeIndex=${variants.modeIndex}, index=${variants.index}`)
+          log(
+            `[debug] mode switch: modeIndex=${variants.modeIndex}, index=${variants.index}`,
+          )
         }
         modeChanged = true
         prevModeIndex = variants.modeIndex
       }
 
-      const now = (logInterval || GC_Interval || limitTime) && timeController.now()
+      const now =
+        (logInterval || GC_Interval || limitTime) && timeController.now()
 
       if (limitTime && now - startTime >= limitTime) {
         timeLimitExceeded = true
@@ -188,7 +211,9 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
         // the log is required to prevent the karma browserNoActivityTimeout
         // Log mode change together with progress when mode changed
         if (logModeChange && modeChanged) {
-          log(`[test-variants] ${formatModeConfig(variants.modeConfig, variants.modeIndex)}`)
+          log(
+            `[test-variants] ${formatModeConfig(variants.modeConfig, variants.modeIndex)}`,
+          )
           modeChanged = false
         }
         let logMsg = '[test-variants] '
@@ -198,32 +223,34 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
           logMsg += `cycle: ${variants.cycleIndex}, variant: ${variants.index}`
           let max = variants.count
           if (max != null) {
-            if (prevCycleVariantsCount != null && prevCycleVariantsCount < max) {
+            if (
+              prevCycleVariantsCount != null &&
+              prevCycleVariantsCount < max
+            ) {
               max = prevCycleVariantsCount
             }
           }
           if (max != null && variants.index > 0) {
             let estimatedCycleTime: number
             if (
-              prevCycleDuration != null && prevCycleVariantsCount != null
-              && variants.index < prevCycleVariantsCount && cycleElapsed < prevCycleDuration
+              prevCycleDuration != null &&
+              prevCycleVariantsCount != null &&
+              variants.index < prevCycleVariantsCount &&
+              cycleElapsed < prevCycleDuration
             ) {
               const adjustedDuration = prevCycleDuration - cycleElapsed
               const adjustedCount = prevCycleVariantsCount - variants.index
               const speedForRemaining = adjustedDuration / adjustedCount
               const remainingTime = (max - variants.index) * speedForRemaining
               estimatedCycleTime = cycleElapsed + remainingTime
-            }
-            else {
-              estimatedCycleTime = cycleElapsed * max / variants.index
+            } else {
+              estimatedCycleTime = (cycleElapsed * max) / variants.index
             }
             logMsg += `/${max} (${formatDuration(cycleElapsed)}/${formatDuration(estimatedCycleTime)})`
-          }
-          else {
+          } else {
             logMsg += ` (${formatDuration(cycleElapsed)})`
           }
-        }
-        else {
+        } else {
           logMsg += `variant: ${variants.index} (${formatDuration(cycleElapsed)})`
         }
         logMsg += `, tests: ${iterations} (${formatDuration(totalElapsed)}), async: ${iterationsAsync}`
@@ -240,9 +267,10 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
       }
 
       if (
-        GC_Iterations && iterations - prevGC_Iterations >= GC_Iterations
-        || GC_IterationsAsync && iterationsAsync - prevGC_IterationsAsync >= GC_IterationsAsync
-        || GC_Interval && now - prevGC_Time >= GC_Interval
+        (GC_Iterations && iterations - prevGC_Iterations >= GC_Iterations) ||
+        (GC_IterationsAsync &&
+          iterationsAsync - prevGC_IterationsAsync >= GC_IterationsAsync) ||
+        (GC_Interval && now - prevGC_Time >= GC_Interval)
       ) {
         prevGC_Iterations = iterations
         prevGC_IterationsAsync = iterationsAsync
@@ -270,40 +298,45 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
             abortControllerParallel.abort()
             continue
           }
-          const {iterationsAsync: _iterationsAsync, iterationsSync: _iterationsSync} = promiseOrIterations
+          const {
+            iterationsAsync: _iterationsAsync,
+            iterationsSync: _iterationsSync,
+          } = promiseOrIterations
           iterationsAsync += _iterationsAsync
           iterations += _iterationsSync + _iterationsAsync
-        }
-        catch (err) {
+        } catch (err) {
           if (findBestError) {
             // Pass captured _args explicitly - state.args may differ in parallel mode
-            variants.addLimit({args: _args, error: err})
+            variants.addLimit({ args: _args, error: err })
             await saveCurrentLimit()
             debug = false
-          }
-          else {
+          } else {
             // Save error variant even without findBestError
             if (errorVariantFilePath) {
               await fileLock({
                 filePath: errorVariantFilePath,
-                func    : () => saveErrorVariantFile(_args, errorVariantFilePath, saveErrorVariants?.argsToJson),
+                func: () =>
+                  saveErrorVariantFile(
+                    _args,
+                    errorVariantFilePath,
+                    saveErrorVariants?.argsToJson,
+                  ),
               })
             }
             throw err
           }
         }
-      }
-      else {
+      } else {
         if (!pool.hold(1)) {
           await poolWait({
             pool,
             count: 1,
-            hold : true,
+            hold: true,
           })
         }
         // Capture current iterations count for this test (tests run before this one)
         const _tests = iterations
-        // eslint-disable-next-line @typescript-eslint/no-loop-func
+
         void (async () => {
           try {
             if (abortSignalParallel?.aborted) {
@@ -322,14 +355,16 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
               abortControllerParallel.abort()
               return
             }
-            const {iterationsAsync: _iterationsAsync, iterationsSync: _iterationsSync} = promiseOrIterations
+            const {
+              iterationsAsync: _iterationsAsync,
+              iterationsSync: _iterationsSync,
+            } = promiseOrIterations
             iterationsAsync += _iterationsAsync
             iterations += _iterationsSync + _iterationsAsync
-          }
-          catch (err) {
+          } catch (err) {
             if (findBestError) {
               // Pass captured _args explicitly - iterator has moved in parallel mode
-              variants.addLimit({args: _args, error: err})
+              variants.addLimit({ args: _args, error: err })
               void saveCurrentLimit()
               debug = false
               // Abort current cycle after first error - next cycle will use new limits
@@ -345,13 +380,17 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
               if (errorVariantFilePath) {
                 void fileLock({
                   filePath: errorVariantFilePath,
-                  func    : () => saveErrorVariantFile(_args, errorVariantFilePath, saveErrorVariants?.argsToJson),
+                  func: () =>
+                    saveErrorVariantFile(
+                      _args,
+                      errorVariantFilePath,
+                      saveErrorVariants?.argsToJson,
+                    ),
                 })
               }
               abortControllerParallel.abort(err)
             }
-          }
-          finally {
+          } finally {
             void pool.release(1)
           }
         })()
@@ -359,7 +398,9 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     }
 
     if (logDebug) {
-      log(`[debug] inner loop exited: modeIndex=${variants.modeIndex}, index=${variants.index}, count=${variants.count}, iterations=${iterations}`)
+      log(
+        `[debug] inner loop exited: modeIndex=${variants.modeIndex}, index=${variants.index}, count=${variants.count}, iterations=${iterations}`,
+      )
     }
 
     // Track cycle metrics for logging
@@ -374,11 +415,15 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     }
 
     if (logDebug) {
-      log(`[debug] calling start() again: cycleIndex=${variants.cycleIndex}, minCompletedCount before start=${variants.minCompletedCount}`)
+      log(
+        `[debug] calling start() again: cycleIndex=${variants.cycleIndex}, minCompletedCount before start=${variants.minCompletedCount}`,
+      )
     }
     variants.start()
     if (logDebug) {
-      log(`[debug] after start(): cycleIndex=${variants.cycleIndex}, modeIndex=${variants.modeIndex}, minCompletedCount=${variants.minCompletedCount}`)
+      log(
+        `[debug] after start(): cycleIndex=${variants.cycleIndex}, modeIndex=${variants.modeIndex}, minCompletedCount=${variants.minCompletedCount}`,
+      )
     }
   }
 
@@ -386,7 +431,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     await poolWait({
       pool,
       count: parallel,
-      hold : true,
+      hold: true,
     })
     void pool.release(parallel)
   }
@@ -405,10 +450,12 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   const includeErrorVariant = findBestError?.includeErrorVariant
   const bestError: TestVariantsBestError<Args> | null = variants.limit
     ? {
-      error: variants.limit.error,
-      args : variants.limit.args,
-      tests: includeErrorVariant ? (variants.count ?? 1) - 1 : (variants.count ?? 0),
-    }
+        error: variants.limit.error,
+        args: variants.limit.args,
+        tests: includeErrorVariant
+          ? (variants.count ?? 1) - 1
+          : (variants.count ?? 0),
+      }
     : null
 
   if (bestError && !dontThrowIfError) {
