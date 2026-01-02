@@ -1,8 +1,21 @@
 export {
-  type Obj,
-  type TestVariantsLogOptions,
+  type AddLimitOptions,
   type GenerateErrorVariantFilePathOptions,
+  type GetSeedParams,
+  type LimitArgOnError,
+  type LimitArgOnErrorOptions,
+  type ModeConfig,
   type SaveErrorVariantsOptions,
+  type TestVariantsBestError,
+  type TestVariantsFindBestErrorOptions,
+  type TestVariantsIterator,
+  type TestVariantsIteratorLimit,
+  type TestVariantsIteratorOptions,
+  type TestVariantsLogOptions,
+  type TestVariantsRunOptions,
+  type TestVariantsRunResult,
+  type TestVariantsTemplate,
+  type TestVariantsTemplates,
 } from 'src/test-variants/types'
 export {
   generateErrorVariantFilePath,
@@ -17,27 +30,11 @@ export {
   type TestVariantsTestRunResult,
 } from 'src/test-variants/testVariantsCreateTestRun'
 export {
-  type TestVariantsFindBestErrorOptions,
-  type TestVariantsRunOptions,
-  type TestVariantsBestError,
-  type TestVariantsRunResult,
-} from 'src/test-variants/testVariantsRun'
-export {
   type TestVariantsTemplatesExt,
   type TestVariantsSetArgs,
   type TestVariantsCall,
   createTestVariants,
 } from './test-variants/createTestVariants'
 export {
-  type GetSeedParams,
-  type LimitArgOnErrorOptions,
-  type LimitArgOnError,
-  type ModeConfig,
-  type TestVariantsIteratorOptions,
-  type TestVariantsIteratorLimit,
-  type AddLimitOptions,
-  type TestVariantsIterator,
   testVariantsIterator,
 } from 'src/test-variants/testVariantsIterator'
-export type {TestVariantsTemplates} from 'src/test-variants/types'
-export type {TestVariantsTemplate} from 'src/test-variants/types'

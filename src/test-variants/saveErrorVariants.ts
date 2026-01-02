@@ -1,7 +1,8 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import {formatDateFileName} from '@flemist/simple-utils'
-import {type GenerateErrorVariantFilePathOptions, type Obj} from 'src/test-variants/types'
+import type {Obj} from '@flemist/simple-utils'
+import type {GenerateErrorVariantFilePathOptions} from 'src/test-variants/types'
 
 /** Reads saved error variant files from directory, sorted by filename descending (newest first) */
 export async function readErrorVariantFiles(dir: string): Promise<string[]> {

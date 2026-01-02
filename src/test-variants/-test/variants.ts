@@ -56,12 +56,13 @@
  */
 
 import {createTestVariants} from 'src/test-variants/createTestVariants'
-import {deepCloneJsonLike, deepEqualJsonLike, getRandomSeed, Random, randomBoolean, randomInt} from '@flemist/simple-utils'
+import {
+  deepCloneJsonLike, deepEqualJsonLike, Random, randomBoolean, randomInt,
+} from '@flemist/simple-utils'
 import {
   log, traceLog, traceEnter, traceExit, formatValue, resetLog,
 } from 'src/helpers/log'
-import type {TestVariantsRunOptions, TestVariantsRunResult} from 'src/test-variants/testVariantsRun'
-import type {ModeConfig} from 'src/test-variants/testVariantsIterator'
+import type {ModeConfig, TestVariantsRunOptions, TestVariantsRunResult} from 'src/test-variants/types'
 
 // region Debug Logging
 
@@ -455,7 +456,13 @@ function verifyCallCount(
 
   // Verify: when error expected and iterations expected, callCount should be > 0
   const expectedIterations = (totalVariantsCount ?? 0) * cycles * attemptsPerVariant * forwardModeCycles
-  if (errorIndex !== null && totalVariantsCount !== null && totalVariantsCount > 0 && expectedIterations > 0 && callCount === 0) {
+  if (
+    errorIndex !== null
+    && totalVariantsCount !== null
+    && totalVariantsCount > 0
+    && expectedIterations > 0
+    && callCount === 0
+  ) {
     throw new Error(`Expected callCount > 0 when error expected, got ${callCount}`)
   }
 
@@ -981,13 +988,16 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   else if (totalVariantsCount !== null) {
     // Static template: use max of all mode formulas
     const sequentialMax = totalVariantsCount * guardCycles * guardRepeats * guardForwardCycles * guardFindBestError
-    const randomMax = guardCycles * Math.max(1, totalVariantsCount * guardRepeats * guardForwardCycles) * guardFindBestError
+    const randomMax = guardCycles
+      * Math.max(1, totalVariantsCount * guardRepeats * guardForwardCycles)
+      * guardFindBestError
     maxExpectedCalls = Math.max(sequentialMax, randomMax)
   }
   else {
     // Dynamic template: use max of sequential estimate and random limit
     const estimatedVariants = (options.valuesPerArgMax + 1)**argsCount
-    const sequentialMax = Math.max(1, estimatedVariants) * guardCycles * guardRepeats * guardForwardCycles * guardFindBestError
+    const sequentialMax = Math.max(1, estimatedVariants)
+      * guardCycles * guardRepeats * guardForwardCycles * guardFindBestError
     const randomMax = guardCycles * 100 * guardFindBestError
     maxExpectedCalls = Math.max(sequentialMax, randomMax)
   }
@@ -1204,7 +1214,20 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     if (logEnabled) {
       traceEnter(`verifyBestError`)
     }
-    verifyBestError(result.bestError, findBestError, dontThrowIfError, errorIndex, errorVariantArgs, errorVariantCallCount, retriesToError, cycles, attemptsPerVariant, forwardModeCycles, iterationMode, isMultiMode)
+    verifyBestError(
+      result.bestError,
+      findBestError,
+      dontThrowIfError,
+      errorIndex,
+      errorVariantArgs,
+      errorVariantCallCount,
+      retriesToError,
+      cycles,
+      attemptsPerVariant,
+      forwardModeCycles,
+      iterationMode,
+      isMultiMode,
+    )
     if (logEnabled) {
       traceExit(`ok`)
     }

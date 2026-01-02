@@ -5,9 +5,10 @@ import {
   TestVariantsTest,
   TestVariantsCreateTestRunOptions,
 } from 'src/test-variants/testVariantsCreateTestRun'
-import {testVariantsRun, TestVariantsRunOptions, TestVariantsRunResult} from 'src/test-variants/testVariantsRun'
+import {testVariantsRun} from 'src/test-variants/testVariantsRun'
+import type {Obj} from '@flemist/simple-utils'
 import {testVariantsIterator} from 'src/test-variants/testVariantsIterator'
-import {Obj, TestVariantsTemplates} from 'src/test-variants/types'
+import {TestVariantsRunOptions, TestVariantsRunResult, TestVariantsTemplates} from 'src/test-variants/types'
 
 /** Extended templates type that allows additional args beyond the base Args type */
 export type TestVariantsTemplatesExt<Args extends Obj, ArgsExtra extends Obj> =

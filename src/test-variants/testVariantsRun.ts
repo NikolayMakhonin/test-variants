@@ -1,16 +1,22 @@
 import {TestVariantsTestRun} from './testVariantsCreateTestRun'
-import {AbortControllerFast, type IAbortSignalFast} from '@flemist/abort-controller-fast'
+import {AbortControllerFast} from '@flemist/abort-controller-fast'
 import {combineAbortSignals, isPromiseLike} from '@flemist/async-utils'
 import {type IPool, Pool, poolWait} from '@flemist/time-limits'
 import {garbageCollect} from 'src/garbage-collect/garbageCollect'
-import {Obj, type SaveErrorVariantsOptions, type TestVariantsLogOptions} from 'src/test-variants/types'
+import type {Obj} from '@flemist/simple-utils'
+import type {
+  ModeConfig,
+  TestVariantsBestError,
+  TestVariantsIterator,
+  TestVariantsLogOptions,
+  TestVariantsRunOptions,
+  TestVariantsRunResult,
+} from 'src/test-variants/types'
 import {generateErrorVariantFilePath, parseErrorVariantFile, readErrorVariantFiles, saveErrorVariantFile} from 'src/test-variants/saveErrorVariants'
-import {TestVariantsIterator, type GetSeedParams, type LimitArgOnError, type ModeConfig} from './testVariantsIterator'
 import {deepEqualJsonLike} from '@flemist/simple-utils'
 import {fileLock} from '@flemist/simple-utils/node'
 import {log} from 'src/helpers/log'
 import * as path from 'path'
-import type {ITimeController} from '@flemist/time-controller'
 import {timeControllerDefault} from '@flemist/time-controller'
 
 const logOptionsDefault: Required<TestVariantsLogOptions> = {
@@ -100,58 +106,6 @@ function formatModeConfig(modeConfig: ModeConfig | null, modeIndex: number): str
   return result
 }
 
-/** Options for finding the earliest failing variant across multiple test runs */
-export type TestVariantsFindBestErrorOptions = {
-  /** Custom equality for comparing arg values when finding indexes */
-  equals?: null | ((a: any, b: any) => boolean),
-  /** Limit per-arg indexes on error; boolean enables/disables, function for custom per-arg logic */
-  limitArgOnError?: null | boolean | LimitArgOnError,
-  /** When true, error variant is included in iteration (for debugging); default false excludes it */
-  includeErrorVariant?: null | boolean,
-  /** Return found error instead of throwing after all cycles complete */
-  dontThrowIfError?: null | boolean,
-}
-
-export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
-  /** Wait for garbage collection after iterations */
-  GC_Iterations?: null | number,
-  /** Same as GC_Iterations but only for async test variants, required for 10000 and more of Promise rejections */
-  GC_IterationsAsync?: null | number,
-  /** Wait for garbage collection after time interval, required to prevent the karma browserDisconnectTimeout */
-  GC_Interval?: null | number,
-  /** Logging options; null/true uses defaults; false disables all; object for fine-grained control */
-  log?: null | boolean | TestVariantsLogOptions,
-  abortSignal?: null | IAbortSignalFast,
-  /** true - all in parallel; number - max parallel; false/0/undefined - sequential */
-  parallel?: null | number | boolean,
-  /** Number of full passes through all variants; default 1 */
-  cycles?: null | number,
-  /** Generates seed for reproducible randomized testing; seed is added to args */
-  getSeed?: null | ((params: GetSeedParams) => any),
-  /** Iteration modes (variant traversal methods); each mode runs until its limits are reached */
-  iterationModes?: null | ModeConfig[],
-  findBestError?: null | TestVariantsFindBestErrorOptions,
-  /** Save error-causing args to files and replay them before normal iteration */
-  saveErrorVariants?: null | SaveErrorVariantsOptions<Args, SavedArgs>,
-  /** Tests only first N variants, ignores the rest. If null or not specified, tests all variants */
-  limitTests?: null | number,
-  /** Maximum test run duration in milliseconds; when exceeded, iteration stops and current results are returned */
-  limitTime?: null | number,
-  /** Time controller for testable time-dependent operations; null uses timeControllerDefault */
-  timeController?: null | ITimeController,
-}
-
-export type TestVariantsBestError<Args extends Obj> = {
-  error: any,
-  args: Args,
-  /** Number of tests run before the error (including attemptsPerVariant) */
-  tests: number,
-}
-
-export type TestVariantsRunResult<Arg extends Obj> = {
-  iterations: number
-  bestError: null | TestVariantsBestError<Arg>
-}
 
 export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   testRun: TestVariantsTestRun<Args>,
@@ -321,7 +275,6 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
 
     let args: Args | null
     while (!abortSignalExternal?.aborted && (debug || (args = variants.next()) != null)) {
-      const _index = variants.index
       const _args = args
 
       if (variants.modeIndex !== prevModeIndex) {
