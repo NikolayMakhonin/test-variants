@@ -1,5 +1,6 @@
 import * as fs from 'fs'
 import * as path from 'path'
+import {formatDateFileName} from '@flemist/simple-utils'
 import {type GenerateErrorVariantFilePathOptions, type Obj} from 'src/test-variants/types'
 
 /** Reads saved error variant files from directory, sorted by filename descending (newest first) */
@@ -50,14 +51,8 @@ export async function parseErrorVariantFile<Args extends Obj, SavedArgs>(
 export function generateErrorVariantFilePath(
   options: GenerateErrorVariantFilePathOptions,
 ): string {
-  // TODO: Use formatDateFileName from @flemist/simple-utils
   const hash = Math.random().toString(36).substring(2)
-  return options.sessionDate.toISOString()
-    .substring(0, 19)
-    .replace('T', '_')
-    .replaceAll(':', '-')
-    + '_' + hash
-    + '.json'
+  return formatDateFileName(options.sessionDate, 'UTC') + '_' + hash + '.json'
 }
 
 /** Saves error-causing args to a JSON file, overwrites if file exists */

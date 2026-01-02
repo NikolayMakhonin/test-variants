@@ -56,9 +56,7 @@
  */
 
 import {createTestVariants} from 'src/test-variants/createTestVariants'
-import {getRandomSeed, Random} from 'src/test-variants/random/Random'
-import {randomBoolean, randomInt} from 'src/test-variants/random/helpers'
-import {deepCloneJsonLike, deepEqualJsonLike} from '@flemist/simple-utils'
+import {deepCloneJsonLike, deepEqualJsonLike, getRandomSeed, Random, randomBoolean, randomInt} from '@flemist/simple-utils'
 import {
   log, traceLog, traceEnter, traceExit, formatValue, resetLog,
 } from 'src/helpers/log'

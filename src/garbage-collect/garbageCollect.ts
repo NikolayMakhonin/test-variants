@@ -1,3 +1,5 @@
+import {waitMicrotasks} from '@flemist/async-utils'
+
 /** Wait for garbage collection and return 0. It may be required for very long calculations. */
 export function garbageCollect(iterations: number): Promise<0> {
   if (iterations == null || iterations <= 0) {
@@ -5,23 +7,9 @@ export function garbageCollect(iterations: number): Promise<0> {
   }
   iterations--
 
-  // const time0 = Date.now()
-  const promise = new Promise<number>(resolve => {
-    // TODO: use waitMicrotasks from @flemist/async-utils
-    setTimeout(() => {
-      resolve(iterations)
-    }, 1)
-  })
+  const promise = waitMicrotasks().then(() => iterations)
 
   return iterations <= 0
     ? promise as Promise<0>
     : promise.then(garbageCollect)
-    // : promise.then(o => {
-    //   const gcTime = Date.now() - time0
-    //   if (gcTime > 50) {
-    //     console.log('GC time: ' + gcTime)
-    //     o++
-    //   }
-    //   return garbageCollect(o)
-    // })
 }

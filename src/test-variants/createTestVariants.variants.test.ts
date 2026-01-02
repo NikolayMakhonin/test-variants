@@ -1,5 +1,5 @@
 /* eslint-disable func-names */
-import {getRandomSeed} from 'src/test-variants/random/Random'
+import {getRandomSeed} from '@flemist/simple-utils'
 import {testVariants} from 'src/test-variants/-test/variants'
 import {log} from 'src/helpers/log'
 
