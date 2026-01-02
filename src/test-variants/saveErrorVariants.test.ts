@@ -176,7 +176,7 @@ describe('test-variants > saveErrorVariants', function () {
       await assert.rejects(
         async () => testFn({a: [1, 2, 3]})({
           saveErrorVariants: {dir: TEST_DIR},
-          log: false,
+          log              : false,
         }),
         /test error/,
       )
@@ -212,7 +212,7 @@ describe('test-variants > saveErrorVariants', function () {
 
       await testFn({a: [1, 2]})({
         saveErrorVariants: {dir: TEST_DIR},
-        log: false,
+        log              : false,
       })
 
       assert.deepStrictEqual(replayedArgs, [99])
@@ -235,7 +235,7 @@ describe('test-variants > saveErrorVariants', function () {
       await assert.rejects(
         async () => testFn({a: [2, 3]})({
           saveErrorVariants: {dir: TEST_DIR},
-          log: false,
+          log              : false,
         }),
         /replay error/,
       )
@@ -262,7 +262,7 @@ describe('test-variants > saveErrorVariants', function () {
 
       await testFn({a: [2]})({
         saveErrorVariants: {
-          dir              : TEST_DIR,
+          dir               : TEST_DIR,
           attemptsPerVariant: 3,
         },
         log: false,
