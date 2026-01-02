@@ -2,46 +2,43 @@ name: Test
 'on':
   push:
     branches:
-      - 'master'
+      - main
   pull_request:
     branches:
-      - 'master'
+      - main
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.57.0-noble
     strategy:
       matrix:
-        node-version: [18.x, 16.x]
+        node-version: [20.x]
 
     steps:
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v2
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
 
-      - name: Check secrets
-        env:
-          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-        run: |
-          node -e "o=['COVERALLS_REPO_TOKEN'].filter(o=>!process.env[o]);o.length&&(console.log('You should set env variables: '+o.join(', ')),process.exit(1))"
-
-      - uses: actions/checkout@v2
+      # region pnpm
 
       # from: https://github.com/pnpm/action-setup
       - name: Install pnpm
         id: pnpm-install
-        uses: pnpm/action-setup@v2.1.0
+        uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 10
           run_install: false
 
       - name: Get pnpm store directory
         id: pnpm-cache
+        shell: bash
         run: |
-          echo "::set-output name=pnpm_cache_dir::$(pnpm store path)"
+          echo "pnpm_cache_dir=$(pnpm store path)" >> $GITHUB_OUTPUT
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         name: Setup pnpm cache
         with:
           path: ${{ steps.pnpm-cache.outputs.pnpm_cache_dir }}
@@ -49,14 +46,32 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
+      # endregion
+
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies (for rdtsc)
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends make g++
+
       - name: Install dependencies
         run: |
           pnpm install --frozen-lockfile
 
+      - name: Debug environment
+        run: |
+          echo "Playwright version:"
+          pnpm playwright --version
+          echo "Browsers path:"
+          ls -la ~/.cache/ms-playwright/ || echo "No browsers in default path"
+          echo "Container check:"
+          [ -f /.dockerenv ] && echo "Running inside Docker container" || echo "NOT inside container"
+          cat /etc/os-release
+
       - name: Lint
         shell: bash
         run: |
-          pnpm run audit
           pnpm run lint
 
       - name: Build
@@ -64,37 +79,9 @@ jobs:
         run: |
           pnpm run build
 
-      - name: Mocha tests
+      - name: Test
         shell: bash
-        run: |
-          pnpm run test:mocha:ci
-
-      - name: Install chromium dependencies
-        if: ${{ matrix.node-version == '18.x' }}
-        run: |
-          sudo apt install libudev-dev libgtk2.0-0
-          sudo ln -sf /lib/$(arch)-linux-gnu/libudev.so.1 /lib/$(arch)-linux-gnu/libudev.so.0
-
-      - name: Install chromium
-        if: ${{ matrix.node-version == '18.x' }}
-        uses: browser-actions/setup-chrome@latest
-        with:
-          chrome-version: 297097 # Chromium 39.0.2171.99 (Android - 5.1.0)
-
-      - name: Karma tests
-        if: ${{ matrix.node-version == '18.x' }}
-        uses: GabrielBB/xvfb-action@v1
         env:
-          CHROMIUM_BIN: /opt/hostedtoolcache/chromium/297097/x64/chrome
-        with:
-          run: |
-            pnpm run test:karma
-
-      - name: Coveralls
-        if: ${{ matrix.node-version == '18.x' }}
-        env:
-          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-        shell: bash
+          HOME: /root
         run: |
-          pnpm add coveralls -D
-          pnpm run coveralls
+          xvfb-run pnpm run test

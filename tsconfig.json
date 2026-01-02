@@ -1,43 +1,50 @@
 {
-  "ts-node": {
-    "compilerOptions": {
-      "module": "node16",
-      "moduleResolution": "node16"
-    }
-  },
-  "include": [
-    "@types/**/*",
-    "src/**/*"
-  ],
-  "exclude": [
-    "node_modules/**/*",
-    "dist/**/*"
-  ],
   "compilerOptions": {
-    "target": "es6",
-    "module": "es6",
-    "isolatedModules": false,
-    "declaration": false,
-    "emitDeclarationOnly": true,
+    "rootDirs": ["."],
+    "isolatedModules": true,
+    "moduleResolution": "bundler",
+    "module": "esnext",
+    "noEmit": true,
+    "target": "esnext",
+
+    "allowJs": true,
+    "checkJs": true,
     "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "moduleResolution": "node16",
-    "allowSyntheticDefaultImports": true,
-    "downlevelIteration": true,
-    "newLine": "LF",
-    "typeRoots": [
-      "node_modules/@types",
-      "@types"
-    ],
-    "lib": [
-      "DOM",
-      "ESNext"
-    ],
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "strict": true,
+    "noImplicitAny": false,
+    "preserveValueImports": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "strictNullChecks": true,
+    "importsNotUsedAsValues": "remove",
+    "verbatimModuleSyntax": false,
+    "noUnusedLocals": false,
+    "allowUnusedLabels": true,
+    "noUnusedParameters": false,
+    "useUnknownInCatchVariables": false,
     "baseUrl": ".",
     "paths": {
-      "src/*": [
-        "src/*"
-      ]
-    }
-  }
+      "src/*": ["src/*"]
+    },
+    "lib": ["ESNext", "DOM", "DOM.Iterable", "WebWorker"]
+  },
+  "include": [
+    "./global.d.ts",
+    "./vite.config",
+    "./src/**/*.js",
+    "./src/**/*.ts",
+    "./tools/**/*.ts"
+  ],
+  "exclude": [
+    "./node_modules/**",
+    "**/temp/**",
+    "**/tmp/**",
+    "**/-temp/**",
+    "**/-tmp/**",
+    "./ai/**"
+  ]
 }

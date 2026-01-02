@@ -1,5 +1,12 @@
 /*
-!/dist
-/dist/**/test/**
-/dist/**/*.test.*
-/dist/**/*.stress.*
+!/build
+/build/**/test/**
+/build/**/*.test.*
+/build/**/*.stress.*
+/build/**/*.perf.*
+/build/**/*.browser.*
+/build/**/*.chrome.*
+/build/**/*.manual.*
+**/-deprecated/**
+**/-tmp/**
+**/-temp/**

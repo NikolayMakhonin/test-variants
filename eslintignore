@@ -1,3 +1,5 @@
+!.*
+
 # For .gitignore
 /.git
 .DS_Store
@@ -5,7 +7,6 @@ node_modules
 /package-lock.json
 /yarn.lock
 /dist
-/dev-dist
 /build
 /coverage
 /pass
@@ -25,6 +26,24 @@ vite.config.ts.timestamp-*
 /..bfg-report
 /ngrok.yml
 /deps.dot
-/.idea/copilot*
-/.claude
 /ai
+
+# For .eslintignore
+/ai
+/docs
+/.idea
+/.github
+/.husky
+**/temp
+**/tmp
+**/-temp
+**/-tmp
+**/-res
+**/generated/*.json
+*.log
+.env.*
+pnpm-lock.yaml
+/tools/*.js
+/tools/*.html
+/functions
+/test
