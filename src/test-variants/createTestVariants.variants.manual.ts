@@ -4,7 +4,7 @@ import {testVariants} from 'src/test-variants/createTestVariants.variants.test'
 
 // Manual test file for human usage only
 // eslint-disable-next-line no-undef
-describe('test-variants > createTestVariants variants', function () {
+describe('test-variants > createTestVariants variants endless', function () {
   this.timeout(7 * 60 * 60 * 1000)
 
   // eslint-disable-next-line no-undef
