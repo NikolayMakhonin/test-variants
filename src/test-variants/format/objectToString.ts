@@ -11,7 +11,7 @@ function tryGetValue(obj: any, key: string): any {
   }
 }
 
-// TODO: перенести вместе с match в пакет test utils
+/** @deprecated Use formatAny from @flemist/simple-utils */
 export function objectToString(
   obj: any,
   options: {
@@ -161,6 +161,7 @@ export function objectToString(
     result += '{'
     const len = maxItems != null ? Math.min(obj.length, maxItems) : obj.length
     let i = 0
+    // eslint-disable-next-line guard-for-in
     for (const key in obj) {
       if (i === 0 && pretty) {
         result += '\n'

@@ -1,3 +1,4 @@
+/** @deprecated Use deepEqualJsonLike from @flemist/simple-utils */
 export function deepEqual(a: unknown, b: unknown): boolean {
   if (a === b) {
     return true
