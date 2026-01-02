@@ -1,3 +1,5 @@
+import { describe, it, beforeEach, afterEach } from 'vitest'
+import * as assert from 'node:assert'
 import * as fs from 'fs'
 import * as path from 'path'
 import { createTestVariants } from './createTestVariants'
@@ -14,30 +16,30 @@ async function cleanTestDir() {
   await fs.promises.rm(TEST_DIR, { recursive: true, force: true })
 }
 
-describe('test-variants > saveErrorVariants', function () {
-  beforeEach(async function () {
+describe('test-variants > saveErrorVariants', () => {
+  beforeEach(async () => {
     await cleanTestDir()
   })
 
-  afterEach(async function () {
+  afterEach(async () => {
     await cleanTestDir()
   })
 
-  describe('readErrorVariantFiles', function () {
-    it('returns empty array when dir does not exist', async function () {
+  describe('readErrorVariantFiles', () => {
+    it('returns empty array when dir does not exist', async () => {
       const files = await readErrorVariantFiles(
         path.join(TEST_DIR, 'nonexistent'),
       )
       assert.deepStrictEqual(files, [])
     })
 
-    it('returns empty array when dir is empty', async function () {
+    it('returns empty array when dir is empty', async () => {
       await fs.promises.mkdir(TEST_DIR, { recursive: true })
       const files = await readErrorVariantFiles(TEST_DIR)
       assert.deepStrictEqual(files, [])
     })
 
-    it('returns json files sorted descending by filename', async function () {
+    it('returns json files sorted descending by filename', async () => {
       await fs.promises.mkdir(TEST_DIR, { recursive: true })
       await fs.promises.writeFile(
         path.join(TEST_DIR, '2024-01-01_10-00-00.json'),
@@ -61,7 +63,7 @@ describe('test-variants > saveErrorVariants', function () {
       ])
     })
 
-    it('throws when path is not a directory', async function () {
+    it('throws when path is not a directory', async () => {
       await fs.promises.mkdir(TEST_DIR, { recursive: true })
       const filePath = path.join(TEST_DIR, 'file.txt')
       await fs.promises.writeFile(filePath, '')
@@ -73,8 +75,8 @@ describe('test-variants > saveErrorVariants', function () {
     })
   })
 
-  describe('parseErrorVariantFile', function () {
-    it('parses json file', async function () {
+  describe('parseErrorVariantFile', () => {
+    it('parses json file', async () => {
       await fs.promises.mkdir(TEST_DIR, { recursive: true })
       const filePath = path.join(TEST_DIR, 'test.json')
       await fs.promises.writeFile(filePath, '{"a": 1, "b": "test"}')
@@ -83,7 +85,7 @@ describe('test-variants > saveErrorVariants', function () {
       assert.deepStrictEqual(args, { a: 1, b: 'test' })
     })
 
-    it('uses jsonToArgs transform', async function () {
+    it('uses jsonToArgs transform', async () => {
       await fs.promises.mkdir(TEST_DIR, { recursive: true })
       const filePath = path.join(TEST_DIR, 'test.json')
       await fs.promises.writeFile(filePath, '{"value": 42}')
@@ -97,7 +99,7 @@ describe('test-variants > saveErrorVariants', function () {
       assert.deepStrictEqual(args, { transformed: 84 })
     })
 
-    it('throws on invalid json', async function () {
+    it('throws on invalid json', async () => {
       await fs.promises.mkdir(TEST_DIR, { recursive: true })
       const filePath = path.join(TEST_DIR, 'test.json')
       await fs.promises.writeFile(filePath, 'invalid json')
@@ -105,7 +107,7 @@ describe('test-variants > saveErrorVariants', function () {
       await assert.rejects(parseErrorVariantFile(filePath), /invalid JSON/)
     })
 
-    it('throws when jsonToArgs fails', async function () {
+    it('throws when jsonToArgs fails', async () => {
       await fs.promises.mkdir(TEST_DIR, { recursive: true })
       const filePath = path.join(TEST_DIR, 'test.json')
       await fs.promises.writeFile(filePath, '{"a": 1}')
@@ -119,16 +121,16 @@ describe('test-variants > saveErrorVariants', function () {
     })
   })
 
-  describe('generateErrorVariantFilePath', function () {
-    it('generates filename with UTC date format and random hash', function () {
+  describe('generateErrorVariantFilePath', () => {
+    it('generates filename with UTC date format and random hash', () => {
       const sessionDate = new Date('2024-06-15T14:30:45.123Z')
       const filePath = generateErrorVariantFilePath({ sessionDate })
       assert.match(filePath, /^2024-06-15_14-30-45_[a-z0-9]+\.json$/)
     })
   })
 
-  describe('saveErrorVariantFile', function () {
-    it('saves args to json file', async function () {
+  describe('saveErrorVariantFile', () => {
+    it('saves args to json file', async () => {
       const filePath = path.join(TEST_DIR, 'test.json')
       await saveErrorVariantFile({ a: 1, b: 'test' }, filePath)
 
@@ -136,7 +138,7 @@ describe('test-variants > saveErrorVariants', function () {
       assert.deepStrictEqual(JSON.parse(content), { a: 1, b: 'test' })
     })
 
-    it('uses argsToJson transform returning object', async function () {
+    it('uses argsToJson transform returning object', async () => {
       const filePath = path.join(TEST_DIR, 'test.json')
       await saveErrorVariantFile({ a: 1, b: 'test' }, filePath, args => ({
         transformed: args.a * 2,
@@ -146,7 +148,7 @@ describe('test-variants > saveErrorVariants', function () {
       assert.deepStrictEqual(JSON.parse(content), { transformed: 2 })
     })
 
-    it('uses argsToJson transform returning string', async function () {
+    it('uses argsToJson transform returning string', async () => {
       const filePath = path.join(TEST_DIR, 'test.json')
       await saveErrorVariantFile(
         { a: 1 },
@@ -158,7 +160,7 @@ describe('test-variants > saveErrorVariants', function () {
       assert.strictEqual(content, 'custom string content')
     })
 
-    it('creates dir if not exists', async function () {
+    it('creates dir if not exists', async () => {
       const nestedDir = path.join(TEST_DIR, 'nested', 'path')
       const filePath = path.join(nestedDir, 'test.json')
       await saveErrorVariantFile({ a: 1 }, filePath)
@@ -167,7 +169,7 @@ describe('test-variants > saveErrorVariants', function () {
       assert.ok(stat.isDirectory())
     })
 
-    it('overwrites existing file', async function () {
+    it('overwrites existing file', async () => {
       const filePath = path.join(TEST_DIR, 'test.json')
       await saveErrorVariantFile({ a: 1 }, filePath)
       await saveErrorVariantFile({ a: 2 }, filePath)
@@ -177,8 +179,8 @@ describe('test-variants > saveErrorVariants', function () {
     })
   })
 
-  describe('integration with createTestVariants', function () {
-    it('saves error-causing args to file', async function () {
+  describe('integration with createTestVariants', () => {
+    it('saves error-causing args to file', async () => {
       let callCount = 0
       const testFn = createTestVariants(({ a }: { a: number }) => {
         callCount++
@@ -207,7 +209,7 @@ describe('test-variants > saveErrorVariants', function () {
       assert.strictEqual(savedArgs.a, 2)
     })
 
-    it('replays saved variants before normal iteration', async function () {
+    it('replays saved variants before normal iteration', async () => {
       await fs.promises.mkdir(TEST_DIR, { recursive: true })
       await fs.promises.writeFile(
         path.join(TEST_DIR, '2024-01-01_10-00-00.json'),
@@ -236,7 +238,7 @@ describe('test-variants > saveErrorVariants', function () {
       assert.deepStrictEqual(normalArgs, [1, 2])
     })
 
-    it('throws on replay failure without saving file', async function () {
+    it('throws on replay failure without saving file', async () => {
       await fs.promises.mkdir(TEST_DIR, { recursive: true })
       await fs.promises.writeFile(
         path.join(TEST_DIR, '2024-01-01_10-00-00.json'),
@@ -264,7 +266,7 @@ describe('test-variants > saveErrorVariants', function () {
       assert.strictEqual(files[0], '2024-01-01_10-00-00.json')
     })
 
-    it('retries replay variants multiple times', async function () {
+    it('retries replay variants multiple times', async () => {
       await fs.promises.mkdir(TEST_DIR, { recursive: true })
       await fs.promises.writeFile(
         path.join(TEST_DIR, '2024-01-01_10-00-00.json'),

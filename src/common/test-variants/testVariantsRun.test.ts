@@ -1,11 +1,11 @@
+import { describe, it } from 'vitest'
+import * as assert from 'node:assert'
 import { testVariantsRun } from 'src/common/test-variants/testVariantsRun'
 import { testVariantsIterator } from 'src/common/test-variants/testVariantsIterator'
 import { TestVariantsTestRun } from './testVariantsCreateTestRun'
 
-describe('test-variants > testVariantsRun', function () {
-  this.timeout(10 * 60 * 1000)
-
-  it('findBestError with limitArgOnError should constrain second cycle', async function () {
+describe('test-variants > testVariantsRun', { timeout: 10 * 60 * 1000 }, () => {
+  it('findBestError with limitArgOnError should constrain second cycle', async () => {
     // Bug reproduction test:
     // When limitArgOnError is enabled, the second cycle should iterate
     // through a constrained number of variants based on argLimits,
@@ -85,7 +85,7 @@ describe('test-variants > testVariantsRun', function () {
     }
   })
 
-  it('findBestError with limitArgOnError and dynamic templates', async function () {
+  it('findBestError with limitArgOnError and dynamic templates', async () => {
     // Test with dynamic templates (functions) to verify argLimits work correctly
     // when template values depend on previous args
 
@@ -161,7 +161,7 @@ describe('test-variants > testVariantsRun', function () {
     }
   })
 
-  it('findBestError with limitArgOnError and getSeed', async function () {
+  it('findBestError with limitArgOnError and getSeed', async () => {
     // Test with getSeed to verify argLimits work correctly when seeds are involved
     // This tests the scenario where:
     // 1. Error is found at some seed in cycle 1
@@ -233,7 +233,7 @@ describe('test-variants > testVariantsRun', function () {
     }
   })
 
-  it('findBestError with limitArgOnError and object values', async function () {
+  it('findBestError with limitArgOnError and object values', async () => {
     // Test with object values to verify reference comparison doesn't break argLimits
     // Objects are compared by reference with ===, which could fail if templates
     // create new objects on each call
@@ -305,7 +305,7 @@ describe('test-variants > testVariantsRun', function () {
     }
   })
 
-  it('findBestError with limitArgOnError and dynamic object values - BUG REPRODUCTION', async function () {
+  it('findBestError with limitArgOnError and dynamic object values - BUG REPRODUCTION', async () => {
     // BUG REPRODUCTION TEST
     // When dynamic templates create NEW object instances on each call,
     // the === comparison fails and argLimits may not work correctly
@@ -377,7 +377,7 @@ describe('test-variants > testVariantsRun', function () {
     }
   })
 
-  it('findBestError', async function () {
+  it('findBestError', async () => {
     const cycles = 10
     const variantsCount = 1000
 

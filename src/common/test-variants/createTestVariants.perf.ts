@@ -1,10 +1,9 @@
+import { describe, it } from 'vitest'
 import { calcPerformance } from 'rdtsc/node'
 import { createTestVariants } from './createTestVariants'
 
-describe('test > testVariants perf', function () {
-  this.timeout(300000)
-
-  it('sync', async function () {
+describe('test > testVariants perf', { timeout: 300000 }, () => {
+  it('sync', async () => {
     let value = 0
     const testVariantsSync = createTestVariants(
       ({ a, b, c }: { a: number; b: string; c: boolean }) => {

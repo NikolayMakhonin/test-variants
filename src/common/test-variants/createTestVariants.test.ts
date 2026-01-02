@@ -1,9 +1,11 @@
+import { describe, it } from 'vitest'
+import * as assert from 'node:assert'
 import { createTestVariants } from './createTestVariants'
 import { delay } from '@flemist/async-utils'
 
-describe('test-variants > createTestVariants', function () {
-  describe('sync', function () {
-    it('base', async function () {
+describe('test-variants > createTestVariants', () => {
+  describe('sync', () => {
+    it('base', async () => {
       const results = []
       const result = await createTestVariants(
         ({ a, b, c }: { a: number; b: string; c: boolean }) => {
@@ -28,7 +30,7 @@ describe('test-variants > createTestVariants', function () {
       assert.strictEqual(result.iterations, results.length)
     })
 
-    it('empty end', async function () {
+    it('empty end', async () => {
       const results = []
       const result = await createTestVariants(
         ({ a, b, c }: { a: number; b: string; c: boolean }) => {
@@ -44,7 +46,7 @@ describe('test-variants > createTestVariants', function () {
       assert.strictEqual(result.iterations, results.length)
     })
 
-    it('empty middle', async function () {
+    it('empty middle', async () => {
       const results = []
       const test = createTestVariants(
         ({ a, b, c }: { a: number; b: string; c: boolean }) => {
@@ -62,7 +64,7 @@ describe('test-variants > createTestVariants', function () {
       assert.strictEqual(result.iterations, results.length)
     })
 
-    it('empty start', async function () {
+    it('empty start', async () => {
       const results = []
       const result = await createTestVariants(
         ({ a, b, c }: { a: number; b: string; c: boolean }) => {
@@ -78,7 +80,7 @@ describe('test-variants > createTestVariants', function () {
       assert.strictEqual(result.iterations, results.length)
     })
 
-    it('calculated', async function () {
+    it('calculated', async () => {
       const results = []
       const result = await createTestVariants(
         ({ a, b, c }: { a: number; b: string; c: boolean }) => {
@@ -101,8 +103,8 @@ describe('test-variants > createTestVariants', function () {
     })
   })
 
-  describe('async as sync', function () {
-    it('base', async function () {
+  describe('async as sync', () => {
+    it('base', async () => {
       const results = []
       const result = await createTestVariants(
         ({ a, b, c }: { a: number; b: string; c: boolean }) => {
@@ -127,7 +129,7 @@ describe('test-variants > createTestVariants', function () {
       assert.strictEqual(result.iterations, results.length)
     })
 
-    it('empty end', async function () {
+    it('empty end', async () => {
       const results = []
       const result = await createTestVariants(
         ({ a, b, c }: { a: number; b: string; c: boolean }) => {
@@ -143,7 +145,7 @@ describe('test-variants > createTestVariants', function () {
       assert.strictEqual(result.iterations, results.length)
     })
 
-    it('empty middle', async function () {
+    it('empty middle', async () => {
       const results = []
       const test = createTestVariants(
         ({ a, b, c }: { a: number; b: string; c: boolean }) => {
@@ -161,7 +163,7 @@ describe('test-variants > createTestVariants', function () {
       assert.strictEqual(result.iterations, results.length)
     })
 
-    it('empty start', async function () {
+    it('empty start', async () => {
       const results = []
       const result = await createTestVariants(
         ({ a, b, c }: { a: number; b: string; c: boolean }) => {
@@ -177,7 +179,7 @@ describe('test-variants > createTestVariants', function () {
       assert.strictEqual(result.iterations, results.length)
     })
 
-    it('calculated', async function () {
+    it('calculated', async () => {
       const results = []
       const result = await createTestVariants(
         ({ a, b, c }: { a: number; b: string; c: boolean }) => {
@@ -200,8 +202,8 @@ describe('test-variants > createTestVariants', function () {
     })
   })
 
-  describe('async', async function () {
-    it('base', async function () {
+  describe('async', async () => {
+    it('base', async () => {
       const results = []
       const result = await createTestVariants(
         async ({ a, b, c }: { a: number; b: string; c: boolean }) => {
@@ -227,7 +229,7 @@ describe('test-variants > createTestVariants', function () {
       assert.strictEqual(result.iterations, results.length)
     })
 
-    it('empty end', async function () {
+    it('empty end', async () => {
       const results = []
       const result = await createTestVariants(
         async ({ a, b, c }: { a: number; b: string; c: boolean }) => {
@@ -244,7 +246,7 @@ describe('test-variants > createTestVariants', function () {
       assert.strictEqual(result.iterations, results.length)
     })
 
-    it('empty middle', async function () {
+    it('empty middle', async () => {
       const results = []
       const test = createTestVariants(
         async ({ a, b, c }: { a: number; b: string; c: boolean }) => {
@@ -263,7 +265,7 @@ describe('test-variants > createTestVariants', function () {
       assert.strictEqual(result.iterations, results.length)
     })
 
-    it('empty start', async function () {
+    it('empty start', async () => {
       const results = []
       const result = await createTestVariants(
         async ({ a, b, c }: { a: number; b: string; c: boolean }) => {
@@ -280,7 +282,7 @@ describe('test-variants > createTestVariants', function () {
       assert.strictEqual(result.iterations, results.length)
     })
 
-    it('calculated', async function () {
+    it('calculated', async () => {
       const results = []
       const result = await createTestVariants(
         async ({ a, b, c }: { a: number; b: string; c: boolean }) => {
@@ -303,9 +305,7 @@ describe('test-variants > createTestVariants', function () {
       assert.strictEqual(result.iterations, results.length)
     })
 
-    xit('complex', async function () {
-      this.timeout(5 * 60 * 1000)
-
+    it.skip('complex', { timeout: 5 * 60 * 1000 }, async () => {
       const results = []
       const result = await createTestVariants(
         async (args: {
@@ -338,9 +338,7 @@ describe('test-variants > createTestVariants', function () {
       // assert.deepStrictEqual(results, arr.map(a => [a]))
     })
 
-    xit('long', async function () {
-      this.timeout(5 * 60 * 1000)
-
+    it.skip('long', { timeout: 5 * 60 * 1000 }, async () => {
       const results = []
       const result = await createTestVariants(async ({ a }: { a: number }) => {
         await delay(3000)
@@ -354,8 +352,8 @@ describe('test-variants > createTestVariants', function () {
     })
   })
 
-  describe('async with sync parallel', async function () {
-    it('base', async function () {
+  describe('async with sync parallel', async () => {
+    it('base', async () => {
       const countParallel = 3
       let countInProcess = 0
       const results = []
@@ -410,11 +408,9 @@ describe('test-variants > createTestVariants', function () {
   })
 })
 
-describe('test-variants > million of Promise reject', function () {
+describe('test-variants > million of Promise reject', () => {
   let millionRejectTime = 0
-  xit('million of Promise reject', async function () {
-    this.timeout(1800000)
-
+  it.skip('million of Promise reject', { timeout: 1800000 }, async () => {
     // console.log('wait 5 sec')
     // await new Promise((resolve) => {
     //   setTimeout(resolve, 5000)
@@ -478,7 +474,7 @@ describe('test-variants > million of Promise reject', function () {
     millionRejectTime = Date.now()
   })
 
-  xit('after million of Promise reject', function () {
+  it.skip('after million of Promise reject', () => {
     const now = Date.now()
     assert.ok(millionRejectTime > 0)
     assert.ok(now - millionRejectTime < 500, now - millionRejectTime + '')
