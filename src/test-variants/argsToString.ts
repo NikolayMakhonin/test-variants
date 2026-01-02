@@ -1,5 +1,6 @@
 import {Obj} from 'src/test-variants/types'
 
+/** @deprecated Use formatAny from @flemist/simple-utils */
 export function argsToString(args: Obj) {
   return JSON.stringify(args, (_, value) => {
     if (value

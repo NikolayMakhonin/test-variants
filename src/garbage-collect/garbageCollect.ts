@@ -7,6 +7,7 @@ export function garbageCollect(iterations: number): Promise<0> {
 
   // const time0 = Date.now()
   const promise = new Promise<number>(resolve => {
+    // TODO: use waitMicrotasks from @flemist/async-utils
     setTimeout(() => {
       resolve(iterations)
     }, 1)

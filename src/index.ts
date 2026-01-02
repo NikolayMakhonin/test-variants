@@ -39,5 +39,5 @@ export {
   type TestVariantsIterator,
   testVariantsIterator,
 } from 'src/test-variants/testVariantsIterator'
-export {TestVariantsTemplates} from "src/test-variants/types";
-export {TestVariantsTemplate} from "src/test-variants/types";
+export type {TestVariantsTemplates} from 'src/test-variants/types'
+export type {TestVariantsTemplate} from 'src/test-variants/types'
