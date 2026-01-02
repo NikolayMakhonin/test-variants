@@ -16,13 +16,16 @@ function getFileLocker(filePath: string): ILocker {
   return locker
 }
 
+/** @deprecated Use @flemist/simple-utils */
 export type FileLockOptions<Result> = {
   filePath: string
   func: () => Promise<Result>
 }
 
-// TODO: извлечь в отдельный пакет, может fs utils
-/** Execute func with exclusive file access and limited parallel file operations */
+/**
+ * @deprecated Use @flemist/simple-utils
+ * Execute func with exclusive file access and limited parallel file operations
+ */
 export function fileLock<Result>(
   options: FileLockOptions<Result>,
 ): Promise<Result> {
