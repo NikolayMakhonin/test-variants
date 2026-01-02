@@ -38,7 +38,7 @@ Violation of these rules is a critical failure.
 ## After Autocompaction
 
 When context contains text "This session is being continued from a previous conversation that ran out of context", immediately read these files before any other action:
-1. `@/ai/project/test-variants/tasks/README_Compliance.md` - active task specification
+1. `@/ai/project/test-variants/tasks/Code_Quality_Improvement.md` - active task specification
 2. `@/README.md` - authoritative API specification
 
-Continue executing README_Compliance task - this is an INFINITE LOOP task, NEVER stop
+Continue executing Code Quality Improvement task - this is an INFINITE LOOP task, NEVER stop
