@@ -962,28 +962,36 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   // region Guard Calculation
 
   // Pre-compute max expected calls for infinite loop guard
+  // CRITICAL: These guards are not arbitrary safety margins - they reflect actual algorithm behavior
   const guardCycles = Math.max(1, options.cyclesMax || 1)
   const guardRepeats = Math.max(1, options.attemptsPerVariantMax || 1)
   const guardForwardCycles = Math.max(1, options.forwardModeCyclesMax || 1)
+  // findBestError 2x multiplier is required, not arbitrary:
+  // 1. After error, findBestError continues iteration with constraints
+  // 2. If error is at end of range (e.g., index [1,1,1] in 2×2×2 template),
+  //    constraints set limits at max values → no reduction in variants
+  // 3. Both modes may need full additional rounds to complete after error
+  // 4. Worst case: roundsToComplete rounds before error + roundsToComplete rounds after = 2x
+  const guardFindBestError = options.findBestError !== false ? 2 : 1
   let maxExpectedCalls: number
   if (isMultiMode && totalVariantsCount !== null) {
     // Multi-mode: limitPerMode = floor(totalVariantsCount / 2), run 2 modes
     // With limitTests interruption, modes need ceil(variants/limitPerMode) rounds to complete
     const limitPerMode = Math.max(1, Math.floor(totalVariantsCount / 2))
     const roundsToComplete = Math.ceil(totalVariantsCount / limitPerMode)
-    maxExpectedCalls = limitPerMode * 2 * guardRepeats * guardCycles * roundsToComplete
+    maxExpectedCalls = limitPerMode * 2 * guardRepeats * guardCycles * roundsToComplete * guardFindBestError
   }
   else if (totalVariantsCount !== null) {
     // Static template: use max of all mode formulas
-    const sequentialMax = totalVariantsCount * guardCycles * guardRepeats * guardForwardCycles
-    const randomMax = guardCycles * Math.max(1, totalVariantsCount * guardRepeats * guardForwardCycles)
+    const sequentialMax = totalVariantsCount * guardCycles * guardRepeats * guardForwardCycles * guardFindBestError
+    const randomMax = guardCycles * Math.max(1, totalVariantsCount * guardRepeats * guardForwardCycles) * guardFindBestError
     maxExpectedCalls = Math.max(sequentialMax, randomMax)
   }
   else {
     // Dynamic template: use max of sequential estimate and random limit
     const estimatedVariants = (options.valuesPerArgMax + 1)**argsCount
-    const sequentialMax = Math.max(1, estimatedVariants) * guardCycles * guardRepeats * guardForwardCycles
-    const randomMax = guardCycles * 100
+    const sequentialMax = Math.max(1, estimatedVariants) * guardCycles * guardRepeats * guardForwardCycles * guardFindBestError
+    const randomMax = guardCycles * 100 * guardFindBestError
     maxExpectedCalls = Math.max(sequentialMax, randomMax)
   }
   // Add buffer for edge cases
@@ -1335,7 +1343,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   // endregion
 }
 
-const testVariants = createTestVariants(async (options: StressTestArgs) => {
+export const testVariants = createTestVariants(async (options: StressTestArgs) => {
   try {
     await executeStressTest(options)
   }

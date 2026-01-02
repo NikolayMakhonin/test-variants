@@ -86,6 +86,8 @@ const result = await testVariants({
     error: boolean,           // default: true
     // message about iteration mode change, with info about current mode
     modeChange: boolean,      // default: true
+    // debug logging for internal behavior
+    debug: boolean,           // default: false
   },
 
   // for aborting async operations inside the test
@@ -167,12 +169,12 @@ const result = await testVariants({
     // Custom rule, whether to limit argument value
     limitArgOnError: ({
       name,          // argument name
-      valueIndex,    // argument value index in template
+      valueIndex,    // argument value index in template for current error
       values,        // all possible argument values in template
-      maxValueIndex, // argument value index in template that caused the error
+      maxValueIndex, // current max value index limit for this arg; null if no limit
     }) => boolean,
     // the following is equivalent to limitArgOnError: true
-    limitArgOnError: ({ valueIndex, maxValueIndex }) => valueIndex >= maxValueIndex,
+    limitArgOnError: () => true,
 
     // Option intended only for system verification
     // If true, iteration will include the last error variant
@@ -181,7 +183,7 @@ const result = await testVariants({
     // If true, when testVariants completes, if an error was found,
     // no exception will be thrown, instead
     // all error info will be returned in the result
-    dontThrowIfError: false,
+    dontThrowIfError: boolean, // default: false
   },
 
   // Seed generation for pseudo-random generator
@@ -239,7 +241,8 @@ const result = await testVariants({
 // Result:
 {
   iterations: number,
-  // Found best error, if findBestError is enabled and dontThrowIfError is disabled
+  // Best error found during testing; set when findBestError is enabled and an error occurred
+  // If dontThrowIfError is true, error is returned here instead of thrown
   bestError: null | {
     error: any, // the error caught via try..catch
     args: { // test parameters that caused the error

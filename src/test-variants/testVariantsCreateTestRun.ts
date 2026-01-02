@@ -55,13 +55,15 @@ export function testVariantsCreateTestRun<Args extends Obj>(
       args,
       tests,
     }
+
+    // README: onError is called "before logging and throwing exception"
+    if (options?.onError) {
+      await options.onError(errorEvent)
+    }
+
     if (logError) {
       console.error(`[test-variants] error variant: ${tests}\n${argsToString(args)}`)
       console.error(error)
-    }
-
-    if (options?.onError) {
-      await options.onError(errorEvent)
     }
 
     throw errorEvent.error
