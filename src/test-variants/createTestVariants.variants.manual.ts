@@ -1,6 +1,6 @@
 /* eslint-disable func-names */
 import {getRandomSeed} from 'src/test-variants/random/Random'
-import {testVariants} from 'src/test-variants/createTestVariants.variants.test'
+import {testVariants} from 'src/test-variants/-test/variants'
 
 // Manual test file for human usage only
 // eslint-disable-next-line no-undef
