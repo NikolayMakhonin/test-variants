@@ -55,7 +55,6 @@
  * Write all code, comments, and logs in English following all project text writing rules
  */
 
-import {createTestVariants as createTestVariantsStable} from 'dist/lib/index.mjs'
 import {createTestVariants} from 'src/test-variants/createTestVariants'
 import {getRandomSeed, Random} from 'src/test-variants/random/Random'
 import {randomBoolean, randomInt} from 'src/test-variants/random/helpers'
@@ -962,7 +961,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
 
   // region Guard Calculation
 
-  // Pre-compute max expected calls for infinite loop guard (worst case: findBestError=false)
+  // Pre-compute max expected calls for infinite loop guard
   const guardCycles = Math.max(1, options.cyclesMax || 1)
   const guardRepeats = Math.max(1, options.attemptsPerVariantMax || 1)
   const guardForwardCycles = Math.max(1, options.forwardModeCyclesMax || 1)

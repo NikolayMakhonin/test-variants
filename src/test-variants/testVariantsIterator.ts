@@ -887,22 +887,21 @@ function switchToNextMode<Args extends Obj>(
     log(`[debug:iter] switchToNextMode: mode[${currentModeIndex}]=${currentMode?.mode}, savePosition=${savePosition}, pickCount=${currentModeState?.pickCount}, hadProgressInCycle=${currentModeState?.hadProgressInCycle}`)
   }
 
-  // For sequential modes: save position when interrupted by limits, clear when naturally completed
+  // For sequential modes: save position when interrupted by limits (only if made progress), clear when naturally completed
   // completedCount increments when mode ran tests in this cycle OR had saved position from previous rounds
   if (currentMode && (currentMode.mode === 'forward' || currentMode.mode === 'backward')) {
-    if (savePosition) {
+    if (savePosition && currentModeState.hadProgressInCycle) {
+      // Only save position if mode actually yielded tests; otherwise nothing to resume
       saveModePosition(state, currentModeIndex, keysCount)
       if (logDebug) {
         log(`[debug:iter] saved position for mode[${currentModeIndex}], completedCount stays ${currentModeState.completedCount}`)
       }
     }
     else {
-      // Mode completed - count if made progress:
-      // - hadProgressInCycle: yielded at least one variant this cycle
-      // - pickCount > 0: picked variants but hit count limit before yielding (hadProgressInCycle not set yet)
-      // - savedPosition != null: had progress from previous rounds (position was saved)
+      // Mode completed naturally - count if made progress:
+      // - hadProgressInCycle: yielded at least one variant this entry
+      // - savedPosition != null: had progress from previous entries (position was saved, meaning tests were yielded before interruption)
       const hadProgress = currentModeState.hadProgressInCycle
-        || currentModeState.pickCount > 0
         || currentModeState.savedPosition != null
       currentModeState.savedPosition = null
       if (hadProgress) {
@@ -917,13 +916,7 @@ function switchToNextMode<Args extends Obj>(
     }
   }
   // Random mode: completedCount increments per-pick in next() only when variant is yielded
-  // Here we only count natural completion (empty template, !savePosition) if progress was made
-  else if (currentMode && currentMode.mode === 'random' && !savePosition && currentModeState.hadProgressInCycle) {
-    currentModeState.completedCount++
-    if (logDebug) {
-      log(`[debug:iter] random mode[${currentModeIndex}] completed naturally, completedCount++ → ${currentModeState.completedCount}`)
-    }
-  }
+  // No additional increment needed here - random mode counts each pick, not pass completions
 
   state.modeIndex++
   if (logDebug) {
@@ -1304,9 +1297,6 @@ export function testVariantsIterator<Args extends Obj>(
 
       state.index++
       modeState.pickCount++
-      // Mark progress as soon as we successfully advance to a variant
-      // This ensures modes hitting count limit are still counted in minCompletedCount
-      modeState.hadProgressInCycle = true
 
       // Process pending limits at new position
       if (state.pendingLimits.length > 0) {
@@ -1318,8 +1308,11 @@ export function testVariantsIterator<Args extends Obj>(
         if (logDebug) {
           log(`[debug:iter] count limit reached: index=${state.index} >= count=${state.count}`)
         }
-        // Current mode made progress, count it as completed
-        modeState.completedCount++
+        // Only count completion if mode actually yielded tests in this cycle
+        // README: "If in the last pass any mode executed zero tests, it is not counted in termination condition check"
+        if (modeState.hadProgressInCycle) {
+          modeState.completedCount++
+        }
         // Mark all modes as exhausted for this cycle
         state.modeIndex = state.modes.length
         return null
@@ -1329,6 +1322,9 @@ export function testVariantsIterator<Args extends Obj>(
         modeState.completedCount++
       }
 
+      // Mark progress only when we actually return a test variant
+      // README: "If in the last pass any mode executed zero tests, it is not counted in termination condition check"
+      modeState.hadProgressInCycle = true
       state.currentArgs = buildCurrentArgs()
       state.testsCount++
       return state.currentArgs

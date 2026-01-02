@@ -60,7 +60,7 @@ export function testVariantsCreateTestRun<Args extends Obj>(
       console.error(error)
     }
 
-    if (options.onError) {
+    if (options?.onError) {
       await options.onError(errorEvent)
     }
 

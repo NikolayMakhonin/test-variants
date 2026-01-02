@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-shadow */
 import {testVariantsRun} from 'src/test-variants/testVariantsRun'
 import {testVariantsIterator} from 'src/test-variants/testVariantsIterator'
-import {TestVariantsTestRun} from '~/src'
+import {TestVariantsTestRun} from './testVariantsCreateTestRun'
 
 describe('test-variants > testVariantsRun', function () {
   this.timeout(10 * 60 * 1000)

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-shadow */
-import {Obj} from '~/src'
+import {Obj} from './types'
 import {testVariantsIterator, TestVariantsIteratorOptions} from './testVariantsIterator'
 
 describe('test-variants > testVariantsIterator', function () {
