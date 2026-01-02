@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-shadow */
-import {Obj} from './types'
-import {testVariantsIterator, TestVariantsIteratorOptions} from './testVariantsIterator'
+import type {Obj} from '@flemist/simple-utils'
+import type {TestVariantsIteratorOptions} from './types'
+import {testVariantsIterator} from './testVariantsIterator'
 
 describe('test-variants > testVariantsIterator', function () {
   this.timeout(10 * 60 * 1000)

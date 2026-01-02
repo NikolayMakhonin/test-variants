@@ -32,6 +32,19 @@ export type TestVariantsTestResult = number | void | TestVariantsTestRunResult
 export type TestVariantsTest<Args extends Obj> = (args: Args, abortSignal: IAbortSignalFast)
   => PromiseOrValue<TestVariantsTestResult>
 
+/** Normalize test result to standard format */
+function normalizeTestResult(value: TestVariantsTestResult, isAsync: boolean): TestVariantsTestRunResult {
+  if (typeof value === 'number') {
+    return {iterationsAsync: 0, iterationsSync: value}
+  }
+  if (value !== null && typeof value === 'object') {
+    return value
+  }
+  return isAsync
+    ? {iterationsAsync: 1, iterationsSync: 0}
+    : {iterationsAsync: 0, iterationsSync: 1}
+}
+
 export function testVariantsCreateTestRun<Args extends Obj>(
   test: TestVariantsTest<Args>,
   options?: null | TestVariantsCreateTestRunOptions<Args>,
@@ -75,43 +88,16 @@ export function testVariantsCreateTestRun<Args extends Obj>(
     abortSignal: IAbortSignalFast,
   ): PromiseOrValue<TestVariantsTestRunResult> {
     try {
-      const promiseOrIterations = test(args, abortSignal)
+      const promiseOrResult = test(args, abortSignal)
 
-      if (isPromiseLike(promiseOrIterations)) {
-        return promiseOrIterations.then(value => {
-          // README: "number is equivalent to iterationsSync" - applies regardless of async/sync test
-          if (typeof value === 'number') {
-            return {
-              iterationsAsync: 0,
-              iterationsSync : value,
-            }
-          }
-          if (value !== null && typeof value === 'object') {
-            return value
-          }
-          return {
-            iterationsAsync: 1,
-            iterationsSync : 0,
-          }
-        }, err => {
-          return onError(err, args, tests)
-        })
+      if (isPromiseLike(promiseOrResult)) {
+        return promiseOrResult.then(
+          value => normalizeTestResult(value, true),
+          err => onError(err, args, tests),
+        )
       }
 
-      const value = promiseOrIterations
-      if (typeof value === 'number') {
-        return {
-          iterationsAsync: 0,
-          iterationsSync : value,
-        }
-      }
-      if (value !== null && typeof value === 'object') {
-        return value
-      }
-      return {
-        iterationsAsync: 0,
-        iterationsSync : 1,
-      }
+      return normalizeTestResult(promiseOrResult, false)
     }
     catch (err) {
       return onError(err, args, tests)

@@ -1,110 +1,30 @@
-import {TestVariantsTestRun} from './testVariantsCreateTestRun'
+import type {TestVariantsTestRun} from './testVariantsCreateTestRun'
 import {AbortControllerFast} from '@flemist/abort-controller-fast'
 import {combineAbortSignals, isPromiseLike} from '@flemist/async-utils'
 import {type IPool, Pool, poolWait} from '@flemist/time-limits'
 import {garbageCollect} from 'src/garbage-collect/garbageCollect'
 import type {Obj} from '@flemist/simple-utils'
 import type {
-  ModeConfig,
   TestVariantsBestError,
   TestVariantsIterator,
-  TestVariantsLogOptions,
   TestVariantsRunOptions,
   TestVariantsRunResult,
 } from 'src/test-variants/types'
-import {generateErrorVariantFilePath, parseErrorVariantFile, readErrorVariantFiles, saveErrorVariantFile} from 'src/test-variants/saveErrorVariants'
+import {generateErrorVariantFilePath, saveErrorVariantFile} from 'src/test-variants/saveErrorVariants'
 import {deepEqualJsonLike} from '@flemist/simple-utils'
 import {fileLock} from '@flemist/simple-utils/node'
 import {log} from 'src/helpers/log'
 import * as path from 'path'
 import {timeControllerDefault} from '@flemist/time-controller'
-
-const logOptionsDefault: Required<TestVariantsLogOptions> = {
-  start           : true,
-  progressInterval: 5000,
-  completed       : true,
-  error           : true,
-  modeChange      : true,
-  debug           : false,
-}
-
-const logOptionsDisabled: TestVariantsLogOptions = {
-  start           : false,
-  progressInterval: false,
-  completed       : false,
-  error           : false,
-  modeChange      : false,
-  debug           : false,
-}
-
-function formatDuration(ms: number): string {
-  const seconds = ms / 1000
-  if (seconds < 60) {
-    return `${seconds.toFixed(1)}s`
-  }
-  const minutes = seconds / 60
-  if (minutes < 60) {
-    return `${minutes.toFixed(1)}m`
-  }
-  const hours = minutes / 60
-  return `${hours.toFixed(1)}h`
-}
-
-function formatBytes(bytes: number): string {
-  const gb = bytes / (1024 * 1024 * 1024)
-  if (gb >= 1) {
-    return gb >= 10 ? `${Math.round(gb)}GB` : `${gb.toFixed(1)}GB`
-  }
-  const mb = bytes / (1024 * 1024)
-  if (mb >= 10) {
-    return `${Math.round(mb)}MB`
-  }
-  return `${mb.toFixed(1)}MB`
-}
-
-function getMemoryUsage(): number | null {
-  // Node.js
-  if (typeof process !== 'undefined' && process.memoryUsage) {
-    try {
-      return process.memoryUsage().heapUsed
-    }
-    catch {
-      // ignore
-    }
-  }
-  // Browser (Chrome only, non-standard)
-  if (typeof performance !== 'undefined' && (performance as any).memory) {
-    try {
-      return (performance as any).memory.usedJSHeapSize
-    }
-    catch {
-      // ignore
-    }
-  }
-  return null
-}
-
-function formatModeConfig(modeConfig: ModeConfig | null, modeIndex: number): string {
-  if (!modeConfig) {
-    return `mode[${modeIndex}]: null`
-  }
-  let result = `mode[${modeIndex}]: ${modeConfig.mode}`
-  if (modeConfig.mode === 'forward' || modeConfig.mode === 'backward') {
-    if (modeConfig.cycles != null) {
-      result += `, cycles=${modeConfig.cycles}`
-    }
-    if (modeConfig.attemptsPerVariant != null) {
-      result += `, attempts=${modeConfig.attemptsPerVariant}`
-    }
-  }
-  if (modeConfig.limitTime != null) {
-    result += `, limitTime=${formatDuration(modeConfig.limitTime)}`
-  }
-  if (modeConfig.limitTests != null) {
-    result += `, limitTests=${modeConfig.limitTests}`
-  }
-  return result
-}
+import {
+  formatBytes,
+  formatDuration,
+  formatModeConfig,
+  getMemoryUsage,
+  logOptionsDefault,
+  resolveLogOptions,
+} from 'src/test-variants/progressLogging'
+import {replayErrorVariants} from 'src/test-variants/errorVariantReplay'
 
 
 export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
@@ -113,8 +33,6 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   options: TestVariantsRunOptions<Args, SavedArgs> = {},
 ): Promise<TestVariantsRunResult<Args>> {
   const saveErrorVariants = options.saveErrorVariants
-  const attemptsPerVariant = saveErrorVariants?.attemptsPerVariant ?? 1
-  const useToFindBestError = saveErrorVariants?.useToFindBestError
   const sessionDate = new Date()
   const errorVariantFilePath = saveErrorVariants
     ? path.resolve(
@@ -127,14 +45,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   const GC_IterationsAsync = options.GC_IterationsAsync ?? 10000
   const GC_Interval = options.GC_Interval ?? 1000
 
-  const logRaw = options.log
-  const logOpts = logRaw === false
-    ? logOptionsDisabled
-    : logRaw === true
-      ? logOptionsDefault
-      : logRaw && typeof logRaw === 'object'
-        ? logRaw
-        : logOptionsDefault
+  const logOpts = resolveLogOptions(options.log)
   const logStart = logOpts.start ?? logOptionsDefault.start
   const logInterval = logOpts.progressInterval ?? logOptionsDefault.progressInterval
   const logCompleted = logOpts.completed ?? logOptionsDefault.completed
@@ -161,32 +72,13 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
 
   // Replay phase: run previously saved error variants before normal iteration
   if (saveErrorVariants) {
-    const files = await readErrorVariantFiles(saveErrorVariants.dir)
-    for (let fileIndex = 0, filesLen = files.length; fileIndex < filesLen; fileIndex++) {
-      const filePath = files[fileIndex]
-      const args = await parseErrorVariantFile<Args, SavedArgs>(filePath, saveErrorVariants.jsonToArgs)
-      for (let retry = 0; retry < attemptsPerVariant; retry++) {
-        try {
-          // During replay, no regular tests have run yet, so tests count is 0
-          const promiseOrResult = testRun(args, 0, null as any)
-          if (isPromiseLike(promiseOrResult)) {
-            await promiseOrResult
-          }
-        }
-        catch (error) {
-          if (useToFindBestError && findBestError) {
-            // Store as pending limit for findBestError cycle
-            variants.addLimit({args, error})
-            break // Exit retry loop, continue to next file
-          }
-          else {
-            throw error
-          }
-        }
-      }
-      // If no error occurred during replays, the saved variant is no longer reproducible
-      // (templates may have changed) - silently skip
-    }
+    await replayErrorVariants({
+      testRun,
+      variants,
+      saveErrorVariants,
+      useToFindBestError  : saveErrorVariants.useToFindBestError,
+      findBestErrorEnabled: !!findBestError,
+    })
   }
 
   let prevCycleVariantsCount: null | number = null
