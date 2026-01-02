@@ -1,7 +1,7 @@
 import {type IAbortSignalFast} from '@flemist/abort-controller-fast'
 import {isPromiseLike, type PromiseOrValue} from '@flemist/async-utils'
-import {Obj, type TestVariantsLogOptions} from 'src/test-variants/types'
-import {argsToString} from 'src/test-variants/argsToString'
+import {formatAny, type Obj} from '@flemist/simple-utils'
+import {type TestVariantsLogOptions} from 'src/test-variants/types'
 
 export type ErrorEvent<Args extends Obj> = {
   error: any,
@@ -62,7 +62,7 @@ export function testVariantsCreateTestRun<Args extends Obj>(
     }
 
     if (logError) {
-      console.error(`[test-variants] error variant: ${tests}\n${argsToString(args)}`)
+      console.error(`[test-variants] error variant: ${tests}\n${formatAny(args, {pretty: true})}`)
       console.error(error)
     }
 

@@ -58,8 +58,7 @@
 import {createTestVariants} from 'src/test-variants/createTestVariants'
 import {getRandomSeed, Random} from 'src/test-variants/random/Random'
 import {randomBoolean, randomInt} from 'src/test-variants/random/helpers'
-import {deepClone} from 'src/helpers/deepClone'
-import {deepEqual} from 'src/helpers/deepEqual'
+import {deepCloneJsonLike, deepEqualJsonLike} from '@flemist/simple-utils'
 import {
   log, traceLog, traceEnter, traceExit, formatValue, resetLog,
 } from 'src/helpers/log'
@@ -222,7 +221,7 @@ function limitArgOnErrorTrue(): boolean {
 function argsEqualByKeys(a: TestArgs, b: TestArgs, keys: string[]): boolean {
   for (let i = 0, len = keys.length; i < len; i++) {
     const key = keys[i]
-    if (!deepEqual(a[key], b[key])) {
+    if (!deepEqualJsonLike(a[key], b[key])) {
       return false
     }
   }
@@ -348,7 +347,7 @@ function verifyBestError(
       delete (resultArgsNoSeed as Record<string, unknown>).seed
       const expectedArgsNoSeed = {...errorVariantArgs}
       delete (expectedArgsNoSeed as Record<string, unknown>).seed
-      if (!deepEqual(resultArgsNoSeed, expectedArgsNoSeed)) {
+      if (!deepEqualJsonLike(resultArgsNoSeed, expectedArgsNoSeed)) {
         throw new Error(
           `bestError.args mismatch!\n`
           + `  Expected: ${JSON.stringify(expectedArgsNoSeed)}\n`
@@ -376,7 +375,7 @@ function verifyBestError(
       delete (resultArgsNoSeed as Record<string, unknown>).seed
       const expectedArgsNoSeed = {...errorVariantArgs}
       delete (expectedArgsNoSeed as Record<string, unknown>).seed
-      if (!deepEqual(resultArgsNoSeed, expectedArgsNoSeed)) {
+      if (!deepEqualJsonLike(resultArgsNoSeed, expectedArgsNoSeed)) {
         throw new Error(
           `bestError.args mismatch (random mode)!\n`
           + `  Expected: ${JSON.stringify(expectedArgsNoSeed)}\n`
@@ -635,7 +634,7 @@ type ErrorVariantInfo = {
 
 /** Compute error variant info for static template
  * Uses value-based detection: ALL variants matching errorArgs are error variants
- * This matches innerTest behavior which uses deepEqual for error detection
+ * This matches innerTest behavior which uses deepEqualJsonLike for error detection
  */
 function computeErrorVariantInfo(
   template: Template,
@@ -653,7 +652,7 @@ function computeErrorVariantInfo(
   const errorArgs = computeArgsAtIndex(template, argKeys, errorIndex)
 
   // Count ALL matching variants from index 0 (value-based detection)
-  // innerTest uses deepEqual which matches any variant with same args
+  // innerTest uses deepEqualJsonLike which matches any variant with same args
   let count = 0
   let firstMatchingIndex = -1
   let lastMatchingIndex = -1
@@ -664,7 +663,7 @@ function computeErrorVariantInfo(
       const key = argKeys[i]
       const values = template[key] as TemplateArray
       const valueIndex = remaining % values.length
-      if (!deepEqual(values[valueIndex], errorArgs[key])) {
+      if (!deepEqualJsonLike(values[valueIndex], errorArgs[key])) {
         matches = false
         break
       }
@@ -943,7 +942,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       const argValue = args[key]
       let valueIndex = -1
       for (let j = 0, len = values.length; j < len; j++) {
-        if (deepEqual(values[j], argValue)) {
+        if (deepEqualJsonLike(values[j], argValue)) {
           valueIndex = j
           break
         }
@@ -1048,7 +1047,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
 
     if (isErrorVariant) {
       if (errorVariantArgs === null) {
-        errorVariantArgs = deepClone(args)
+        errorVariantArgs = deepCloneJsonLike(args)
       }
       errorAttempts++
       if (logEnabled) {

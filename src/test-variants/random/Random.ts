@@ -25,7 +25,7 @@ export function getRandomFunc(seed?: null | number) {
   return seed != null ? mulberry32(seed) : randomWithoutSeed
 }
 
-// TODO: извлечь в отдельный пакет, может test utils или math utils.
+// TODO: use simple-utils
 // Последнюю версию брать из practices
 /** Generate random number in range [0..1) like Math.random() or other, but can be pseudorandom with seed */
 export class Random {

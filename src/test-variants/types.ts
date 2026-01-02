@@ -1,5 +1,4 @@
-/** @deprecated Use @flemist/simple-utils */
-export type Obj = Record<string, any>
+export {type Obj} from '@flemist/simple-utils'
 
 /** Logging options for test-variants */
 export type TestVariantsLogOptions = {

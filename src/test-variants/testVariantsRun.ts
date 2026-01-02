@@ -6,8 +6,8 @@ import {garbageCollect} from 'src/garbage-collect/garbageCollect'
 import {Obj, type SaveErrorVariantsOptions, type TestVariantsLogOptions} from 'src/test-variants/types'
 import {generateErrorVariantFilePath, parseErrorVariantFile, readErrorVariantFiles, saveErrorVariantFile} from 'src/test-variants/saveErrorVariants'
 import {TestVariantsIterator, type GetSeedParams, type LimitArgOnError, type ModeConfig} from './testVariantsIterator'
-import {fileLock} from 'src/test-variants/fs/fileLock'
-import {deepEqual} from 'src/helpers/deepEqual'
+import {deepEqualJsonLike} from '@flemist/simple-utils'
+import {fileLock} from '@flemist/simple-utils/node'
 import {log} from 'src/helpers/log'
 import * as path from 'path'
 import type {ITimeController} from '@flemist/time-controller'
@@ -272,7 +272,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
       return
     }
     const currentArgs = variants.limit.args
-    if (deepEqual(currentArgs, lastSavedLimitArgs)) {
+    if (deepEqualJsonLike(currentArgs, lastSavedLimitArgs)) {
       return
     }
     lastSavedLimitArgs = {...currentArgs}

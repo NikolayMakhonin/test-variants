@@ -1,7 +1,7 @@
 const PRIME_NUMBER = 1073741789
 export const UNIQUE_PSEUDO_RANDOM_MAX_COUNT = (PRIME_NUMBER >> 2) - 1
 
-// TODO: извлечь в отдельный пакет, может test utils или math utils.
+// TODO: use simple-utils
 /** It is very simple algorithm. Use it for tests only !!! */
 export function createUniquePseudoRandom(
   count: number = UNIQUE_PSEUDO_RANDOM_MAX_COUNT,

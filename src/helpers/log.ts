@@ -1,4 +1,4 @@
-import {objectToString} from 'src/test-variants/format/objectToString'
+import {formatAny} from '@flemist/simple-utils'
 
 let traceIndent = 0
 
@@ -6,11 +6,11 @@ const LOG_LAST_MAX = 1000
 const logLast: string[] = []
 
 export function formatValue(value: unknown): string {
-  return objectToString(value, {maxDepth: 3, maxItems: 20})
+  return formatAny(value, {maxDepth: 3, maxItems: 20})
 }
 
 export function formatObject(obj: unknown): string {
-  return objectToString(obj, {pretty: true, maxDepth: 5, maxItems: 50})
+  return formatAny(obj, {pretty: true, maxDepth: 5, maxItems: 50})
 }
 
 export function log(...args: unknown[]): void {
