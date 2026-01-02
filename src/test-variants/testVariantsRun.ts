@@ -208,7 +208,8 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   // Replay phase: run previously saved error variants before normal iteration
   if (saveErrorVariants) {
     const files = await readErrorVariantFiles(saveErrorVariants.dir)
-    for (const filePath of files) {
+    for (let fileIndex = 0, filesLen = files.length; fileIndex < filesLen; fileIndex++) {
+      const filePath = files[fileIndex]
       const args = await parseErrorVariantFile<Args, SavedArgs>(filePath, saveErrorVariants.jsonToArgs)
       for (let retry = 0; retry < attemptsPerVariant; retry++) {
         try {

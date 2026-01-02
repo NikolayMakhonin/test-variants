@@ -502,16 +502,19 @@ function validateArgsKeys<Args extends Obj>(
   keySet: Set<string>,
   keysCount: number,
 ): boolean {
-  const savedKeys = Object.keys(savedArgs).filter(k => k !== 'seed')
-  if (savedKeys.length !== keysCount) {
-    return false
-  }
-  for (const key of savedKeys) {
+  const savedKeys = Object.keys(savedArgs)
+  let count = 0
+  for (let i = 0, len = savedKeys.length; i < len; i++) {
+    const key = savedKeys[i]
+    if (key === 'seed') {
+      continue
+    }
     if (!keySet.has(key)) {
       return false
     }
+    count++
   }
-  return true
+  return count === keysCount
 }
 
 /** Check if current position >= pending args position; returns false if current < pending or all args skipped */
@@ -584,7 +587,7 @@ function compareLexicographic(a: number[], b: number[]): number {
   return 0
 }
 
-/** Remove pending limits that exceed current argLimits */
+/** Remove pending limits that exceed current argLimits (in-place mutation) */
 function filterPendingLimits<Args extends Obj>(
   state: IteratorState<Args>,
   templates: TestVariantsTemplate<Args, any>[],
@@ -592,7 +595,11 @@ function filterPendingLimits<Args extends Obj>(
   keysCount: number,
   equals?: null | ((a: any, b: any) => boolean),
 ): void {
-  state.pendingLimits = state.pendingLimits.filter(pending => {
+  const pendingLimits = state.pendingLimits
+  let writeIndex = 0
+  for (let readIndex = 0, len = pendingLimits.length; readIndex < len; readIndex++) {
+    const pending = pendingLimits[readIndex]
+    let keep = true
     for (let i = 0; i < keysCount; i++) {
       const argLimit = state.argLimits[i]
       if (argLimit == null) {
@@ -601,11 +608,16 @@ function filterPendingLimits<Args extends Obj>(
       const values = calcTemplateValues(state, templates, pending.args, i)
       const valueIndex = findValueIndex(values, pending.args[keys[i]], equals)
       if (valueIndex > argLimit) {
-        return false
+        keep = false
+        break
       }
     }
-    return true
-  })
+    if (keep) {
+      pendingLimits[writeIndex] = pending
+      writeIndex++
+    }
+  }
+  pendingLimits.length = writeIndex
 }
 
 /** Update per-arg limits from args values using lexicographic comparison; returns true if updated */
@@ -670,31 +682,32 @@ function processPendingLimits<Args extends Obj>(
   limitArgOnError?: null | boolean | LimitArgOnError,
   includeErrorVariant?: null | boolean,
 ): boolean {
-  const reached: PendingLimit<Args>[] = []
-  const remaining: PendingLimit<Args>[] = []
+  const pendingLimits = state.pendingLimits
+  let lastReached: PendingLimit<Args> | null = null
+  let writeIndex = 0
 
-  for (const pending of state.pendingLimits) {
+  for (let i = 0, len = pendingLimits.length; i < len; i++) {
+    const pending = pendingLimits[i]
     if (isPositionReached(state, pending.args, keys, keysCount, equals)) {
-      reached.push(pending)
+      lastReached = pending
     }
     else {
-      remaining.push(pending)
+      pendingLimits[writeIndex] = pending
+      writeIndex++
     }
   }
+  pendingLimits.length = writeIndex
 
-  state.pendingLimits = remaining
-
-  if (reached.length === 0) {
+  if (lastReached == null) {
     return false
   }
 
   // Apply the last reached limit (newest = lexicographically smallest)
-  const pending = reached[reached.length - 1]
   if (state.count == null || state.index < state.count) {
     const oldLimitArgs = state.limit?.args ?? null
     state.count = includeErrorVariant ? state.index + 1 : state.index
-    state.limit = createLimit(pending.args, pending.error)
-    updateArgLimits(state, pending.args, oldLimitArgs, templates, keys, keysCount, equals, limitArgOnError)
+    state.limit = createLimit(lastReached.args, lastReached.error)
+    updateArgLimits(state, lastReached.args, oldLimitArgs, templates, keys, keysCount, equals, limitArgOnError)
     return true
   }
 
@@ -1013,13 +1026,16 @@ export function testVariantsIterator<Args extends Obj>(
     modesState,
   }
 
+  // Pre-allocated object for getSeed params - mutated and reused on each call
+  // Safe because getSeed is expected to extract values immediately (per README examples)
+  const seedParams: GetSeedParams = {tests: 0, cycles: 0, repeats: 0}
+
   function buildCurrentArgs(): Args {
     if (getSeed) {
-      const seed = getSeed({
-        tests  : state.testsCount,
-        cycles : state.cycleIndex,
-        repeats: state.repeatIndex,
-      })
+      seedParams.tests = state.testsCount
+      seedParams.cycles = state.cycleIndex
+      seedParams.repeats = state.repeatIndex
+      const seed = getSeed(seedParams)
       return {...state.args, seed} as Args
     }
     return {...state.args}
