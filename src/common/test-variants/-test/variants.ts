@@ -863,6 +863,24 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   let logModeChanges = 0
   let logErrors = 0
   let logDebugs = 0
+  const logStartEnabled =
+    typeof runOptions.log === 'boolean' ? runOptions.log : runOptions.log?.start
+  const logCompletedEnabled =
+    typeof runOptions.log === 'boolean'
+      ? runOptions.log
+      : runOptions.log?.completed
+  const logProgressEnabled =
+    typeof runOptions.log === 'boolean'
+      ? runOptions.log
+      : runOptions.log?.progress !== false
+  const logModeChangesEnabled =
+    typeof runOptions.log === 'boolean'
+      ? runOptions.log
+      : runOptions.log?.modeChange
+  const logErrorsEnabled =
+    typeof runOptions.log === 'boolean' ? runOptions.log : runOptions.log?.error
+  const logDebugsEnabled =
+    typeof runOptions.log === 'boolean' ? runOptions.log : runOptions.log?.debug
   // Log and error callbacks
   function logFunc(type: TestVariantsLogType, message: string): void {
     if (logEnabled) {
@@ -875,6 +893,9 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     if (callCount === 0) {
       if (type !== 'start') {
         throw new Error(`logFunc: first log is not start`)
+      }
+      if (!logStartEnabled) {
+        throw new Error(`logFunc: start log when not enabled`)
       }
       logStart = true
       return
@@ -890,26 +911,41 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       if (logCompleted) {
         throw new Error(`logFunc: completed logged multiple times`)
       }
+      if (!logCompletedEnabled) {
+        throw new Error(`logFunc: completed log when not enabled`)
+      }
       logCompleted = true
       return
     }
 
     if (type === 'progress') {
+      if (!logProgressEnabled) {
+        throw new Error(`logFunc: progress log when not enabled`)
+      }
       logProgressCount++
       return
     }
 
     if (type === 'modeChange') {
+      if (!logModeChangesEnabled) {
+        throw new Error(`logFunc: modeChange log when not enabled`)
+      }
       logModeChanges++
       return
     }
 
     if (type === 'error') {
+      if (!logErrorsEnabled) {
+        throw new Error(`logFunc: error log when not enabled`)
+      }
       logErrors++
       return
     }
 
     if (type === 'debug') {
+      if (!logDebugsEnabled) {
+        throw new Error(`logFunc: debug log when not enabled`)
+      }
       logDebugs++
       return
     }
@@ -998,12 +1034,126 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     }
   })
 
-  let resultPromise = testFunc(template)(runOptions)
-  if (isPromiseLike(resultPromise)) {
-    resultPromise = await waitTimeControllerMock(timeController, resultPromise)
+  let result: TestVariantsRunResult<TestArgs>
+  let thrownError: unknown = null
+  try {
+    const resultPromise = testFunc(template)({
+      ...runOptions,
+      abortSignal,
+      timeController,
+    })
+    if (isPromiseLike(resultPromise)) {
+      result = await waitTimeControllerMock(timeController, resultPromise)
+    } else {
+      result = resultPromise
+    }
+  } catch (err) {
+    if (!(err instanceof TestError)) {
+      throw err
+    }
+    thrownError = err
+    result = null as any
   }
 
-  // TODO: Validate result and logs
+  // Validate error behavior
+  const errorExpected =
+    (errorIndex != null && retriesToError === 0) || !!lastError
+  const findBestError = runOptions.findBestError
+  const dontThrowIfError = findBestError?.dontThrowIfError ?? false
+
+  if (errorExpected) {
+    if (lastError == null) {
+      throw new Error(`Error was expected but lastError is null`)
+    }
+    if (findBestError && dontThrowIfError) {
+      // Error expected but should not throw
+      if (thrownError != null) {
+        throw new Error(`Error was thrown but dontThrowIfError=true`)
+      }
+      if (result.bestError == null) {
+        throw new Error(`bestError is null but error was expected`)
+      }
+      if (result.bestError.error !== lastError) {
+        throw new Error(`bestError.error is not TestError`)
+      }
+    } else if (findBestError) {
+      // Error expected and should throw after finding best
+      if (thrownError == null) {
+        throw new Error(`Error expected but not thrown (findBestError=true)`)
+      }
+      if (thrownError !== lastError) {
+        throw new Error(`Thrown error does not match lastError`)
+      }
+    } else {
+      // Error expected and should throw immediately
+      if (thrownError == null) {
+        throw new Error(`Error expected but not thrown`)
+      }
+      if (thrownError !== lastError) {
+        throw new Error(`Thrown error does not match lastError`)
+      }
+    }
+  } else {
+    // No error expected
+    if (thrownError != null) {
+      throw new Error(`No error expected but error was thrown`)
+    }
+    if (result.bestError != null) {
+      throw new Error(`bestError is set but no error was expected`)
+    }
+  }
+
+  if (result.iterations < 0) {
+    throw new Error(`iterations must be >= 0, got ${result.iterations}`)
+  }
+
+  // Validate iterations
+  if (thrownError == null) {
+    const iterationsExpected = callCount * 10 + callCount * 1000000
+    if (result.iterations !== iterationsExpected) {
+      throw new Error(
+        `iterations ${result.iterations} !== ${iterationsExpected}`,
+      )
+    }
+  }
+
+  // Validate logs
+  if (logStartEnabled && !logStart) {
+    throw new Error(`Start log expected but not logged`)
+  }
+  if (logCompletedEnabled && !logCompleted) {
+    throw new Error(`Completed log expected but not logged`)
+  }
+  const logProgressOption =
+    typeof runOptions.log === 'boolean'
+      ? runOptions.log
+      : runOptions.log?.progress
+  if (logProgressEnabled && typeof logProgressOption === 'number') {
+    const logProgressExpected = Math.floor(
+      timeController.now() / logProgressOption,
+    )
+    if (logProgressCount !== logProgressExpected) {
+      throw new Error(
+        `Progress log count ${logProgressCount} !== expected ${logProgressExpected}`,
+      )
+    }
+  }
+  if (
+    logModeChangesEnabled &&
+    runOptions.iterationModes &&
+    runOptions.iterationModes.length > 1
+  ) {
+    const logModeChangesExpected = 0 // TODO: helper to estimate lower bound
+    if (logModeChanges < logModeChangesExpected) {
+      throw new Error(
+        `Mode changes log count ${logModeChanges} < expected minimum ${logModeChangesExpected}`,
+      )
+    }
+  }
+  if (logErrorsEnabled && lastError != null && onErrorCount <= 0) {
+    throw new Error(`Error log expected but not logged`)
+  }
+  abortController.abort()
 }
 
 export const testVariants = createTestVariants(
