@@ -9,6 +9,15 @@ export default defineConfig(env =>
           extends: true,
           test: {
             name: {
+              label: 'dev',
+              // color: 'grey',
+            },
+          },
+        },
+        {
+          extends: true,
+          test: {
+            name: {
               label: 'node',
               // color: 'blue',
             },

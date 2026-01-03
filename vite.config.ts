@@ -69,7 +69,7 @@ export default defineConfig(({ mode, isSsrBuild, command }) => {
     },
     test: {
       include: [
-        '**/*.{test,node,perf,manual,api,e2e}.{js,ts}',
+        '**/*.{test,node,browser,chrome,perf,manual,api,e2e}.{js,ts}',
         '!**/{tmp,temp,-tmp,-temp}/**',
         '!./*.ts',
       ],
