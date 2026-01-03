@@ -1,4 +1,11 @@
-import type { ModeConfig, TestVariantsLogOptions } from './types'
+import type {
+  ModeConfig,
+  TestVariantsLogFunc,
+  TestVariantsLogOptions,
+  TestVariantsLogType,
+} from './types'
+import { log } from 'src/common/helpers/log'
+import { type RequiredNonNullable } from '@flemist/simple-utils'
 
 /** Chrome-specific performance.memory API (non-standard) */
 type PerformanceMemory = {
@@ -7,24 +14,34 @@ type PerformanceMemory = {
   jsHeapSizeLimit: number
 }
 
+/** Default log function - outputs using log helper */
+const logFuncDefault: TestVariantsLogFunc = (
+  _type: TestVariantsLogType,
+  message: string,
+): void => {
+  log(message)
+}
+
 /** Default log options when logging is enabled */
-export const logOptionsDefault: Required<TestVariantsLogOptions> = {
+export const logOptionsDefault: RequiredNonNullable<TestVariantsLogOptions> = {
   start: true,
-  progressInterval: 5000,
+  progress: 5000,
   completed: true,
   error: true,
   modeChange: true,
   debug: false,
+  func: logFuncDefault,
 }
 
 /** Log options when logging is disabled */
-export const logOptionsDisabled: TestVariantsLogOptions = {
+export const logOptionsDisabled: RequiredNonNullable<TestVariantsLogOptions> = {
   start: false,
-  progressInterval: false,
+  progress: false,
   completed: false,
   error: false,
   modeChange: false,
   debug: false,
+  func: logFuncDefault,
 }
 
 /** Format duration in human-readable form */
@@ -107,15 +124,20 @@ export function formatModeConfig(
 /** Resolve log options from various input formats */
 export function resolveLogOptions(
   logRaw: boolean | TestVariantsLogOptions | null | undefined,
-): TestVariantsLogOptions {
+): RequiredNonNullable<TestVariantsLogOptions> {
   if (logRaw === false) {
     return logOptionsDisabled
   }
-  if (logRaw === true) {
+  if (logRaw === true || !logRaw) {
     return logOptionsDefault
   }
-  if (logRaw && typeof logRaw === 'object') {
-    return logRaw
+  return {
+    start: logRaw.start ?? logOptionsDefault.start,
+    progress: logRaw.progress ?? logOptionsDefault.progress,
+    completed: logRaw.completed ?? logOptionsDefault.completed,
+    error: logRaw.error ?? logOptionsDefault.error,
+    modeChange: logRaw.modeChange ?? logOptionsDefault.modeChange,
+    debug: logRaw.debug ?? logOptionsDefault.debug,
+    func: logRaw.func ?? logOptionsDefault.func,
   }
-  return logOptionsDefault
 }

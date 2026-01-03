@@ -9,6 +9,7 @@ import type {
   TestVariantsTestRun,
   TestVariantsTestRunResult,
 } from './types'
+import { resolveLogOptions } from './progressLogging'
 
 export type ErrorEvent<Args extends Obj> = {
   error: any
@@ -47,13 +48,7 @@ export function testVariantsCreateTestRun<Args extends Obj>(
   test: TestVariantsTest<Args>,
   options?: null | TestVariantsCreateTestRunOptions<Args>,
 ): TestVariantsTestRun<Args> {
-  const log = options?.log
-  const logError =
-    log === false
-      ? false
-      : log === true || log == null
-        ? true
-        : (log.error ?? true)
+  const logOpts = resolveLogOptions(options?.log)
 
   let errorEvent: ErrorEvent<Args> | null = null
   // Debug mode: counts iterations for step-by-step debugging of failing variant.
@@ -73,11 +68,11 @@ export function testVariantsCreateTestRun<Args extends Obj>(
         args,
         tests,
       }
-      if (logError) {
-        console.error(
-          `[test-variants] error variant: ${tests}\n${formatAny(args, { pretty: true })}`,
+      if (logOpts.error) {
+        logOpts.func(
+          'error',
+          `[test-variants] error variant: ${tests}\n${formatAny(args, { pretty: true })}\n${formatAny(error)}`,
         )
-        console.error(error)
       }
     }
 
@@ -89,7 +84,10 @@ export function testVariantsCreateTestRun<Args extends Obj>(
     // eslint-disable-next-line no-debugger
     debugger
     if (Date.now() - time0 > 50 && debugIteration < 5) {
-      console.log('[test-variants] DEBUG ITERATION: ' + debugIteration)
+      logOpts.func(
+        'debug',
+        '[test-variants] DEBUG ITERATION: ' + debugIteration,
+      )
       debugIteration++
       return
     }

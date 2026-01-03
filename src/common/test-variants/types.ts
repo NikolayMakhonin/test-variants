@@ -139,7 +139,7 @@ export type TestVariantsLogOptions = {
   /** Log at test start with memory info; default true */
   start?: null | boolean
   /** Progress log interval in ms; false/0 to disable; default 5000 */
-  progressInterval?: null | false | number
+  progress?: null | false | number
   /** Log on completion; default true */
   completed?: null | boolean
   /** Log error details (variant index, args, error); default true */
@@ -148,7 +148,18 @@ export type TestVariantsLogOptions = {
   modeChange?: null | boolean
   /** Debug logging for internal behavior; default false */
   debug?: null | boolean
+  /** Custom log function; receives log type and formatted message */
+  func?: null | TestVariantsLogFunc
 }
+
+/** Log entry type for custom log function */
+export type TestVariantsLogType = Exclude<keyof TestVariantsLogOptions, 'func'>
+
+/** Custom log function signature */
+export type TestVariantsLogFunc = (
+  type: TestVariantsLogType,
+  message: string,
+) => void
 
 /** Options for generating error variant file path */
 export type GenerateErrorVariantFilePathOptions = {

@@ -12,14 +12,12 @@ import type {
   TestVariantsRunOptionsInternal,
   TestVariantsRunResult,
 } from './types'
-import { log } from 'src/common/helpers/log'
 import { timeControllerDefault } from '@flemist/time-controller'
 import {
   formatBytes,
   formatDuration,
   formatModeConfig,
   getMemoryUsage,
-  logOptionsDefault,
   resolveLogOptions,
 } from './progressLogging'
 
@@ -39,12 +37,6 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   const GC_Interval = options?.GC_Interval ?? 1000
 
   const logOpts = resolveLogOptions(options?.log)
-  const logStart = logOpts.start ?? logOptionsDefault.start
-  const logInterval =
-    logOpts.progressInterval ?? logOptionsDefault.progressInterval
-  const logCompleted = logOpts.completed ?? logOptionsDefault.completed
-  const logModeChange = logOpts.modeChange ?? logOptionsDefault.modeChange
-  const logDebug = logOpts.debug ?? logOptionsDefault.debug
 
   const abortSignalExternal = options?.abortSignal
   const findBestError = options?.findBestError
@@ -93,8 +85,11 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   let cycleStartTime = startTime
 
   const startMemory = getMemoryUsage()
-  if (logStart && startMemory != null) {
-    log(`[test-variants] start, memory: ${formatBytes(startMemory)}`)
+  if (logOpts.start && startMemory != null) {
+    logOpts.func(
+      'start',
+      `[test-variants] start, memory: ${formatBytes(startMemory)}`,
+    )
   }
 
   // Debug mode: repeats failing variant for step-by-step JS debugging.
@@ -117,7 +112,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   const pool: IPool | null = parallel <= 1 ? null : new Pool(parallel)
 
   function onCompleted() {
-    if (logCompleted) {
+    if (logOpts.completed) {
       const totalElapsed = timeController.now() - startTime
       let logMsg = `[test-variants] end, tests: ${iterations} (${formatDuration(totalElapsed)}), async: ${iterationsAsync}`
       if (startMemory != null) {
@@ -127,28 +122,31 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
           logMsg += `, memory: ${formatBytes(memory)} (${diff >= 0 ? '+' : ''}${formatBytes(diff)})`
         }
       }
-      log(logMsg)
+      logOpts.func('completed', logMsg)
     }
   }
 
   // Main iteration using iterator
   let timeLimitExceeded = false
   variants.start()
-  if (logDebug) {
-    log(
+  if (logOpts.debug) {
+    logOpts.func(
+      'debug',
       `[debug] start() called: cycleIndex=${variants.cycleIndex}, modeIndex=${variants.modeIndex}, minCompletedCount=${variants.minCompletedCount}, cycles=${cycles}`,
     )
   }
   // Always show current mode at start
-  if (logModeChange) {
+  if (logOpts.modeChange) {
     prevModeIndex = variants.modeIndex
-    log(
+    logOpts.func(
+      'modeChange',
       `[test-variants] ${formatModeConfig(variants.modeConfig, variants.modeIndex)}`,
     )
   }
   while (variants.minCompletedCount < cycles && !timeLimitExceeded) {
-    if (logDebug) {
-      log(
+    if (logOpts.debug) {
+      logOpts.func(
+        'debug',
         `[debug] outer loop: minCompletedCount=${variants.minCompletedCount} < cycles=${cycles}`,
       )
     }
@@ -169,8 +167,9 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
       }
 
       if (variants.modeIndex !== prevModeIndex) {
-        if (logDebug) {
-          log(
+        if (logOpts.debug) {
+          logOpts.func(
+            'debug',
             `[debug] mode switch: modeIndex=${variants.modeIndex}, index=${variants.index}`,
           )
         }
@@ -178,7 +177,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
         prevModeIndex = variants.modeIndex
       }
 
-      if (logInterval || GC_Interval || limitTime) {
+      if (logOpts.progress || GC_Interval || limitTime) {
         const now = timeController.now()
 
         if (limitTime && now - startTime >= limitTime) {
@@ -186,11 +185,12 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
           break
         }
 
-        if (logInterval && now - prevLogTime >= logInterval) {
+        if (logOpts.progress && now - prevLogTime >= logOpts.progress) {
           // the log is required to prevent the karma browserNoActivityTimeout
           // Log mode change together with progress when mode changed
-          if (logModeChange && modeChanged) {
-            log(
+          if (logOpts.modeChange && modeChanged) {
+            logOpts.func(
+              'modeChange',
               `[test-variants] ${formatModeConfig(variants.modeConfig, variants.modeIndex)}`,
             )
             modeChanged = false
@@ -241,7 +241,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
               prevLogMemory = memory
             }
           }
-          log(logMsg)
+          logOpts.func('progress', logMsg)
           prevLogTime = now
         }
 
@@ -358,8 +358,9 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
       }
     }
 
-    if (logDebug) {
-      log(
+    if (logOpts.debug) {
+      logOpts.func(
+        'debug',
         `[debug] inner loop exited: modeIndex=${variants.modeIndex}, index=${variants.index}, count=${variants.count}, iterations=${iterations}`,
       )
     }
@@ -375,14 +376,16 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
       break
     }
 
-    if (logDebug) {
-      log(
+    if (logOpts.debug) {
+      logOpts.func(
+        'debug',
         `[debug] calling start() again: cycleIndex=${variants.cycleIndex}, minCompletedCount before start=${variants.minCompletedCount}`,
       )
     }
     variants.start()
-    if (logDebug) {
-      log(
+    if (logOpts.debug) {
+      logOpts.func(
+        'debug',
         `[debug] after start(): cycleIndex=${variants.cycleIndex}, modeIndex=${variants.modeIndex}, minCompletedCount=${variants.minCompletedCount}`,
       )
     }
