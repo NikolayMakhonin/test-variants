@@ -1,4 +1,7 @@
-import type { TestVariantsTestRun } from './testVariantsCreateTestRun'
+import type {
+  TestVariantsTestOptions,
+  TestVariantsTestRun,
+} from './testVariantsCreateTestRun'
 import { AbortControllerFast } from '@flemist/abort-controller-fast'
 import { combineAbortSignals, isPromiseLike } from '@flemist/async-utils'
 import { type IPool, Pool, poolWait } from '@flemist/time-limits'
@@ -71,6 +74,18 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
         ? 1
         : options.parallel
 
+  const abortControllerParallel = new AbortControllerFast()
+  const abortSignal = combineAbortSignals(
+    abortSignalExternal,
+    abortControllerParallel.signal,
+  )
+  const abortSignalAll = abortSignal
+
+  const testOptions: TestVariantsTestOptions = {
+    abortSignal,
+    timeController,
+  }
+
   // Apply initial limits
   if (options?.limitTests != null) {
     variants.addLimit({ index: options.limitTests })
@@ -82,6 +97,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
       testRun,
       variants,
       saveErrorVariants,
+      testOptions,
       useToFindBestError: saveErrorVariants.useToFindBestError,
       findBestErrorEnabled: !!findBestError,
     })
@@ -91,13 +107,6 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   let prevCycleDuration: null | number = null
   const startTime = timeController.now()
   let cycleStartTime = startTime
-
-  const abortControllerParallel = new AbortControllerFast()
-  const abortSignalParallel = combineAbortSignals(
-    abortSignalExternal,
-    abortControllerParallel.signal,
-  )
-  const abortSignalAll = abortSignalParallel
 
   const startMemory = getMemoryUsage()
   if (logStart && startMemory != null) {
@@ -293,14 +302,10 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
         continue
       }
 
-      if (!pool || abortSignalParallel.aborted) {
+      if (!pool || abortSignal.aborted) {
         try {
           // Pass current iterations count (tests run before this one)
-          let promiseOrIterations = testRun(
-            args,
-            iterations,
-            abortSignalParallel,
-          )
+          let promiseOrIterations = testRun(args, iterations, testOptions)
           if (isPromiseLike(promiseOrIterations)) {
             promiseOrIterations = await promiseOrIterations
           }
@@ -350,13 +355,13 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
 
         void (async () => {
           try {
-            if (abortSignalParallel?.aborted) {
+            if (abortSignal?.aborted) {
               return
             }
             let promiseOrIterations = testRun(
               capturedArgs,
               capturedIterations,
-              abortSignalParallel,
+              testOptions,
             )
             if (isPromiseLike(promiseOrIterations)) {
               promiseOrIterations = await promiseOrIterations

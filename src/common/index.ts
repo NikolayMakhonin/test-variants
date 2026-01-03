@@ -22,6 +22,7 @@ export {
   type ErrorEvent,
   type OnErrorCallback,
   type TestVariantsTest,
+  type TestVariantsTestOptions,
   type TestVariantsTestResult,
   type TestVariantsCreateTestRunOptions,
   type TestVariantsTestRun,

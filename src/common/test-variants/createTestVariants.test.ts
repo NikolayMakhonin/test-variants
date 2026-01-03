@@ -368,7 +368,7 @@ describe('test-variants > createTestVariants', () => {
             b: string
             c: boolean
           },
-          abortSignal,
+          { abortSignal },
         ) => {
           countInProcess++
           console.log(`${a} ${b} ${c} ${countInProcess} START`)

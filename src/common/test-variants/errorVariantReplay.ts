@@ -4,7 +4,10 @@ import type {
   TestVariantsIterator,
   SaveErrorVariantsOptions,
 } from 'src/common/test-variants/types'
-import type { TestVariantsTestRun } from 'src/common/test-variants/testVariantsCreateTestRun'
+import type {
+  TestVariantsTestOptions,
+  TestVariantsTestRun,
+} from 'src/common/test-variants/testVariantsCreateTestRun'
 import {
   parseErrorVariantFile,
   readErrorVariantFiles,
@@ -18,6 +21,8 @@ export type ReplayErrorVariantsOptions<Args extends Obj, SavedArgs> = {
   variants: TestVariantsIterator<Args>
   /** Save error variants configuration */
   saveErrorVariants: SaveErrorVariantsOptions<Args, SavedArgs>
+  /** Options passes to test function */
+  testOptions: TestVariantsTestOptions
   /** Whether to use replayed errors for findBestError mode */
   useToFindBestError?: null | boolean
   /** Whether findBestError is enabled */
@@ -37,6 +42,7 @@ export async function replayErrorVariants<Args extends Obj, SavedArgs = Args>(
     testRun,
     variants,
     saveErrorVariants,
+    testOptions,
     useToFindBestError,
     findBestErrorEnabled,
   } = options
@@ -56,7 +62,7 @@ export async function replayErrorVariants<Args extends Obj, SavedArgs = Args>(
     for (let retry = 0; retry < attemptsPerVariant; retry++) {
       try {
         // During replay, no regular tests have run yet, so tests count is 0
-        const promiseOrResult = testRun(args, 0, null as any)
+        const promiseOrResult = testRun(args, 0, testOptions)
         if (isPromiseLike(promiseOrResult)) {
           await promiseOrResult
         }

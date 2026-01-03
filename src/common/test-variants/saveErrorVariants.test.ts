@@ -97,7 +97,7 @@ describe('test-variants > saveErrorVariants', () => {
           seed: void 0,
         }),
       )
-      assert.deepStrictEqual(args, { transformed: 84 })
+      assert.deepStrictEqual(args, { transformed: 84, seed: void 0 })
     })
 
     it('throws on invalid json', async () => {

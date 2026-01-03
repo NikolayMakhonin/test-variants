@@ -1,6 +1,7 @@
 import { type IAbortSignalFast } from '@flemist/abort-controller-fast'
 import { isPromiseLike, type PromiseOrValue } from '@flemist/async-utils'
 import { formatAny, type Obj } from '@flemist/simple-utils'
+import type { ITimeController } from '@flemist/time-controller'
 import {
   ArgsWithSeed,
   type TestVariantsLogOptions,
@@ -28,17 +29,22 @@ export type TestVariantsTestRunResult = void | {
   iterationsSync: number
 }
 
+export type TestVariantsTestOptions = {
+  abortSignal: IAbortSignalFast
+  timeController: ITimeController
+}
+
 export type TestVariantsTestRun<Args extends Obj> = (
   args: ArgsWithSeed<Args>,
   tests: number,
-  abortSignal: IAbortSignalFast,
+  options: TestVariantsTestOptions,
 ) => PromiseOrValue<TestVariantsTestRunResult>
 
 export type TestVariantsTestResult = number | void | TestVariantsTestRunResult
 
 export type TestVariantsTest<Args extends Obj> = (
   args: ArgsWithSeed<Args>,
-  abortSignal: IAbortSignalFast,
+  options: TestVariantsTestOptions,
 ) => PromiseOrValue<TestVariantsTestResult>
 
 /** Normalize test result to standard format */
@@ -118,10 +124,10 @@ export function testVariantsCreateTestRun<Args extends Obj>(
   return function testRun(
     args: ArgsWithSeed<Args>,
     tests: number,
-    abortSignal: IAbortSignalFast,
+    options: TestVariantsTestOptions,
   ): PromiseOrValue<TestVariantsTestRunResult> {
     try {
-      const promiseOrResult = test(args, abortSignal)
+      const promiseOrResult = test(args, options)
 
       if (isPromiseLike(promiseOrResult)) {
         return promiseOrResult.then(

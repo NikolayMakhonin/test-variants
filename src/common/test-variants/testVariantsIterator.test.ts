@@ -565,7 +565,9 @@ describe(
       assert.strictEqual(result2, null)
 
       assert.strictEqual(iterator.count, 1)
-      assert.deepStrictEqual(iterator.limit, { args: { a: 1, b: 'y' } })
+      assert.deepStrictEqual(iterator.limit, {
+        args: { a: 1, b: 'y', seed: void 0 },
+      })
     })
 
     it('addLimit({args, error}) stores pending error', async () => {
@@ -589,7 +591,11 @@ describe(
       assert.strictEqual(result, null)
 
       assert.strictEqual(iterator.count, 2)
-      assert.deepStrictEqual(iterator.limit?.args, { a: 2, b: 'x' })
+      assert.deepStrictEqual(iterator.limit?.args, {
+        a: 2,
+        b: 'x',
+        seed: void 0,
+      })
       assert.strictEqual(iterator.limit?.error, testError)
     })
 
@@ -680,7 +686,11 @@ describe(
       iterator.addLimit({ args: { a: 1, b: 'z', seed: void 0 }, index: 2 })
 
       assert.strictEqual(iterator.count, 2) // Index applied
-      assert.deepStrictEqual(iterator.limit?.args, { a: 1, b: 'z' }) // Limit set after template extension
+      assert.deepStrictEqual(iterator.limit?.args, {
+        a: 1,
+        b: 'z',
+        seed: void 0,
+      }) // Limit set after template extension
     })
 
     it('multiple pending limits apply at different positions', async () => {
@@ -701,7 +711,11 @@ describe(
       assert.strictEqual(result, null)
 
       assert.strictEqual(iterator.count, 1)
-      assert.deepStrictEqual(iterator.limit?.args, { a: 1, b: 'y' })
+      assert.deepStrictEqual(iterator.limit?.args, {
+        a: 1,
+        b: 'y',
+        seed: void 0,
+      })
     })
 
     it('limitArgOnError limits per-arg indexes', async () => {

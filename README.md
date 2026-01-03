@@ -47,7 +47,14 @@ const testVariants = createTestVariants(async (
     // intended for pseudo-random generator and reproducibility of randomized tests
     seed?: number | null,
   },
-  abortSignal: IAbortSignalFast,
+  {
+    // created by testVariants, combined with abortSignal from run options if provided
+    // use to abort async operations or check abortSignal.aborted
+    abortSignal,
+    // from run options timeController, or timeControllerDefault if not specified
+    // use for time-dependent operations: timeController.now(), delays, etc.
+    timeController,
+  }: TestVariantsTestOptions,
 ) => {
   // test body
 
