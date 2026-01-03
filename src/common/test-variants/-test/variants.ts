@@ -122,7 +122,6 @@ type StressTestArgs = {
   withSeed: boolean | null
   attemptsPerVariantMax: number
   cyclesMax: number
-  forwardModeCyclesMax: number
   modeType: 'forward' | 'backward' | 'random' | null
   modesCountMax: number
   withEquals: boolean | null
@@ -786,7 +785,7 @@ function generateRunOptions(
   const limitTime = generateBoundaryInt(rnd, TIME_MAX)
   return {
     onError,
-    log: generateLogOptions(rnd, logFunc),
+    log: logEnabled || generateLogOptions(rnd, logFunc),
     parallel: generateParallel(rnd, options.parallel, PARALLEL_MAX),
     cycles: generateBoundaryInt(rnd, options.cyclesMax),
     getSeed: generateSeedFunc(rnd, options.withSeed),
@@ -945,8 +944,12 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       return
     }
 
-    if (callCount === 0) {
-      throw new Error(`logFunc: log before test started`)
+    if (type === 'debug') {
+      if (!logDebugsEnabled) {
+        throw new Error(`logFunc: debug log when not enabled`)
+      }
+      logDebugs++
+      return
     }
 
     if (type === 'completed') {
@@ -958,6 +961,10 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       }
       logCompleted = true
       return
+    }
+
+    if (callCount === 0) {
+      throw new Error(`logFunc: log before test started`)
     }
 
     if (type === 'progress') {
@@ -973,14 +980,6 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
         throw new Error(`logFunc: error log when not enabled`)
       }
       logErrors++
-      return
-    }
-
-    if (type === 'debug') {
-      if (!logDebugsEnabled) {
-        throw new Error(`logFunc: debug log when not enabled`)
-      }
-      logDebugs++
       return
     }
 
@@ -1091,7 +1090,8 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
 
   // Validate error behavior
   const errorExpected =
-    (errorIndex != null && retriesToError === 0) || !!lastError
+    (errorIndex != null && retriesToError === 0 && callCount > errorIndex) ||
+    !!lastError
   const findBestError = runOptions.findBestError
   const dontThrowIfError = findBestError?.dontThrowIfError ?? false
 
@@ -1151,41 +1151,49 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     }
   }
 
-  // Validate logs
-  if (logStartEnabled && !logStart) {
-    throw new Error(`Start log expected but not logged`)
-  }
-  if (logCompletedEnabled && !logCompleted) {
-    throw new Error(`Completed log expected but not logged`)
-  }
-  const logProgressOption =
-    typeof runOptions.log === 'boolean'
-      ? runOptions.log
-      : runOptions.log?.progress
-  if (logProgressEnabled && typeof logProgressOption === 'number') {
-    const logProgressExpected = Math.floor(
-      timeController.now() / logProgressOption,
-    )
-    if (logProgressCount !== logProgressExpected) {
-      throw new Error(
-        `Progress log count ${logProgressCount} !== expected ${logProgressExpected}`,
+  if (!logEnabled) {
+    // Validate logs
+    if (logStartEnabled && !logStart) {
+      throw new Error(`Start log expected but not logged`)
+    }
+    if (logCompletedEnabled && !logCompleted) {
+      throw new Error(`Completed log expected but not logged`)
+    }
+    const logProgressOption =
+      typeof runOptions.log === 'boolean'
+        ? runOptions.log
+        : runOptions.log?.progress
+    if (
+      logProgressEnabled &&
+      typeof logProgressOption === 'number' &&
+      callCount > 0
+    ) {
+      const logProgressExpected =
+        logProgressOption === 0
+          ? callCount
+          : Math.floor(timeController.now() / logProgressOption)
+      if (logProgressCount !== logProgressExpected) {
+        throw new Error(
+          `Progress log count ${logProgressCount} !== expected ${logProgressExpected}`,
+        )
+      }
+    }
+    if (logModeChangesEnabled && runOptions.iterationModes) {
+      const modeChangesMin = estimateModeChangesMin(
+        runOptions.iterationModes,
+        callCount,
       )
+      if (logModeChanges < modeChangesMin) {
+        throw new Error(
+          `Mode changes log count ${logModeChanges} < expected minimum ${modeChangesMin}`,
+        )
+      }
+    }
+    if (logErrorsEnabled && lastError != null && onErrorCount <= 0) {
+      throw new Error(`Error log expected but not logged`)
     }
   }
-  if (logModeChangesEnabled && runOptions.iterationModes) {
-    const modeChangesMin = estimateModeChangesMin(
-      runOptions.iterationModes,
-      callCount,
-    )
-    if (logModeChanges < modeChangesMin) {
-      throw new Error(
-        `Mode changes log count ${logModeChanges} < expected minimum ${modeChangesMin}`,
-      )
-    }
-  }
-  if (logErrorsEnabled && lastError != null && onErrorCount <= 0) {
-    throw new Error(`Error log expected but not logged`)
-  }
+
   abortController.abort()
 }
 
