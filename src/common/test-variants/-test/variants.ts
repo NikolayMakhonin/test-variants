@@ -128,6 +128,29 @@ type StressTestArgs = {
 const PARALLEL_MAX = 10
 const TIME_MAX = 10
 
+// region Helpers
+
+function deepFreezeJsonLike(value: unknown): void {
+  if (value == null || typeof value !== 'object') {
+    return
+  }
+  Object.freeze(value)
+  if (Array.isArray(value)) {
+    for (let i = 0, len = value.length; i < len; i++) {
+      deepFreezeJsonLike(value[i])
+    }
+  } else {
+    const keys = Object.keys(value)
+    for (let i = 0, len = keys.length; i < len; i++) {
+      deepFreezeJsonLike((value as Record<string, unknown>)[keys[i]])
+    }
+  }
+}
+
+// endregion
+
+class TestError extends Error {}
+
 // region Generators
 
 function generateBoolean(rnd: Random, value: boolean | null): boolean {
@@ -704,6 +727,171 @@ async function runWithLogs<T>(fn: () => T | Promise<T>): Promise<T> {
 
 async function executeStressTest(options: StressTestArgs): Promise<void> {
   const rnd = new Random(options.seed)
+
+  // Generate template
+  const template = generateTemplate(
+    rnd,
+    options.argsCountMax,
+    options.valuesPerArgMax,
+    options.valuesCountMax,
+    options.argType,
+    options.valueType,
+  )
+  const argKeys = Object.keys(template)
+
+  // Count all variants by iterating through all combinations
+  let variantsCount = 0
+  function countVariants(argIndex: number, args: TestArgs): void {
+    if (argIndex >= argKeys.length) {
+      variantsCount++
+      return
+    }
+    const key = argKeys[argIndex]
+    const templateValue = template[key]
+    const values =
+      typeof templateValue === 'function' ? templateValue(args) : templateValue
+    for (let i = 0, len = values.length; i < len; i++) {
+      args[key] = values[i]
+      countVariants(argIndex + 1, args)
+    }
+    delete args[key]
+  }
+  countVariants(0, {})
+
+  // Generate run options and run test
+  const runOptions = generateRunOptions(
+    rnd,
+    options,
+    argKeys,
+    template,
+    variantsCount,
+    logFunc,
+    onError,
+  )
+
+  // Generate error index
+  const errorIndex = generateErrorIndex(
+    rnd,
+    options.errorPosition,
+    variantsCount,
+  )
+  const retriesToError = generateBoundaryInt(rnd, options.retriesToErrorMax)
+
+  const callCountMax = 0 // TODO: calculate it in separate helper function
+
+  // Tracking state
+  let callCount = 0
+  let errorAttempts = 0
+  let lastError: TestError | null = null
+  let lastErrorVariantArgs: TestArgs | null = null
+
+  let logStart = false
+  let logCompleted = false
+  let logProgressCount = 0
+  let logModeChanges = 0
+  let logErrors = 0
+  let logDebugs = 0
+  // Log and error callbacks
+  function logFunc(type: TestVariantsLogType, message: string): void {
+    if (logEnabled) {
+      log(`[${type}] ${message}`)
+    }
+    if (logCompleted) {
+      throw new Error(`logFunc: log after completed`)
+    }
+
+    if (callCount === 0) {
+      if (type !== 'start') {
+        throw new Error(`logFunc: first log is not start`)
+      }
+      logStart = true
+      return
+    }
+    if (type === 'start') {
+      throw new Error(`logFunc: start logged multiple times`)
+    }
+    if (!logStart) {
+      throw new Error(`logFunc: log before start`)
+    }
+
+    if (type === 'completed') {
+      if (logCompleted) {
+        throw new Error(`logFunc: completed logged multiple times`)
+      }
+      logCompleted = true
+      return
+    }
+
+    if (type === 'progress') {
+      logProgressCount++
+      return
+    }
+
+    if (type === 'modeChange') {
+      logModeChanges++
+      return
+    }
+
+    if (type === 'error') {
+      logErrors++
+      return
+    }
+
+    if (type === 'debug') {
+      logDebugs++
+      return
+    }
+
+    throw new Error(`logFunc: unknown log type "${type}"`)
+  }
+
+  let onErrorCount = 0
+  function onError(event: {
+    error: unknown
+    args: TestArgs
+    tests: number
+  }): void {
+    if (onErrorCount > 0 && !runOptions.findBestError) {
+      throw new Error(`onError called multiple times`)
+    }
+    onErrorCount++
+    if (event.args !== lastErrorVariantArgs) {
+      throw new Error(`onError: args do not match errorVariantArgs`)
+    }
+    if (event.tests !== callCount) {
+      throw new Error(
+        `onError: tests ${event.tests} !== callCount ${callCount}`,
+      )
+    }
+    if (event.error !== lastError) {
+      throw new Error(`onError: error does not match`)
+    }
+  }
+
+  // Create test function
+  const testFunc = createTestVariants(function innerTest(args: TestArgs): void {
+    if (callCount > callCountMax) {
+      throw new Error(
+        `testFunc: callCount ${callCount} exceeded max ${callCountMax}`,
+      )
+    }
+    deepFreezeJsonLike(args)
+    callCount++
+
+    // Check if this is the error variant
+    const isErrorVariant = errorIndex != null && callCount === errorIndex + 1
+    if (isErrorVariant) {
+      errorAttempts++
+      if (errorAttempts > retriesToError) {
+        errorAttempts = 0
+        lastErrorVariantArgs = args
+        lastError = new TestError(`Test error at variant ${callCount - 1}`)
+        throw lastError
+      }
+    }
+  })
+
+  const result = await testFunc(template)(runOptions)
 }
 
 export const testVariants = createTestVariants(
