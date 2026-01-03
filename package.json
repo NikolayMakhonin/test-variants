@@ -10,8 +10,28 @@
     "./package.json": "./package.json",
     ".": {
       "types": "./build/common/index.d.ts",
+      "browser": {
+        "types": "./build/browser/index.d.ts",
+        "import": "./build/browser/index.mjs",
+        "require": "./build/browser/index.cjs"
+      },
+      "node": {
+        "types": "./build/node/index.d.ts",
+        "import": "./build/node/index.mjs",
+        "require": "./build/node/index.cjs"
+      },
       "import": "./build/common/index.mjs",
       "require": "./build/common/index.cjs"
+    },
+    "./browser": {
+      "types": "./build/browser/index.d.ts",
+      "import": "./build/browser/index.mjs",
+      "require": "./build/browser/index.cjs"
+    },
+    "./node": {
+      "types": "./build/node/index.d.ts",
+      "import": "./build/node/index.mjs",
+      "require": "./build/node/index.cjs"
     }
   },
   "packageManager": "pnpm@10.18.3",
