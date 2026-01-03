@@ -31,7 +31,7 @@ describe('test > testVariants perf', { timeout: 300000 }, () => {
 
     const result = await testVariantsSync(args)()
 
-    perfResult.absoluteDiff = perfResult.absoluteDiff.map(
+    perfResult.absoluteDiff = perfResult.absoluteDiff!.map(
       o => o / result.iterations,
     )
 

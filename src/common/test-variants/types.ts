@@ -71,14 +71,14 @@ export type LimitArgOnErrorOptions = {
 export type LimitArgOnError = (options: LimitArgOnErrorOptions) => boolean
 
 /** Limit information with args and optional error */
-export type TestVariantsIteratorLimit<Args> = {
-  args: Args
+export type TestVariantsIteratorLimit<Args extends Obj> = {
+  args: ArgsWithSeed<Args>
   error?: unknown
 }
 
 /** Options for addLimit method */
-export type AddLimitOptions<Args> = {
-  args?: null | Args
+export type AddLimitOptions<Args extends Obj> = {
+  args?: null | ArgsWithSeed<Args>
   index?: null | number
   error?: unknown
 }
@@ -155,7 +155,7 @@ export type GenerateErrorVariantFilePathOptions = {
 }
 
 /** Options for saving and replaying error-causing parameter combinations */
-export type SaveErrorVariantsOptions<Args, SavedArgs = Args> = {
+export type SaveErrorVariantsOptions<Args extends Obj, SavedArgs = Args> = {
   /** Directory path for error variant JSON files */
   dir: string
   /** Retry attempts per variant during replay phase (default: 1) */
@@ -165,9 +165,9 @@ export type SaveErrorVariantsOptions<Args, SavedArgs = Args> = {
     | null
     | ((options: GenerateErrorVariantFilePathOptions) => string | null)
   /** Transform args before JSON serialization */
-  argsToJson?: null | ((args: Args) => string | SavedArgs)
+  argsToJson?: null | ((args: ArgsWithSeed<Args>) => string | SavedArgs)
   /** Transform parsed JSON back to args */
-  jsonToArgs?: null | ((json: SavedArgs) => Args)
+  jsonToArgs?: null | ((json: SavedArgs) => ArgsWithSeed<Args>)
   /** Use saved errors to set findBestError limits instead of throwing on replay */
   useToFindBestError?: null | boolean
 }

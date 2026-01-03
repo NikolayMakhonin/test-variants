@@ -94,6 +94,7 @@ describe('test-variants > saveErrorVariants', () => {
         filePath,
         (json: { value: number }) => ({
           transformed: json.value * 2,
+          seed: void 0,
         }),
       )
       assert.deepStrictEqual(args, { transformed: 84 })

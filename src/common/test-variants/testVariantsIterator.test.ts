@@ -244,7 +244,7 @@ describe(
         },
       })
 
-      const savedArgs = { a: 1, b: 'y' }
+      const savedArgs = { a: 1, b: 'y', seed: void 0 }
       const testError = new Error('saved error')
 
       iterator.addLimit({ args: savedArgs, index: 1, error: testError })
@@ -555,7 +555,7 @@ describe(
       })
 
       // Add pending limit for {a: 1, b: 'y'} (index 1)
-      iterator.addLimit({ args: { a: 1, b: 'y' } })
+      iterator.addLimit({ args: { a: 1, b: 'y', seed: void 0 } })
 
       iterator.start()
       const result1 = iterator.next() // index 0: {a: 1, b: 'x'}
@@ -577,7 +577,10 @@ describe(
       })
 
       const testError = new Error('pending error')
-      iterator.addLimit({ args: { a: 2, b: 'x' }, error: testError })
+      iterator.addLimit({
+        args: { a: 2, b: 'x', seed: void 0 },
+        error: testError,
+      })
 
       iterator.start()
       iterator.next() // 0
@@ -620,7 +623,7 @@ describe(
       })
 
       // Value 'z' not in template - template should be extended with 'z'
-      iterator.addLimit({ args: { a: 1, b: 'z' } })
+      iterator.addLimit({ args: { a: 1, b: 'z', seed: void 0 } })
 
       iterator.start()
       // After template extension: a=[1,2], b=['x','y','z']
@@ -674,7 +677,7 @@ describe(
       })
 
       // Value 'z' not in template - template extended, both index and limit applied
-      iterator.addLimit({ args: { a: 1, b: 'z' }, index: 2 })
+      iterator.addLimit({ args: { a: 1, b: 'z', seed: void 0 }, index: 2 })
 
       assert.strictEqual(iterator.count, 2) // Index applied
       assert.deepStrictEqual(iterator.limit?.args, { a: 1, b: 'z' }) // Limit set after template extension
@@ -689,8 +692,8 @@ describe(
       })
 
       // Add two pending limits
-      iterator.addLimit({ args: { a: 2, b: 'x' } }) // position 2
-      iterator.addLimit({ args: { a: 1, b: 'y' } }) // position 1 - should win
+      iterator.addLimit({ args: { a: 2, b: 'x', seed: void 0 } }) // position 2
+      iterator.addLimit({ args: { a: 1, b: 'y', seed: void 0 } }) // position 1 - should win
 
       iterator.start()
       iterator.next() // 0
@@ -842,12 +845,18 @@ describe(
       })
 
       // File 1: a=0, b=2 (indexes: [0, 2])
-      iterator.addLimit({ args: { a: 0, b: 2 }, error: new Error('file1') })
+      iterator.addLimit({
+        args: { a: 0, b: 2, seed: void 0 },
+        error: new Error('file1'),
+      })
 
       // File 2: a=3, b=1 (indexes: [3, 1])
       // Lexicographic compare: [3, 1] vs [0, 2] -> at position 0: 3 > 0
       // File 2 is lexicographically LARGER, reject
-      iterator.addLimit({ args: { a: 3, b: 1 }, error: new Error('file2') })
+      iterator.addLimit({
+        args: { a: 3, b: 1, seed: void 0 },
+        error: new Error('file2'),
+      })
 
       iterator.start()
       const results: any[] = []
@@ -879,7 +888,7 @@ describe(
 
       // File 1: a=0, b=2, c=false (indexes: [0, 2, 0])
       iterator.addLimit({
-        args: { a: 0, b: 2, c: false },
+        args: { a: 0, b: 2, c: false, seed: void 0 },
         error: new Error('file1'),
       })
 
@@ -889,7 +898,7 @@ describe(
       // - b: 1 < 2, file2 wins!
       // File 2 is lexicographically SMALLER, accept
       iterator.addLimit({
-        args: { a: 0, b: 1, c: true },
+        args: { a: 0, b: 1, c: true, seed: void 0 },
         error: new Error('file2'),
       })
 
@@ -924,12 +933,18 @@ describe(
 
       // File 1: a=0, b=2 (indexes: [0, 2])
       // a is at index 0 - argLimits[a] = 0 (restricts to 1 value)
-      iterator.addLimit({ args: { a: 0, b: 2 }, error: new Error('file1') })
+      iterator.addLimit({
+        args: { a: 0, b: 2, seed: void 0 },
+        error: new Error('file1'),
+      })
 
       // File 2: a=1, b=0 (indexes: [1, 0])
       // Lexicographic compare: [1, 0] vs [0, 2] -> at position 0: 1 > 0
       // File 2 is lexicographically LARGER, reject
-      iterator.addLimit({ args: { a: 1, b: 0 }, error: new Error('file2') })
+      iterator.addLimit({
+        args: { a: 1, b: 0, seed: void 0 },
+        error: new Error('file2'),
+      })
 
       iterator.start()
       const results: any[] = []
@@ -961,7 +976,10 @@ describe(
 
       // With a=false, b template is [3, 4, 5]
       // b=4 is at index 1 in [3, 4, 5]
-      iterator.addLimit({ args: { a: false, b: 4 }, error: new Error('file1') })
+      iterator.addLimit({
+        args: { a: false, b: 4, seed: void 0 },
+        error: new Error('file1'),
+      })
 
       iterator.start()
       const results: any[] = []
@@ -995,7 +1013,7 @@ describe(
       // With a=false, b template is [3, 4]
       // b=10 is NOT in template - should be extended
       iterator.addLimit({
-        args: { a: false, b: 10 },
+        args: { a: false, b: 10, seed: void 0 },
         error: new Error('file1'),
       })
 
@@ -1033,14 +1051,14 @@ describe(
 
       // File 1: [2, 2, 2]
       iterator.addLimit({
-        args: { a: 2, b: 2, c: 2 },
+        args: { a: 2, b: 2, c: 2, seed: void 0 },
         error: new Error('file1'),
       })
 
       // File 2: [1, 1, 1] - lexicographically smaller (at position 0: 1 < 2)
       // Should be accepted and replace file1
       iterator.addLimit({
-        args: { a: 1, b: 1, c: 1 },
+        args: { a: 1, b: 1, c: 1, seed: void 0 },
         error: new Error('file2'),
       })
 
@@ -1080,6 +1098,7 @@ describe(
         dependencyCountMax: 1,
         checksPerIterationMax: 1,
         iterations: 10,
+        seed: void 0,
       }
 
       const file2Args = {
@@ -1101,6 +1120,7 @@ describe(
         dependencyCountMax: 3,
         checksPerIterationMax: 1,
         iterations: 10,
+        seed: void 0,
       }
 
       const file3Args = {
@@ -1122,6 +1142,7 @@ describe(
         dependencyCountMax: 1,
         checksPerIterationMax: 1,
         iterations: 10,
+        seed: void 0,
       }
 
       const iterator = testVariantsIterator({
@@ -1187,7 +1208,10 @@ describe(
       })
 
       // Error at [1, 1]
-      iterator.addLimit({ args: { a: 1, b: 1 }, error: new Error('error') })
+      iterator.addLimit({
+        args: { a: 1, b: 1, seed: void 0 },
+        error: new Error('error'),
+      })
 
       iterator.start()
       const results: any[] = []
@@ -1329,6 +1353,7 @@ describe(
           d: 3,
           e: 3,
           f: 3,
+          seed: void 0,
         },
         error: new Error('error1'),
       })
@@ -1351,6 +1376,7 @@ describe(
           d: 3,
           e: 1,
           f: 1,
+          seed: void 0,
         },
         error: new Error('error2'),
       })
@@ -1374,6 +1400,7 @@ describe(
           d: 1,
           e: 1,
           f: 1,
+          seed: void 0,
         },
         error: new Error('error3'),
       })
@@ -1446,6 +1473,7 @@ describe(
           dependencyCountMax: 1,
           checksPerIterationMax: 1,
           iterations: 10,
+          seed: void 0,
         },
         error: new Error('error1'),
       })
@@ -1471,6 +1499,7 @@ describe(
           dependencyCountMax: 3,
           checksPerIterationMax: 1,
           iterations: 10,
+          seed: void 0,
         },
         error: new Error('error2'),
       })
@@ -1496,6 +1525,7 @@ describe(
           dependencyCountMax: 1,
           checksPerIterationMax: 1,
           iterations: 10,
+          seed: void 0,
         },
         error: new Error('error3'),
       })
@@ -1545,6 +1575,7 @@ describe(
           dependencyCountMax: 1, // Reduced from 3 to 1
           checksPerIterationMax: 1,
           iterations: 10,
+          seed: void 0,
         },
         error: new Error('error4'),
       })
@@ -1581,6 +1612,7 @@ describe(
           dependencyCountMax: 1,
           checksPerIterationMax: 1,
           iterations: 10,
+          seed: void 0,
         },
         error: new Error('error5'),
       })

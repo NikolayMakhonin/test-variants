@@ -1,5 +1,6 @@
 import type { Obj } from '@flemist/simple-utils'
 import type {
+  ArgsWithSeed,
   LimitArgOnError,
   TestVariantsIteratorLimit,
   TestVariantsTemplate,
@@ -10,8 +11,8 @@ import {
 } from 'src/common/test-variants/variantNavigation'
 
 /** Pending limit waiting for position match during iteration */
-export type PendingLimit<Args> = {
-  args: Args
+export type PendingLimit<Args extends Obj> = {
+  args: ArgsWithSeed<Args>
   error?: unknown
 }
 
@@ -271,8 +272,8 @@ export function updateArgLimits<Args extends Obj>(
 }
 
 /** Create limit object with optional error */
-export function createLimit<Args>(
-  args: Args,
+export function createLimit<Args extends Obj>(
+  args: ArgsWithSeed<Args>,
   error?: unknown,
 ): TestVariantsIteratorLimit<Args> {
   return error !== void 0 ? { args, error } : { args }

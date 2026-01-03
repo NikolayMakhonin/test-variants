@@ -2,7 +2,10 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { formatDateFileName } from '@flemist/simple-utils'
 import type { Obj } from '@flemist/simple-utils'
-import type { GenerateErrorVariantFilePathOptions } from 'src/common/test-variants/types'
+import type {
+  ArgsWithSeed,
+  GenerateErrorVariantFilePathOptions,
+} from 'src/common/test-variants/types'
 
 /** Reads saved error variant files from directory, sorted by filename descending (newest first) */
 export async function readErrorVariantFiles(dir: string): Promise<string[]> {
@@ -25,8 +28,8 @@ export async function readErrorVariantFiles(dir: string): Promise<string[]> {
 /** Parses saved error variant file and transforms JSON to args */
 export async function parseErrorVariantFile<Args extends Obj, SavedArgs>(
   filePath: string,
-  jsonToArgs?: null | ((json: SavedArgs) => Args),
-): Promise<Args> {
+  jsonToArgs?: null | ((json: SavedArgs) => ArgsWithSeed<Args>),
+): Promise<ArgsWithSeed<Args>> {
   const content = await fs.promises.readFile(filePath, 'utf-8')
   let json: SavedArgs
   try {
@@ -45,7 +48,7 @@ export async function parseErrorVariantFile<Args extends Obj, SavedArgs>(
     }
   }
 
-  return json as unknown as Args
+  return json as unknown as ArgsWithSeed<Args>
 }
 
 /** Generates default error variant file path: YYYY-MM-DD_HH-mm-ss_<hash>.json (UTC) */

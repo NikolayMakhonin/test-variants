@@ -37,7 +37,7 @@ export type TestVariantsTestRun<Args extends Obj> = (
 export type TestVariantsTestResult = number | void | TestVariantsTestRunResult
 
 export type TestVariantsTest<Args extends Obj> = (
-  args: Args,
+  args: ArgsWithSeed<Args>,
   abortSignal: IAbortSignalFast,
 ) => PromiseOrValue<TestVariantsTestResult>
 
@@ -116,7 +116,7 @@ export function testVariantsCreateTestRun<Args extends Obj>(
   }
 
   return function testRun(
-    args: Args,
+    args: ArgsWithSeed<Args>,
     tests: number,
     abortSignal: IAbortSignalFast,
   ): PromiseOrValue<TestVariantsTestRunResult> {

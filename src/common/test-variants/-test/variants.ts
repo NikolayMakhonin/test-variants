@@ -457,7 +457,7 @@ function verifySeenValues(
 ): void {
   for (let i = 0, len = argKeys.length; i < len; i++) {
     const key = argKeys[i]
-    const seen = seenValuesPerArg.get(key)
+    const seen = seenValuesPerArg.get(key)!
     const isDynamic = argIsDynamic.get(key)
     const templateValues = expectedValuesPerArg.get(key) ?? []
 
@@ -905,7 +905,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
         }
 
         // Track received count for post-hoc verification
-        const callCounts = capturedDynamicArgsReceived.get(capturedArgKey)
+        const callCounts = capturedDynamicArgsReceived.get(capturedArgKey)!
         callCounts[callCounts.length] = receivedCount
 
         const len = capturedValues.length
@@ -1167,7 +1167,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       const argValue = args[key]
       if (argValue !== void 0) {
         const value = typeof argValue === 'object' ? argValue.id : argValue
-        seenValuesPerArg.get(key).add(value)
+        seenValuesPerArg.get(key)!.add(value)
       }
     }
 
