@@ -5,6 +5,7 @@ import { type IPool, Pool, poolWait } from '@flemist/time-limits'
 import { garbageCollect } from 'src/common/garbage-collect/garbageCollect'
 import type { Obj } from '@flemist/simple-utils'
 import type {
+  ArgsWithSeed,
   TestVariantsBestError,
   TestVariantsIterator,
   TestVariantsRunOptions,
@@ -32,9 +33,9 @@ import { replayErrorVariants } from 'src/common/test-variants/errorVariantReplay
 export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   testRun: TestVariantsTestRun<Args>,
   variants: TestVariantsIterator<Args>,
-  options: TestVariantsRunOptions<Args, SavedArgs> = {},
+  options?: null | TestVariantsRunOptions<Args, SavedArgs>,
 ): Promise<TestVariantsRunResult<Args>> {
-  const saveErrorVariants = options.saveErrorVariants
+  const saveErrorVariants = options?.saveErrorVariants
   const sessionDate = new Date()
   const errorVariantFilePath = saveErrorVariants
     ? path.resolve(
@@ -44,11 +45,11 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
       )
     : null
 
-  const GC_Iterations = options.GC_Iterations ?? 1000000
-  const GC_IterationsAsync = options.GC_IterationsAsync ?? 10000
-  const GC_Interval = options.GC_Interval ?? 1000
+  const GC_Iterations = options?.GC_Iterations ?? 1000000
+  const GC_IterationsAsync = options?.GC_IterationsAsync ?? 10000
+  const GC_Interval = options?.GC_Interval ?? 1000
 
-  const logOpts = resolveLogOptions(options.log)
+  const logOpts = resolveLogOptions(options?.log)
   const logStart = logOpts.start ?? logOptionsDefault.start
   const logInterval =
     logOpts.progressInterval ?? logOptionsDefault.progressInterval
@@ -56,22 +57,22 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   const logModeChange = logOpts.modeChange ?? logOptionsDefault.modeChange
   const logDebug = logOpts.debug ?? logOptionsDefault.debug
 
-  const abortSignalExternal = options.abortSignal
-  const findBestError = options.findBestError
-  const cycles = options.cycles ?? 1
+  const abortSignalExternal = options?.abortSignal
+  const findBestError = options?.findBestError
+  const cycles = options?.cycles ?? 1
   const dontThrowIfError = findBestError?.dontThrowIfError
-  const limitTime = options.limitTime
-  const timeController = options.timeController ?? timeControllerDefault
+  const limitTime = options?.limitTime
+  const timeController = options?.timeController ?? timeControllerDefault
 
   const parallel =
-    options.parallel === true
+    options?.parallel === true
       ? 2 ** 31
-      : !options.parallel || options.parallel <= 0
+      : !options?.parallel || options.parallel <= 0
         ? 1
         : options.parallel
 
   // Apply initial limits
-  if (options.limitTests != null) {
+  if (options?.limitTests != null) {
     variants.addLimit({ index: options.limitTests })
   }
 
@@ -188,7 +189,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
       break
     }
 
-    let args: Args = null!
+    let args: ArgsWithSeed<Args> = null!
     while (!abortSignalExternal?.aborted) {
       if (!debug) {
         const nextArgs = variants.next()

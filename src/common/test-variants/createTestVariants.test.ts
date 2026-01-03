@@ -6,7 +6,7 @@ import { delay } from '@flemist/async-utils'
 describe('test-variants > createTestVariants', () => {
   describe('sync', () => {
     it('base', async () => {
-      const results = []
+      const results: any[][] = []
       const result = await createTestVariants(
         ({ a, b, c }: { a: number; b: string; c: boolean }) => {
           results.push([a, b, c])
@@ -31,7 +31,7 @@ describe('test-variants > createTestVariants', () => {
     })
 
     it('empty end', async () => {
-      const results = []
+      const results: any[][] = []
       const result = await createTestVariants(
         ({ a, b, c }: { a: number; b: string; c: boolean }) => {
           results.push([a, b, c])
@@ -47,7 +47,7 @@ describe('test-variants > createTestVariants', () => {
     })
 
     it('empty middle', async () => {
-      const results = []
+      const results: any[] = []
       const test = createTestVariants(
         ({ a, b, c }: { a: number; b: string; c: boolean }) => {
           results.push([a, b, c])
@@ -65,7 +65,7 @@ describe('test-variants > createTestVariants', () => {
     })
 
     it('empty start', async () => {
-      const results = []
+      const results: any[][] = []
       const result = await createTestVariants(
         ({ a, b, c }: { a: number; b: string; c: boolean }) => {
           results.push([a, b, c])
@@ -81,7 +81,7 @@ describe('test-variants > createTestVariants', () => {
     })
 
     it('calculated', async () => {
-      const results = []
+      const results: any[][] = []
       const result = await createTestVariants(
         ({ a, b, c }: { a: number; b: string; c: boolean }) => {
           results.push([a, b, c])
@@ -105,7 +105,7 @@ describe('test-variants > createTestVariants', () => {
 
   describe('async as sync', () => {
     it('base', async () => {
-      const results = []
+      const results: any[][] = []
       const result = await createTestVariants(
         ({ a, b, c }: { a: number; b: string; c: boolean }) => {
           results.push([a, b, c])
@@ -130,7 +130,7 @@ describe('test-variants > createTestVariants', () => {
     })
 
     it('empty end', async () => {
-      const results = []
+      const results: any[][] = []
       const result = await createTestVariants(
         ({ a, b, c }: { a: number; b: string; c: boolean }) => {
           results.push([a, b, c])
@@ -146,7 +146,7 @@ describe('test-variants > createTestVariants', () => {
     })
 
     it('empty middle', async () => {
-      const results = []
+      const results: any[] = []
       const test = createTestVariants(
         ({ a, b, c }: { a: number; b: string; c: boolean }) => {
           results.push([a, b, c])
@@ -164,7 +164,7 @@ describe('test-variants > createTestVariants', () => {
     })
 
     it('empty start', async () => {
-      const results = []
+      const results: any[][] = []
       const result = await createTestVariants(
         ({ a, b, c }: { a: number; b: string; c: boolean }) => {
           results.push([a, b, c])
@@ -180,7 +180,7 @@ describe('test-variants > createTestVariants', () => {
     })
 
     it('calculated', async () => {
-      const results = []
+      const results: any[][] = []
       const result = await createTestVariants(
         ({ a, b, c }: { a: number; b: string; c: boolean }) => {
           results.push([a, b, c])
@@ -204,7 +204,7 @@ describe('test-variants > createTestVariants', () => {
 
   describe('async', async () => {
     it('base', async () => {
-      const results = []
+      const results: any[][] = []
       const result = await createTestVariants(
         async ({ a, b, c }: { a: number; b: string; c: boolean }) => {
           await delay(100)
@@ -230,7 +230,7 @@ describe('test-variants > createTestVariants', () => {
     })
 
     it('empty end', async () => {
-      const results = []
+      const results: any[][] = []
       const result = await createTestVariants(
         async ({ a, b, c }: { a: number; b: string; c: boolean }) => {
           await delay(100)
@@ -247,7 +247,7 @@ describe('test-variants > createTestVariants', () => {
     })
 
     it('empty middle', async () => {
-      const results = []
+      const results: any[] = []
       const test = createTestVariants(
         async ({ a, b, c }: { a: number; b: string; c: boolean }) => {
           await delay(100)
@@ -266,7 +266,7 @@ describe('test-variants > createTestVariants', () => {
     })
 
     it('empty start', async () => {
-      const results = []
+      const results: any[][] = []
       const result = await createTestVariants(
         async ({ a, b, c }: { a: number; b: string; c: boolean }) => {
           await delay(100)
@@ -283,7 +283,7 @@ describe('test-variants > createTestVariants', () => {
     })
 
     it('calculated', async () => {
-      const results = []
+      const results: any[][] = []
       const result = await createTestVariants(
         async ({ a, b, c }: { a: number; b: string; c: boolean }) => {
           await delay(100)
@@ -306,7 +306,7 @@ describe('test-variants > createTestVariants', () => {
     })
 
     it.skip('complex', { timeout: 5 * 60 * 1000 }, async () => {
-      const results = []
+      const results: any[] = []
       const result = await createTestVariants(
         async (args: {
           op: number
@@ -339,7 +339,7 @@ describe('test-variants > createTestVariants', () => {
     })
 
     it.skip('long', { timeout: 5 * 60 * 1000 }, async () => {
-      const results = []
+      const results: any[] = []
       const result = await createTestVariants(async ({ a }: { a: number }) => {
         await delay(3000)
         results.push([a])
@@ -356,7 +356,7 @@ describe('test-variants > createTestVariants', () => {
     it('base', async () => {
       const countParallel = 3
       let countInProcess = 0
-      const results = []
+      const results: any[] = []
       const result = await createTestVariants(
         async (
           {

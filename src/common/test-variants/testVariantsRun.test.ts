@@ -184,7 +184,7 @@ describe('test-variants > testVariantsRun', { timeout: 10 * 60 * 1000 }, () => {
       getSeed: ({ cycles, tests }) => cycles * 10000 + tests,
     })
 
-    const testRun = (args: { a: number; b: number; seed: number }) => {
+    const testRun: TestVariantsTestRun<{ a: number; b: number }> = args => {
       const cycleIndex = variants.cycleIndex
       if (cycleVariants[cycleIndex] == null) {
         cycleVariants[cycleIndex] = 0
@@ -386,12 +386,10 @@ describe('test-variants > testVariantsRun', { timeout: 10 * 60 * 1000 }, () => {
       expectedIndex <= variantsCount;
       expectedIndex++
     ) {
-      const expectedArgs =
+      const expectedArgs: { i: number } | null =
         expectedIndex < variantsCount ? { i: expectedIndex } : null
 
-      const testRun: TestVariantsTestRun<typeof expectedArgs> = (args: {
-        i: number
-      }) => {
+      const testRun: TestVariantsTestRun<{ i: number }> = args => {
         if (
           (expectedArgs != null && args.i === expectedArgs.i) ||
           args.i > (expectedIndex + variantsCount) / 2
@@ -425,6 +423,7 @@ describe('test-variants > testVariantsRun', { timeout: 10 * 60 * 1000 }, () => {
           assert.ok(result.bestError == null)
         } else {
           assert.ok(result.bestError)
+          assert.ok(expectedArgs != null)
           assert.strictEqual(result.bestError.args.i, expectedArgs.i)
           assert.strictEqual(
             result.bestError.error.message,

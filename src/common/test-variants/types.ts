@@ -102,6 +102,9 @@ export type TestVariantsIteratorOptions<Args extends Obj> = {
   logDebug?: null | boolean
 }
 
+/** Args with seed from getSeed */
+export type ArgsWithSeed<Args extends Obj> = Args & { seed: any }
+
 /** Test variants iterator with limiting capabilities */
 export type TestVariantsIterator<Args extends Obj> = {
   /** Current variant index; -1 before first next() */
@@ -123,7 +126,7 @@ export type TestVariantsIterator<Args extends Obj> = {
   /** Reset to beginning of iteration for next cycle */
   start(): void
   /** Get next variant or null when done */
-  next(): Args | null
+  next(): ArgsWithSeed<Args> | null
 }
 
 // endregion

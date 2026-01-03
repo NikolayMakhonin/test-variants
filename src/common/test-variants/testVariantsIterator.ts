@@ -1,6 +1,7 @@
 import type { Obj } from '@flemist/simple-utils'
 import { timeControllerDefault } from '@flemist/time-controller'
 import type {
+  ArgsWithSeed,
   GetSeedParams,
   ModeConfig,
   TestVariantsIterator,
@@ -38,7 +39,8 @@ type IteratorState<Args extends Obj> = LimitState<Args> & {
   /** Whether count was set by explicit addLimit call (not by mode exhaustion) */
   countIsExplicit: boolean
   started: boolean
-  currentArgs: Args | null
+  /** Current args with seed; valid after first next() call (check state.index >= 0) */
+  currentArgs: ArgsWithSeed<Args>
   /** Mode configurations */
   modes: ModeConfig[]
   /** Current mode index */
@@ -266,7 +268,8 @@ export function testVariantsIterator<Args extends Obj>(
     countIsExplicit: false,
     limit: null,
     started: false,
-    currentArgs: null,
+    // Initialized by first next() call; addLimit() checks index >= 0 before use
+    currentArgs: null!,
     pendingLimits: [],
     modes,
     modeIndex: 0,
@@ -277,15 +280,15 @@ export function testVariantsIterator<Args extends Obj>(
   // Safe because getSeed is expected to extract values immediately (per README examples)
   const seedParams: GetSeedParams = { tests: 0, cycles: 0, repeats: 0 }
 
-  function buildCurrentArgs(): Args {
+  function buildCurrentArgs(): ArgsWithSeed<Args> {
     if (getSeed) {
       seedParams.tests = state.testsCount
       seedParams.cycles = state.cycleIndex
       seedParams.repeats = state.repeatIndex
       const seed = getSeed(seedParams)
-      return { ...state.args, seed } as Args
+      return { ...state.args, seed }
     }
-    return { ...state.args }
+    return { ...state.args } as ArgsWithSeed<Args>
   }
 
   const iterator: TestVariantsIterator<Args> = {
@@ -349,11 +352,11 @@ export function testVariantsIterator<Args extends Obj>(
       return min
     },
     addLimit(options) {
-      const hasArgs = options?.args != null
-      const hasIndex = options?.index != null
+      const optArgs = options?.args
+      const optIndex = options?.index
 
       // addLimit() or addLimit({error}) - uses current args and index
-      if (!hasArgs && !hasIndex) {
+      if (optArgs == null && optIndex == null) {
         if (state.index < 0) {
           throw new Error(
             '[testVariantsIterator] addLimit() requires at least one next() call',
@@ -394,23 +397,23 @@ export function testVariantsIterator<Args extends Obj>(
       }
 
       // addLimit({index}) - only index limiting
-      if (hasIndex && !hasArgs) {
-        if (state.count == null || options.index < state.count) {
-          state.count = options.index
+      if (optIndex != null && optArgs == null) {
+        if (state.count == null || optIndex < state.count) {
+          state.count = optIndex
           state.countIsExplicit = true
         }
         return
       }
 
       // addLimit({args}) or addLimit({args, error}) - pending limit + immediate per-arg limits
-      if (hasArgs && !hasIndex) {
-        if (!validateArgsKeys(options.args, keySet, keysCount)) {
+      if (optArgs != null && optIndex == null) {
+        if (!validateArgsKeys(optArgs, keySet, keysCount)) {
           return
         }
         // Extend templates with missing values from saved args
         extendTemplatesForArgs(
           state,
-          options.args,
+          optArgs,
           templates,
           keys,
           keysCount,
@@ -419,7 +422,7 @@ export function testVariantsIterator<Args extends Obj>(
         const oldLimitArgs = state.limit?.args ?? null
         const updated = updateArgLimits(
           state,
-          options.args,
+          optArgs,
           oldLimitArgs,
           templates,
           keys,
@@ -428,13 +431,13 @@ export function testVariantsIterator<Args extends Obj>(
           limitArgOnError,
         )
         if (updated) {
-          const limit = createLimit(options.args, options.error)
+          const limit = createLimit(optArgs, options?.error)
           state.limit = limit
           state.pendingLimits.push(limit)
         } else if (!limitArgOnError) {
           // When limitArgOnError is false, still set state.limit for error retrieval
           // and add to pendingLimits for next cycle index limiting
-          const limit = createLimit(options.args, options.error)
+          const limit = createLimit(optArgs, options?.error)
           if (state.limit == null) {
             state.limit = limit
           }
@@ -444,18 +447,18 @@ export function testVariantsIterator<Args extends Obj>(
       }
 
       // addLimit({args, index}) or addLimit({args, index, error}) - immediate index + pending args
-      if (hasArgs && hasIndex) {
-        const isEarliest = state.count == null || options.index < state.count
+      if (optArgs != null && optIndex != null) {
+        const isEarliest = state.count == null || optIndex < state.count
         if (isEarliest) {
-          state.count = options.index
+          state.count = optIndex
         }
-        if (!validateArgsKeys(options.args, keySet, keysCount)) {
+        if (!validateArgsKeys(optArgs, keySet, keysCount)) {
           return
         }
         // Extend templates with missing values from saved args
         extendTemplatesForArgs(
           state,
-          options.args,
+          optArgs,
           templates,
           keys,
           keysCount,
@@ -463,10 +466,10 @@ export function testVariantsIterator<Args extends Obj>(
         )
         if (isEarliest) {
           const oldLimitArgs = state.limit?.args ?? null
-          state.limit = createLimit(options.args, options.error)
+          state.limit = createLimit(optArgs, options?.error)
           updateArgLimits(
             state,
-            options.args,
+            optArgs,
             oldLimitArgs,
             templates,
             keys,
