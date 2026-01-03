@@ -937,6 +937,14 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       return
     }
 
+    if (type === 'modeChange') {
+      if (!logModeChangesEnabled) {
+        throw new Error(`logFunc: modeChange log when not enabled`)
+      }
+      logModeChanges++
+      return
+    }
+
     if (callCount === 0) {
       throw new Error(`logFunc: log before test started`)
     }
@@ -957,14 +965,6 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
         throw new Error(`logFunc: progress log when not enabled`)
       }
       logProgressCount++
-      return
-    }
-
-    if (type === 'modeChange') {
-      if (!logModeChangesEnabled) {
-        throw new Error(`logFunc: modeChange log when not enabled`)
-      }
-      logModeChanges++
       return
     }
 

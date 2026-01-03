@@ -42,6 +42,8 @@ export type ModeConfig =
   | BackwardModeConfig
   | RandomModeConfig
 
+export type ModeType = ModeConfig['mode']
+
 // endregion
 
 // region Iterator types
@@ -185,8 +187,8 @@ export type SaveErrorVariantsOptions<Args extends Obj, SavedArgs = Args> = {
 }
 
 export type TestVariantsTemplate<Args extends Obj, Value> =
-  | Value[]
-  | ((args: Args) => Value[])
+  | readonly Value[]
+  | ((args: Args) => readonly Value[])
 
 export type TestVariantsTemplates<Args extends Obj> = {
   [key in keyof Args]: TestVariantsTemplate<Args, Args[key]>

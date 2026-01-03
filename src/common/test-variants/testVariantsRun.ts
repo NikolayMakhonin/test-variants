@@ -85,11 +85,12 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   let cycleStartTime = startTime
 
   const startMemory = getMemoryUsage()
-  if (logOpts.start && startMemory != null) {
-    logOpts.func(
-      'start',
-      `[test-variants] start, memory: ${formatBytes(startMemory)}`,
-    )
+  if (logOpts.start) {
+    let msg = `[test-variants] start`
+    if (startMemory != null) {
+      msg += `, memory: ${formatBytes(startMemory)}`
+    }
+    logOpts.func('start', msg)
   }
 
   // Debug mode: repeats failing variant for step-by-step JS debugging.
@@ -401,6 +402,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   }
 
   // Only throw if abort has a real error reason (not flow control abort for findBestError)
+  const count = variants.count ?? 0
   // Flow control abort uses null reason; real errors use Error instances
   if (abortSignalAll?.aborted && abortSignalAll.reason != null) {
     throw abortSignalAll.reason
@@ -416,9 +418,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     ? {
         error: variants.limit.error,
         args: variants.limit.args,
-        tests: includeErrorVariant
-          ? (variants.count ?? 1) - 1
-          : (variants.count ?? 0),
+        tests: includeErrorVariant ? Math.max(0, count - 1) : count,
       }
     : null
 

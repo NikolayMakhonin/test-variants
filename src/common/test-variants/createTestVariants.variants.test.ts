@@ -18,7 +18,8 @@ describe(
         argType: ['static', 'dynamic', null],
         retriesToErrorMax: [0, 1, 2],
         valueType: ['primitive', 'object', null],
-        iterationMode: ['forward', 'backward', 'random', null],
+        modeType: ['forward', 'backward', 'random', null],
+        modesCountMax: [1, 2, 3],
         findBestError: [false, true, null],
         withEquals: ({ findBestError }) =>
           findBestError !== false ? [false, true, null] : [false],
@@ -35,11 +36,10 @@ describe(
         argsCountMax: [0, 1, 2, 3],
         valuesPerArgMax: [0, 1, 2],
         valuesCountMax: [1, 5],
-        // Parallel: false/1 = sequential, 4/8 = concurrent, true = max parallel, null = random
         parallel: [false, 1, 4, 8, true, null],
         errorPosition: ['none', 'first', 'last', null],
-        // Mode configuration: 'single' uses one mode, 'multi' uses forward+backward for position persistence testing
-        modeConfig: ['single', 'multi', null],
+        async: [false, true, null],
+        delay: [false, true, null],
       })({
         limitTime,
         getSeed: getRandomSeed,
