@@ -3,6 +3,7 @@ import * as assert from 'node:assert'
 import type { Obj } from '@flemist/simple-utils'
 import type { TestVariantsIteratorOptions } from './types'
 import { testVariantsIterator } from './testVariantsIterator'
+import { logOptionsDisabled } from './progressLogging'
 
 describe(
   'test-variants > testVariantsIterator',
@@ -28,6 +29,7 @@ describe(
           b: ['x', 'y', 'z'],
           c: [true, false],
         },
+        log: logOptionsDisabled,
       })
 
       assert.deepStrictEqual(results, [
@@ -48,6 +50,7 @@ describe(
 
     it('index property', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2],
           b: ['x', 'y'],
@@ -78,6 +81,7 @@ describe(
 
     it('cycleIndex property', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2],
         },
@@ -101,6 +105,7 @@ describe(
 
     it('count property', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2],
           b: ['x', 'y'],
@@ -125,6 +130,7 @@ describe(
 
     it('addLimit with index', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2],
           b: ['x', 'y'],
@@ -147,6 +153,7 @@ describe(
 
     it('throws if next() called before start()', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2],
         },
@@ -159,6 +166,7 @@ describe(
 
     it('addLimit() uses current args and index', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2],
           b: ['x', 'y'],
@@ -182,6 +190,7 @@ describe(
 
     it('addLimit({error}) stores error in limit', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2],
         },
@@ -201,6 +210,7 @@ describe(
 
     it('addLimit() throws if called before next()', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2],
         },
@@ -215,6 +225,7 @@ describe(
 
     it('addLimit keeps earliest limit', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2, 3, 4],
         },
@@ -238,6 +249,7 @@ describe(
 
     it('addLimit({args, index}) sets both count and limit', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2],
           b: ['x', 'y'],
@@ -256,6 +268,7 @@ describe(
 
     it('getSeed adds seed to returned args', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2],
         },
@@ -274,6 +287,7 @@ describe(
 
     it('attemptsPerVariant repeats each variant', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2],
         },
@@ -300,6 +314,7 @@ describe(
 
     it('attemptsPerVariant with external cycles via start()', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2],
         },
@@ -327,6 +342,7 @@ describe(
 
     it('forward mode cycles iterates variants multiple times', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2],
         },
@@ -346,6 +362,7 @@ describe(
 
     it('forward mode cycles with attemptsPerVariant', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2],
         },
@@ -372,6 +389,7 @@ describe(
       // Use 30 picks to make probability of all same values negligible (~1e-14)
       const pickCount = 30
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2, 3],
         },
@@ -397,6 +415,7 @@ describe(
 
     it('random mode respects limitTime', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2, 3],
         },
@@ -420,6 +439,7 @@ describe(
 
     it('forward then random mode sequence', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2],
         },
@@ -449,6 +469,7 @@ describe(
 
     it('sequential modes persist position when interrupted by limits', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2, 3, 4],
         },
@@ -482,6 +503,7 @@ describe(
 
     it('sequential mode position not saved when naturally completed', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2],
         },
@@ -505,6 +527,7 @@ describe(
 
     it('sequential mode position persistence with attemptsPerVariant', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2, 3],
         },
@@ -548,6 +571,7 @@ describe(
 
     it('addLimit({args}) applies limit when position reached', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2],
           b: ['x', 'y'],
@@ -572,6 +596,7 @@ describe(
 
     it('addLimit({args, error}) stores pending error', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2],
           b: ['x', 'y'],
@@ -601,6 +626,7 @@ describe(
 
     it('addLimit({args}) discards if keys dont match', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2],
           b: ['x', 'y'],
@@ -622,6 +648,7 @@ describe(
 
     it('addLimit({args}) extends template with missing value', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2],
           b: ['x', 'y'],
@@ -651,6 +678,7 @@ describe(
 
     it('addLimit({args}) with seed key is ignored in validation', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2],
           b: ['x', 'y'],
@@ -676,6 +704,7 @@ describe(
 
     it('addLimit({args, index}) applies both index and limit with template extension', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2],
           b: ['x', 'y'],
@@ -695,6 +724,7 @@ describe(
 
     it('multiple pending limits apply at different positions', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2, 3],
           b: ['x', 'y'],
@@ -720,6 +750,7 @@ describe(
 
     it('limitArgOnError limits per-arg indexes', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2, 3],
           b: ['x', 'y', 'z'],
@@ -766,6 +797,7 @@ describe(
       // When error is at index 0, argLimit = 0 (INCLUSIVE)
       // This restricts the arg to exactly one value (index 0 only)
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2, 3],
           b: ['x', 'y', 'z'],
@@ -801,6 +833,7 @@ describe(
 
     it('limitArgOnError with callback', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [1, 2, 3],
           b: ['x', 'y', 'z'],
@@ -851,6 +884,7 @@ describe(
       // - If new >= current, reject entirely
 
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [0, 1, 2, 3],
           b: [0, 1, 2, 3],
@@ -892,6 +926,7 @@ describe(
       // Lexicographic: compare like numbers, first differing position decides
       // [0, 1, 1] vs [0, 2, 0]: at position 1: 1 < 2, so [0, 1, 1] wins
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [0, 1, 2, 3],
           b: [0, 1, 2, 3],
@@ -938,6 +973,7 @@ describe(
       // Lexicographic comparison uses all indexes including 0
 
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [0, 1, 2, 3],
           b: [0, 1, 2, 3],
@@ -981,6 +1017,7 @@ describe(
       // This ensures correct indexes for dynamic templates
 
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [false, true],
           b: ({ a }) => (a ? [1, 2] : [3, 4, 5]), // Dynamic: depends on a
@@ -1017,6 +1054,7 @@ describe(
       // Missing value is appended to extraValues and available for all arg combinations
 
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [false, true],
           b: ({ a }) => (a ? [1, 2] : [3, 4]), // Dynamic: depends on a
@@ -1055,6 +1093,7 @@ describe(
     it('addLimit({args}) lexicographic comparison - accepts smaller and replaces', async () => {
       // New error is accepted if lexicographically smaller
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [0, 1, 2, 3],
           b: [0, 1, 2, 3],
@@ -1160,6 +1199,7 @@ describe(
       }
 
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           returnReadableResolved: [false, true, null],
           dependencyFactory: [false, true],
@@ -1213,6 +1253,7 @@ describe(
 
     it('includeErrorVariant includes error variant in iteration', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [0, 1, 2],
           b: [0, 1, 2],
@@ -1248,6 +1289,7 @@ describe(
 
     it('includeErrorVariant with addLimit() during iteration', async () => {
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [0, 1, 2],
           b: [0, 1, 2],
@@ -1285,6 +1327,7 @@ describe(
       // This tests the scenario where findBestError finds a lexicographically smaller error
       // at a later variant index (due to different seeds producing different error patterns)
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [0, 1, 2, 3],
           b: [0, 1, 2, 3],
@@ -1346,6 +1389,7 @@ describe(
       // Full space: 3 * 2 * 4 * 4 * 4 * 4 = 1536
 
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           a: [0, 1, 2], // 3 values
           b: [0, 1], // 2 values
@@ -1440,6 +1484,7 @@ describe(
       //    Expected: 4608 / 2 = 2304
 
       const iterator = testVariantsIterator({
+        log: logOptionsDisabled,
         argsTemplates: {
           returnReadableResolved: [false, true, null],
           dependencyFactory: [false, true],

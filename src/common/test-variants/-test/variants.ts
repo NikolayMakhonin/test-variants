@@ -73,9 +73,19 @@ import {
 } from 'src/common/helpers/log'
 import type {
   ModeConfig,
+  TestVariantsLogType,
   TestVariantsRunOptions,
   TestVariantsRunResult,
 } from '../types'
+
+// region Log Capture
+
+type LogEntry = {
+  type: TestVariantsLogType
+  message: string
+}
+
+// endregion
 
 // region Debug Logging
 
@@ -561,6 +571,39 @@ function verifyExpectedError(err: unknown): void {
     !err.message.startsWith('Test error at call')
   ) {
     throw err
+  }
+}
+
+/** Verify log output invariants */
+function verifyLogs(
+  logEntries: LogEntry[],
+  errorActuallyOccurred: boolean,
+  findBestError: boolean,
+  dontThrowIfError: boolean,
+): void {
+  // Count error logs
+  let errorLogCount = 0
+  for (let i = 0, len = logEntries.length; i < len; i++) {
+    if (logEntries[i].type === 'error') {
+      errorLogCount++
+    }
+  }
+
+  // Invariant: if error occurred, exactly 1 error log should be present
+  // (new code logs only on first error to avoid spam)
+  if (errorActuallyOccurred) {
+    if (errorLogCount !== 1) {
+      throw new Error(
+        `Expected exactly 1 error log when error occurred, got ${errorLogCount}`,
+      )
+    }
+  }
+
+  // Invariant: if no error occurred, no error logs
+  if (!errorActuallyOccurred && errorLogCount > 0) {
+    throw new Error(
+      `Expected 0 error logs when no error occurred, got ${errorLogCount}`,
+    )
   }
 }
 
@@ -1052,6 +1095,15 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     totalVariantsCount !== null &&
     totalVariantsCount > 1
 
+  // Log capture for verification
+  const logEntries: LogEntry[] = []
+  function captureLog(type: TestVariantsLogType, message: string): void {
+    logEntries[logEntries.length] = { type, message }
+    if (logEnabled) {
+      log(message)
+    }
+  }
+
   // endregion
 
   // region Position Persistence Tracking
@@ -1149,7 +1201,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
 
   // Note: innerTest is SYNCHRONOUS for maximum performance
   // Async overhead would destroy throughput with millions of iterations
-  const testFn = createTestVariants(function innerTest(args: TestArgs): void {
+  const testFunc = createTestVariants(function innerTest(args: TestArgs): void {
     if (logEnabled) {
       traceEnter(`innerTest(${formatValue(args)}), callCount=${callCount}`)
     }
@@ -1282,9 +1334,15 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     iterationModes: modes,
     parallel,
     getSeed: withSeed ? getSeedFromRnd : void 0,
-    log: logEnabled
-      ? { start: true, progressInterval: 5000, completed: true, error: true }
-      : false,
+    log: {
+      start: logEnabled,
+      progress: logEnabled ? 5000 : false,
+      completed: logEnabled,
+      error: true,
+      modeChange: logEnabled,
+      debug: logEnabled,
+      func: captureLog,
+    },
     findBestError: findBestError
       ? {
           limitArgOnError:
@@ -1323,7 +1381,10 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   // region Run Test
 
   try {
-    const result = await testFn(template)(runOptions)
+    const result = await testFunc(template)(runOptions)
+
+    // Error actually occurred if errorAttempts exceeded retriesToError
+    const errorActuallyOccurred = errorAttempts > retriesToError
 
     if (logEnabled) {
       log('</execution>')
@@ -1332,6 +1393,8 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
         iterations: result.iterations,
         bestError: result.bestError,
         callCount,
+        errorAttempts,
+        errorActuallyOccurred,
         errorVariantArgs,
       })
       log('</result>')
@@ -1463,6 +1526,19 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     }
 
     if (logEnabled) {
+      traceEnter('verifyLogs')
+    }
+    verifyLogs(
+      logEntries,
+      errorActuallyOccurred,
+      findBestError,
+      dontThrowIfError,
+    )
+    if (logEnabled) {
+      traceExit('ok')
+    }
+
+    if (logEnabled) {
       log('</verification>')
       log('</test>')
     }
@@ -1531,9 +1607,9 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
 
 export const testVariants = createTestVariants(
   async (options: StressTestArgs) => {
-    if (Math.random() < 0.0001) {
-      throw new Error('TEST')
-    }
+    // if (Math.random() < 0.0001) {
+    //   throw new Error('TEST')
+    // }
     try {
       await executeStressTest(options)
     } catch (err) {

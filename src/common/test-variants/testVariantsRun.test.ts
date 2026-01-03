@@ -2,6 +2,7 @@ import { describe, it } from 'vitest'
 import * as assert from 'node:assert'
 import { testVariantsRun } from './testVariantsRun'
 import { testVariantsIterator } from './testVariantsIterator'
+import { logOptionsDisabled } from './progressLogging'
 import type { TestVariantsTestRun } from './types'
 
 describe('test-variants > testVariantsRun', { timeout: 10 * 60 * 1000 }, () => {
@@ -29,6 +30,7 @@ describe('test-variants > testVariantsRun', { timeout: 10 * 60 * 1000 }, () => {
         b: Array.from({ length: 100 }).map((_, i) => i),
       },
       limitArgOnError: true,
+      log: logOptionsDisabled,
     })
 
     const testRun = (_args: { a: number; b: number }, index: number) => {
@@ -105,6 +107,7 @@ describe('test-variants > testVariantsRun', { timeout: 10 * 60 * 1000 }, () => {
           Array.from({ length: args.a + 10 }).map((_, i) => i), // 0 to (a+9)
       },
       limitArgOnError: true,
+      log: logOptionsDisabled,
     })
 
     const testRun = (args: { a: number; b: number }) => {
@@ -182,6 +185,7 @@ describe('test-variants > testVariantsRun', { timeout: 10 * 60 * 1000 }, () => {
       },
       limitArgOnError: true,
       getSeed: ({ cycles, tests }) => cycles * 10000 + tests,
+      log: logOptionsDisabled,
     })
 
     const testRun: TestVariantsTestRun<{ a: number; b: number }> = args => {
@@ -256,6 +260,7 @@ describe('test-variants > testVariantsRun', { timeout: 10 * 60 * 1000 }, () => {
         b: [objB1, objB2, objB3],
       },
       limitArgOnError: true,
+      log: logOptionsDisabled,
     })
 
     const testRun = (args: { a: { id: string }; b: { id: string } }) => {
@@ -323,6 +328,7 @@ describe('test-variants > testVariantsRun', { timeout: 10 * 60 * 1000 }, () => {
         b: () => Array.from({ length: 10 }).map((_, i) => ({ value: i })),
       },
       limitArgOnError: true,
+      log: logOptionsDisabled,
     })
 
     const testRun = (args: { a: number; b: { value: number } }) => {
@@ -408,6 +414,7 @@ describe('test-variants > testVariantsRun', { timeout: 10 * 60 * 1000 }, () => {
         },
         getSeed: ({ cycles }) => cycles,
         iterationModes: [{ mode: 'forward', attemptsPerVariant: 1 }],
+        log: logOptionsDisabled,
       })
 
       const result = await testVariantsRun(testRun, variants, {

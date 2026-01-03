@@ -1,9 +1,6 @@
 import { type PromiseOrValue } from '@flemist/async-utils'
 
-import {
-  testVariantsCreateTestRun,
-  type TestVariantsCreateTestRunOptions,
-} from './testVariantsCreateTestRun'
+import { testVariantsCreateTestRun } from './testVariantsCreateTestRun'
 import type { TestVariantsTest } from './types'
 import { testVariantsRun } from './testVariantsRun'
 import type { Obj } from '@flemist/simple-utils'
@@ -13,6 +10,7 @@ import type {
   TestVariantsRunResult,
   TestVariantsTemplates,
 } from './types'
+import { resolveLogOptions } from 'src/common/test-variants/progressLogging'
 
 /** Extended templates type that allows additional args beyond the base Args type */
 export type TestVariantsTemplatesExt<
@@ -27,10 +25,7 @@ export type TestVariantsTemplatesExt<
 }>
 
 export type TestVariantsCall<Args extends Obj> = <SavedArgs = Args>(
-  options?:
-    | null
-    | (TestVariantsRunOptionsInternal<Args, SavedArgs> &
-        TestVariantsCreateTestRunOptions<Args>),
+  options?: null | TestVariantsRunOptionsInternal<Args, SavedArgs>,
 ) => PromiseOrValue<TestVariantsRunResult<Args>>
 
 export type TestVariantsSetArgs<Args extends Obj> = <ArgsExtra extends Obj>(
@@ -42,14 +37,11 @@ export function createTestVariants<Args extends Obj>(
 ): TestVariantsSetArgs<Args> {
   return function testVariantsArgs(args) {
     return async function testVariantsCall(options) {
+      const logOpts = resolveLogOptions(options?.log)
       const testRun = testVariantsCreateTestRun<Args>(test, {
         onError: options?.onError,
-        log: options?.log,
+        log: logOpts,
       })
-
-      const logOpts = options?.log
-      const logDebug =
-        logOpts && typeof logOpts === 'object' ? logOpts.debug : false
 
       // Extended templates include extra args beyond Args; iterator accepts base Args structure
       const variants = testVariantsIterator<Args>({
@@ -60,7 +52,7 @@ export function createTestVariants<Args extends Obj>(
         limitArgOnError: options?.findBestError?.limitArgOnError,
         includeErrorVariant: options?.findBestError?.includeErrorVariant,
         timeController: options?.timeController,
-        logDebug,
+        log: logOpts,
       })
 
       return testVariantsRun(testRun, variants, options)

@@ -1,6 +1,6 @@
 import type { IAbortSignalFast } from '@flemist/abort-controller-fast'
 import type { PromiseOrValue } from '@flemist/async-utils'
-import type { Obj } from '@flemist/simple-utils'
+import type { Obj, RequiredNonNullable } from '@flemist/simple-utils'
 import type { ITimeController } from '@flemist/time-controller'
 
 // region Mode configuration types
@@ -99,8 +99,8 @@ export type TestVariantsIteratorOptions<Args extends Obj> = {
   iterationModes?: null | ModeConfig[]
   /** Time controller for testable time-dependent operations; null uses timeControllerDefault */
   timeController?: null | ITimeController
-  /** Debug logging for internal behavior; default false */
-  logDebug?: null | boolean
+  /** Resolved logging options */
+  log: RequiredNonNullable<TestVariantsLogOptions>
 }
 
 /** Args with seed from getSeed */
@@ -305,7 +305,22 @@ export type TestVariantsRunResult<Args extends Obj> = {
   bestError: null | TestVariantsBestError<Args>
 }
 
+/** Error event passed to onError callback */
+export type ErrorEvent<Args extends Obj> = {
+  error: any
+  args: Args
+  /** Number of tests run before this error (including attemptsPerVariant) */
+  tests: number
+}
+
+/** Callback invoked when a test variant throws an error */
+export type OnErrorCallback<Args extends Obj> = (
+  event: ErrorEvent<Args>,
+) => PromiseOrValue<void>
+
 export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
+  /** Callback invoked when a test variant throws an error */
+  onError?: null | OnErrorCallback<Args>
   /** Wait for garbage collection after iterations */
   GC_Iterations?: null | number
   /** Same as GC_Iterations but only for async test variants, required for 10000 and more of Promise rejections */

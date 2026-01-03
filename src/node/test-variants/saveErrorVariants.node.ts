@@ -9,6 +9,7 @@ import {
   parseErrorVariantFile,
   saveErrorVariantFile,
 } from './saveErrorVariants'
+import { logOptionsDisabled } from 'src/common/test-variants/progressLogging'
 
 const TEST_DIR = path.join(process.cwd(), '-tmp', '-test', 'saveErrorVariants')
 
@@ -183,7 +184,7 @@ describe('test-variants > saveErrorVariants', () => {
   describe('integration with createTestVariants', () => {
     it('saves error-causing args to file', async () => {
       let callCount = 0
-      const testFn = createTestVariants(({ a }: { a: number }) => {
+      const testFunc = createTestVariants(({ a }: { a: number }) => {
         callCount++
         if (a === 2) {
           throw new Error('test error')
@@ -192,9 +193,9 @@ describe('test-variants > saveErrorVariants', () => {
 
       await assert.rejects(
         async () =>
-          testFn({ a: [1, 2, 3] })({
+          testFunc({ a: [1, 2, 3] })({
             saveErrorVariants: { dir: TEST_DIR },
-            log: false,
+            log: logOptionsDisabled,
           }),
         /test error/,
       )
@@ -221,7 +222,7 @@ describe('test-variants > saveErrorVariants', () => {
       const normalArgs: number[] = []
 
       let isReplaying = true
-      const testFn = createTestVariants(({ a }: { a: number }) => {
+      const testFunc = createTestVariants(({ a }: { a: number }) => {
         if (isReplaying) {
           replayedArgs.push(a)
           isReplaying = false
@@ -230,9 +231,9 @@ describe('test-variants > saveErrorVariants', () => {
         }
       })
 
-      await testFn({ a: [1, 2] })({
+      await testFunc({ a: [1, 2] })({
         saveErrorVariants: { dir: TEST_DIR },
-        log: false,
+        log: logOptionsDisabled,
       })
 
       assert.deepStrictEqual(replayedArgs, [99])
@@ -246,7 +247,7 @@ describe('test-variants > saveErrorVariants', () => {
         JSON.stringify({ a: 1, seed: null }),
       )
 
-      const testFn = createTestVariants(({ a }: { a: number }) => {
+      const testFunc = createTestVariants(({ a }: { a: number }) => {
         if (a === 1) {
           throw new Error('replay error')
         }
@@ -254,9 +255,9 @@ describe('test-variants > saveErrorVariants', () => {
 
       await assert.rejects(
         async () =>
-          testFn({ a: [2, 3] })({
+          testFunc({ a: [2, 3] })({
             saveErrorVariants: { dir: TEST_DIR },
-            log: false,
+            log: logOptionsDisabled,
           }),
         /replay error/,
       )
@@ -275,18 +276,18 @@ describe('test-variants > saveErrorVariants', () => {
       )
 
       let replayCount = 0
-      const testFn = createTestVariants(({ a }: { a: number }) => {
+      const testFunc = createTestVariants(({ a }: { a: number }) => {
         if (a === 1) {
           replayCount++
         }
       })
 
-      await testFn({ a: [2] })({
+      await testFunc({ a: [2] })({
         saveErrorVariants: {
           dir: TEST_DIR,
           attemptsPerVariant: 3,
         },
-        log: false,
+        log: logOptionsDisabled,
       })
 
       assert.strictEqual(replayCount, 3)

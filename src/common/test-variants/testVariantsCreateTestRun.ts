@@ -1,7 +1,13 @@
 import { isPromiseLike, type PromiseOrValue } from '@flemist/async-utils'
-import { formatAny, type Obj } from '@flemist/simple-utils'
+import {
+  formatAny,
+  type Obj,
+  type RequiredNonNullable,
+} from '@flemist/simple-utils'
 import type {
   ArgsWithSeed,
+  ErrorEvent,
+  OnErrorCallback,
   TestVariantsLogOptions,
   TestVariantsTest,
   TestVariantsTestOptions,
@@ -9,23 +15,11 @@ import type {
   TestVariantsTestRun,
   TestVariantsTestRunResult,
 } from './types'
-import { resolveLogOptions } from './progressLogging'
-
-export type ErrorEvent<Args extends Obj> = {
-  error: any
-  args: Args
-  /** Number of tests run before this error (including attemptsPerVariant) */
-  tests: number
-}
-
-export type OnErrorCallback<Args extends Obj> = (
-  event: ErrorEvent<Args>,
-) => PromiseOrValue<void>
 
 export type TestVariantsCreateTestRunOptions<Args extends Obj> = {
   onError?: null | OnErrorCallback<Args>
-  /** Logging options; null/true uses defaults; false disables all */
-  log?: null | boolean | TestVariantsLogOptions
+  /** Resolved logging options */
+  log: RequiredNonNullable<TestVariantsLogOptions>
 }
 
 /** Normalize test result to standard format */
@@ -46,9 +40,9 @@ function normalizeTestResult(
 
 export function testVariantsCreateTestRun<Args extends Obj>(
   test: TestVariantsTest<Args>,
-  options?: null | TestVariantsCreateTestRunOptions<Args>,
+  options: TestVariantsCreateTestRunOptions<Args>,
 ): TestVariantsTestRun<Args> {
-  const logOpts = resolveLogOptions(options?.log)
+  const logOpts = options.log
 
   let errorEvent: ErrorEvent<Args> | null = null
   // Debug mode: counts iterations for step-by-step debugging of failing variant.
