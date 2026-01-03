@@ -31,7 +31,7 @@ import {
   logOptionsDefault,
   resolveLogOptions,
 } from 'src/common/test-variants/progressLogging'
-import { replayErrorVariants } from 'src/common/test-variants/errorVariantReplay'
+import { replayErrorVariants } from 'src/common/test-variants/replayErrorVariants'
 
 export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   testRun: TestVariantsTestRun<Args>,

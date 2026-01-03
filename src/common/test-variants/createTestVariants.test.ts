@@ -305,7 +305,7 @@ describe('test-variants > createTestVariants', () => {
       assert.strictEqual(result.iterations, results.length)
     })
 
-    it.skip('complex', { timeout: 5 * 60 * 1000 }, async () => {
+    it('complex', { timeout: 5 * 60 * 1000 }, async () => {
       const results: any[] = []
       const result = await createTestVariants(
         async (args: {
@@ -338,7 +338,7 @@ describe('test-variants > createTestVariants', () => {
       // assert.deepStrictEqual(results, arr.map(a => [a]))
     })
 
-    it.skip('long', { timeout: 5 * 60 * 1000 }, async () => {
+    it('long', { timeout: 5 * 60 * 1000 }, async () => {
       const results: any[] = []
       const result = await createTestVariants(async ({ a }: { a: number }) => {
         await delay(3000)
@@ -410,7 +410,7 @@ describe('test-variants > createTestVariants', () => {
 
 describe('test-variants > million of Promise reject', () => {
   let millionRejectTime = 0
-  it.skip('million of Promise reject', { timeout: 1800000 }, async () => {
+  it('million of Promise reject', { timeout: 1800000 }, async () => {
     // console.log('wait 5 sec')
     // await new Promise((resolve) => {
     //   setTimeout(resolve, 5000)
@@ -474,7 +474,7 @@ describe('test-variants > million of Promise reject', () => {
     millionRejectTime = Date.now()
   })
 
-  it.skip('after million of Promise reject', () => {
+  it('after million of Promise reject', () => {
     const now = Date.now()
     assert.ok(millionRejectTime > 0)
     assert.ok(now - millionRejectTime < 500, now - millionRejectTime + '')
