@@ -1,60 +1,3 @@
-/**
- * # Debugging and Coding Work Instructions
- *
- * These are my (project owner) mandatory instructions for LLM agents working with this file.
- * Follow these instructions with absolute priority according to project rules.
- *
- * ## Before Starting Work
- *
- * Read and apply all documentation required for TypeScript test files with ultra-performance code:
- * - @/ai/project/base/docs/rules/docs/documentation.md
- * - @/ai/project/base/docs/rules/common/code.md
- * - @/ai/project/base/docs/rules/common/naming.md
- * - @/ai/project/base/docs/rules/common/logging.md
- * - @/ai/project/base/docs/rules/code/TypeScript/rules/lib.md
- * - @/ai/project/base/docs/rules/code/test-development/principles.md
- *
- * After completing modifications, execute code review:
- * - @/ai/project/base/docs/rules/common/code-review.md
- *
- * ## Stress Test Philosophy
- *
- * The goal of stress tests is to FIND errors, not to pass tests.
- * Tests must fail on any unexpected behavior - this is their primary purpose.
- * Polish code to perfection through massive verification of everything.
- *
- * Strive to find as many explicit and implicit errors and unexpected behaviors as possible.
- * Never sweep bugs under the rug.
- * Never fix bugs with workarounds; always search for systemic root causes.
- * Debugging time is irrelevant; actual debugging and code improvement is what matters.
- *
- * ## Coverage Requirements
- *
- * Test all possible variations of all parameters, modes, edge cases, and combinations.
- * Perform all possible verifications of all results, states, and invariants.
- * Include boundary conditions, zero values, empty inputs, and impossible cases.
- *
- * ## Code Quality Requirements
- *
- * - Maximize performance for millions of iterations using ultra-performance patterns
- * - Maximize cleanliness, simplicity, and code quality
- * - Search for most simple, most effective, most competent, most flexible, and most reliable solutions
- * - Apply discovered solutions systematically to all similar cases
- * - Improve code, tests, and logs during every modification
- * - Eliminate workarounds and bad code; bring everything to ideal order
- *
- * ## Logging Requirements
- *
- * - Format logs with XML tags for LLM parsing
- * - Write logs exclusively for LLM debugging
- * - Enable logs exclusively when error is caught and exclusively for duration of one repeated execution
- * - Ensure logs provide all information necessary for debugging
- *
- * ## Language Requirements
- *
- * Write all code, comments, and logs in English following all project text writing rules
- */
-
 import { createTestVariants } from '#this'
 import {
   deepCloneJsonLike,
@@ -262,150 +205,138 @@ function argsEqualByKeys(a: TestArgs, b: TestArgs, keys: string[]): boolean {
 
 // region Verification
 
-function verifyIterationsCount(
-  resultIterations: number,
-  totalVariantsCount: number | null,
-  errorIndex: number | null,
-  firstMatchingIndex: number,
-  lastMatchingIndex: number,
-  findBestError: boolean,
-  dontThrowIfError: boolean,
-  cycles: number,
-  attemptsPerVariant: number,
-  forwardModeCycles: number,
-  errorVariantCallCount: number,
-  retriesToError: number,
-  iterationMode: 'forward' | 'backward' | 'random',
-  callCount: number,
-  errorAttempts: number,
-  isParallel: boolean,
-  isMultiMode: boolean,
-): void {
-  // Verify: iterations is never negative
-  if (resultIterations < 0) {
-    throw new Error(`Iterations should be >= 0, got ${resultIterations}`)
-  }
-
-  // Verify: when totalVariantsCount=0, iterations should be 0
-  if (totalVariantsCount === 0 && resultIterations !== 0) {
-    throw new Error(
-      `Expected 0 iterations for empty variants, got ${resultIterations}`,
-    )
-  }
-
-  // Calculate expected error behavior
-  // For random mode: use actual errorAttempts since random picks may not hit error variant
-  // For multi-mode: use actual errorAttempts since position persistence affects which variants are hit per cycle
-  // For backward mode: use actual errorAttempts since backward visits high indices first (lastMatchingIndex, not firstMatchingIndex)
-  // For forward mode: use theoretical calculation based on variant structure
-  const totalErrorCalls =
-    errorVariantCallCount * cycles * attemptsPerVariant * forwardModeCycles
-  const errorWillOccur =
-    iterationMode === 'random' || isMultiMode || iterationMode === 'backward'
-      ? errorAttempts > retriesToError
-      : errorIndex !== null &&
-        totalErrorCalls > retriesToError &&
-        callCount > firstMatchingIndex
-  // Error is thrown if: (1) no findBestError, or (2) findBestError but dontThrowIfError=false
-  const errorWillBeThrown =
-    errorWillOccur && (!findBestError || !dontThrowIfError)
-
-  // Verify: when error expected to be thrown, should have thrown
-  if (errorWillBeThrown) {
-    throw new Error('Expected error to be thrown')
-  }
-
-  // Verify: when error expected after first variant and totalVariantsCount > 0, should have some iterations
-  // For forward mode: firstMatchingIndex > 0 means error is not at first variant
-  // For backward mode: lastMatchingIndex < totalVariantsCount - 1 means error is not at first variant (iteration starts from end)
-  // For multi-mode: first mode is always forward, so use forward logic regardless of iterationMode
-  // Skip for parallel mode: iteration counting has race conditions with abort signal
-  // Skip for random mode: random picks may hit error variant first, resulting in 0 iterations
-  const errorNotAtFirstVariant =
-    iterationMode === 'backward' && !isMultiMode
-      ? lastMatchingIndex < (totalVariantsCount ?? 0) - 1
-      : firstMatchingIndex > 0
-  if (
-    !isParallel &&
-    iterationMode !== 'random' &&
-    errorWillOccur &&
-    totalVariantsCount !== null &&
-    totalVariantsCount > 0 &&
-    resultIterations === 0 &&
-    errorNotAtFirstVariant
-  ) {
-    throw new Error(
-      'Expected some iterations when totalVariantsCount > 0 and error expected after first variant',
-    )
-  }
-
-  // Verify exact count for deterministic modes with known variant count and no error
-  // Skip for multi-mode: uses limitPerMode instead of forwardModeCycles, different counting logic
-  if (
-    totalVariantsCount !== null &&
-    totalVariantsCount > 0 &&
-    !errorWillOccur &&
-    iterationMode !== 'random' &&
-    !isMultiMode &&
-    cycles > 0 &&
-    attemptsPerVariant > 0 &&
-    forwardModeCycles > 0
-  ) {
-    const expected =
-      totalVariantsCount * cycles * attemptsPerVariant * forwardModeCycles
-    if (resultIterations !== expected) {
-      throw new Error(
-        `Expected ${expected} iterations (variants=${totalVariantsCount}, cycles=${cycles}, repeats=${attemptsPerVariant}, forwardModeCycles=${forwardModeCycles}), got ${resultIterations}`,
-      )
-    }
-  }
+/** Verification state tracked during test execution */
+type VerificationState = {
+  callCount: number
+  errorAttempts: number
+  errorActuallyOccurred: boolean
+  errorVariantArgs: TestArgs | null
 }
 
-function verifyBestError(
-  resultBestError: TestVariantsRunResult<TestArgs>['bestError'],
-  findBestError: boolean,
-  dontThrowIfError: boolean,
-  errorIndex: number | null,
-  errorVariantArgs: TestArgs | null,
-  errorVariantCallCount: number,
-  retriesToError: number,
-  cycles: number,
-  attemptsPerVariant: number,
-  forwardModeCycles: number,
-  iterationMode: 'forward' | 'backward' | 'random',
-  isMultiMode: boolean,
+/** Verification parameters from test configuration */
+type VerificationParams = {
+  totalVariantsCount: number | null
+  errorIndex: number | null
+  firstMatchingIndex: number
+  lastMatchingIndex: number
+  errorVariantCallCount: number
+  retriesToError: number
+  findBestError: boolean
+  dontThrowIfError: boolean
+  cycles: number
+  attemptsPerVariant: number
+  forwardModeCycles: number
+  iterationMode: 'forward' | 'backward' | 'random'
+  isParallel: boolean
+  isMultiMode: boolean
+  limitPerMode: number
+  argKeys: string[]
+}
+
+/** Verify universal invariants that hold for ALL configurations */
+function verifyInvariants(
+  result: TestVariantsRunResult<TestArgs>,
+  state: VerificationState,
+  params: VerificationParams,
 ): void {
-  // Calculate expected error behavior
-  const totalErrorCalls =
-    errorVariantCallCount * cycles * attemptsPerVariant * forwardModeCycles
-  const errorWillOccur = errorIndex !== null && totalErrorCalls > retriesToError
+  const { callCount, errorActuallyOccurred, errorVariantArgs } = state
+  const {
+    totalVariantsCount,
+    findBestError,
+    dontThrowIfError,
+    cycles,
+    attemptsPerVariant,
+    forwardModeCycles,
+    isMultiMode,
+    limitPerMode,
+    argKeys,
+  } = params
 
-  // bestError is set only when findBestError=true and dontThrowIfError=true
-  const bestErrorExpected = findBestError && dontThrowIfError && errorWillOccur
+  // Invariant 1: iterations >= 0
+  if (result.iterations < 0) {
+    throw new Error(`iterations must be >= 0, got ${result.iterations}`)
+  }
 
-  // Verify: when findBestError and dontThrowIfError and error expected, bestError should be set
-  // Skip for random mode: random picks may not hit error variant as predicted
-  // Skip for multi-mode: position persistence changes iteration order, affecting when errors occur
-  if (bestErrorExpected && iterationMode !== 'random' && !isMultiMode) {
-    if (resultBestError === null) {
+  // Invariant 2: callCount >= 0
+  if (callCount < 0) {
+    throw new Error(`callCount must be >= 0, got ${callCount}`)
+  }
+
+  // Invariant 3: iterations <= callCount (iterations are successful calls)
+  if (result.iterations > callCount) {
+    throw new Error(
+      `iterations (${result.iterations}) must be <= callCount (${callCount})`,
+    )
+  }
+
+  // Invariant 4: when totalVariantsCount=0, both should be 0
+  if (totalVariantsCount === 0) {
+    if (result.iterations !== 0) {
       throw new Error(
-        'Expected bestError to be set when error occurred with findBestError and dontThrowIfError',
+        `iterations must be 0 when totalVariantsCount=0, got ${result.iterations}`,
       )
     }
-    if (
-      !(resultBestError.error instanceof Error) ||
-      !resultBestError.error.message.startsWith('Test error at call')
-    ) {
-      throw new Error('bestError.error should be our test error')
+    if (callCount !== 0) {
+      throw new Error(
+        `callCount must be 0 when totalVariantsCount=0, got ${callCount}`,
+      )
     }
-    // CRITICAL: Verify args match - this catches parallel mode attribution bugs
+  }
+
+  // Invariant 5: callCount has upper bound
+  // Max possible calls = variants * cycles * attemptsPerVariant * forwardModeCycles * 2 (findBestError may double)
+  if (totalVariantsCount !== null && totalVariantsCount > 0) {
+    let maxCalls: number
+    if (isMultiMode) {
+      // Multi-mode: 2 modes, each with limitPerMode, may need multiple rounds
+      const roundsToComplete = Math.ceil(totalVariantsCount / limitPerMode)
+      maxCalls =
+        limitPerMode * 2 * attemptsPerVariant * cycles * roundsToComplete * 2
+    } else {
+      maxCalls =
+        totalVariantsCount * cycles * attemptsPerVariant * forwardModeCycles * 2
+    }
+    maxCalls = maxCalls + 10 // small buffer for edge cases
+    if (callCount > maxCalls) {
+      throw new Error(
+        `callCount (${callCount}) exceeds maximum bound (${maxCalls}). ` +
+          `variants=${totalVariantsCount}, cycles=${cycles}, attemptsPerVariant=${attemptsPerVariant}, ` +
+          `forwardModeCycles=${forwardModeCycles}, isMultiMode=${isMultiMode}`,
+      )
+    }
+  }
+
+  // Invariant 6: if error actually occurred and findBestError && dontThrowIfError, bestError must be set
+  if (errorActuallyOccurred && findBestError && dontThrowIfError) {
+    if (result.bestError === null) {
+      throw new Error(
+        'bestError must be set when error occurred with findBestError && dontThrowIfError',
+      )
+    }
+  }
+
+  // Invariant 7: if bestError is set, it must be valid
+  if (result.bestError !== null) {
+    if (!(result.bestError.error instanceof Error)) {
+      throw new Error('bestError.error must be an Error instance')
+    }
+    if (!result.bestError.error.message.startsWith('Test error at call')) {
+      throw new Error(
+        `bestError.error must be our test error, got: ${result.bestError.error.message}`,
+      )
+    }
+    if (result.bestError.tests < 0) {
+      throw new Error(
+        `bestError.tests must be >= 0, got ${result.bestError.tests}`,
+      )
+    }
+    // Verify args match error variant
     if (errorVariantArgs !== null) {
-      // Remove seed from comparison as it varies per call
-      const resultArgsNoSeed = { ...resultBestError.args }
+      const resultArgsNoSeed = { ...result.bestError.args }
       delete (resultArgsNoSeed as Record<string, unknown>).seed
       const expectedArgsNoSeed = { ...errorVariantArgs }
       delete (expectedArgsNoSeed as Record<string, unknown>).seed
-      if (!deepEqualJsonLike(resultArgsNoSeed, expectedArgsNoSeed)) {
+      if (!argsEqualByKeys(resultArgsNoSeed, expectedArgsNoSeed, argKeys)) {
         throw new Error(
           `bestError.args mismatch!\n` +
             `  Expected: ${JSON.stringify(expectedArgsNoSeed)}\n` +
@@ -415,43 +346,66 @@ function verifyBestError(
     }
   }
 
-  // Verify: when no error expected, bestError should be null
-  // Skip for random mode: random picks may hit error variant more times than theoretical calculation predicts
-  // Skip for multi-mode: position persistence changes iteration order, affecting when errors occur
-  if (
-    iterationMode !== 'random' &&
-    !isMultiMode &&
-    !errorWillOccur &&
-    resultBestError !== null
-  ) {
-    throw new Error('Expected bestError to be null when no error occurred')
+  // Invariant 8: if no error occurred, bestError must be null
+  if (!errorActuallyOccurred && result.bestError !== null) {
+    throw new Error('bestError must be null when no error occurred')
   }
 
-  // Verify: for random mode with error, bestError should still be set if findBestError and dontThrowIfError
-  if (
-    iterationMode === 'random' &&
-    bestErrorExpected &&
-    resultBestError !== null
-  ) {
-    if (
-      !(resultBestError.error instanceof Error) ||
-      !resultBestError.error.message.startsWith('Test error at call')
-    ) {
-      throw new Error('bestError.error should be our test error (random mode)')
+  // Invariant 9: if error occurred in success path, findBestError+dontThrowIfError must be true
+  // Otherwise the error should have been thrown and we'd be in catch block
+  if (errorActuallyOccurred && (!findBestError || !dontThrowIfError)) {
+    throw new Error(
+      `Error occurred but was not thrown. findBestError=${findBestError}, dontThrowIfError=${dontThrowIfError}`,
+    )
+  }
+}
+
+/** Verify deterministic behavior for forward/backward modes without parallel */
+function verifyDeterministicBehavior(
+  result: TestVariantsRunResult<TestArgs>,
+  state: VerificationState,
+  params: VerificationParams,
+): void {
+  const { callCount, errorActuallyOccurred } = state
+  const {
+    totalVariantsCount,
+    cycles,
+    attemptsPerVariant,
+    forwardModeCycles,
+    iterationMode,
+    isParallel,
+    isMultiMode,
+  } = params
+
+  // Skip for non-deterministic modes
+  if (isParallel || iterationMode === 'random') {
+    return
+  }
+
+  // Skip for multi-mode (has different counting logic)
+  if (isMultiMode) {
+    return
+  }
+
+  // Skip if no variants
+  if (totalVariantsCount === null || totalVariantsCount === 0) {
+    return
+  }
+
+  // When no error occurred, verify exact counts
+  if (!errorActuallyOccurred) {
+    const expected =
+      totalVariantsCount * cycles * attemptsPerVariant * forwardModeCycles
+    if (callCount !== expected) {
+      throw new Error(
+        `callCount mismatch: expected ${expected}, got ${callCount}. ` +
+          `variants=${totalVariantsCount}, cycles=${cycles}, attemptsPerVariant=${attemptsPerVariant}, forwardModeCycles=${forwardModeCycles}`,
+      )
     }
-    // Also verify args for random mode when errorVariantArgs is known
-    if (errorVariantArgs !== null) {
-      const resultArgsNoSeed = { ...resultBestError.args }
-      delete (resultArgsNoSeed as Record<string, unknown>).seed
-      const expectedArgsNoSeed = { ...errorVariantArgs }
-      delete (expectedArgsNoSeed as Record<string, unknown>).seed
-      if (!deepEqualJsonLike(resultArgsNoSeed, expectedArgsNoSeed)) {
-        throw new Error(
-          `bestError.args mismatch (random mode)!\n` +
-            `  Expected: ${JSON.stringify(expectedArgsNoSeed)}\n` +
-            `  Actual:   ${JSON.stringify(resultArgsNoSeed)}`,
-        )
-      }
+    if (result.iterations !== expected) {
+      throw new Error(
+        `iterations mismatch: expected ${expected}, got ${result.iterations}`,
+      )
     }
   }
 }
@@ -503,63 +457,6 @@ function verifySeenValues(
           throw new Error(`Value ${expectedId} was not seen for arg ${key}`)
         }
       }
-    }
-  }
-}
-
-function verifyCallCount(
-  callCount: number,
-  totalVariantsCount: number | null,
-  errorIndex: number | null,
-  cycles: number,
-  attemptsPerVariant: number,
-  forwardModeCycles: number,
-  iterationMode: 'forward' | 'backward' | 'random',
-  isMultiMode: boolean,
-): void {
-  // Verify: callCount is never negative
-  if (callCount < 0) {
-    throw new Error(`callCount should be >= 0, got ${callCount}`)
-  }
-
-  // Verify: when totalVariantsCount=0, callCount should be 0
-  if (totalVariantsCount === 0 && callCount !== 0) {
-    throw new Error(
-      `Expected callCount=0 when totalVariantsCount=0, got ${callCount}`,
-    )
-  }
-
-  // Verify: when error expected and iterations expected, callCount should be > 0
-  const expectedIterations =
-    (totalVariantsCount ?? 0) * cycles * attemptsPerVariant * forwardModeCycles
-  if (
-    errorIndex !== null &&
-    totalVariantsCount !== null &&
-    totalVariantsCount > 0 &&
-    expectedIterations > 0 &&
-    callCount === 0
-  ) {
-    throw new Error(
-      `Expected callCount > 0 when error expected, got ${callCount}`,
-    )
-  }
-
-  // Verify exact count for deterministic modes with known variant count and no error
-  // Skip for multi-mode: uses limitPerMode instead of forwardModeCycles, different counting logic
-  if (
-    totalVariantsCount !== null &&
-    totalVariantsCount > 0 &&
-    errorIndex === null &&
-    iterationMode !== 'random' &&
-    !isMultiMode &&
-    cycles > 0 &&
-    attemptsPerVariant > 0 &&
-    forwardModeCycles > 0
-  ) {
-    const expected =
-      totalVariantsCount * cycles * attemptsPerVariant * forwardModeCycles
-    if (callCount !== expected) {
-      throw new Error(`Expected callCount=${expected}, got ${callCount}`)
     }
   }
 }
@@ -1401,57 +1298,50 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       log('<verification>')
     }
 
-    if (logEnabled) {
-      traceEnter(
-        `verifyIterationsCount(${result.iterations}, ${totalVariantsCount}, ${errorIndex}, ${firstMatchingIndex}, ${lastMatchingIndex}, ${findBestError}, ${dontThrowIfError}, ${cycles}, ${attemptsPerVariant}, ${forwardModeCycles}, ${errorVariantCallCount}, ${retriesToError}, ${iterationMode}, ${callCount}, ${errorAttempts}, ${isParallel}, ${isMultiMode})`,
-      )
+    // Build verification state and params
+    const verificationState: VerificationState = {
+      callCount,
+      errorAttempts,
+      errorActuallyOccurred,
+      errorVariantArgs,
     }
-    verifyIterationsCount(
-      result.iterations,
+    const verificationParams: VerificationParams = {
       totalVariantsCount,
       errorIndex,
       firstMatchingIndex,
       lastMatchingIndex,
+      errorVariantCallCount,
+      retriesToError,
       findBestError,
       dontThrowIfError,
       cycles,
       attemptsPerVariant,
       forwardModeCycles,
-      errorVariantCallCount,
-      retriesToError,
       iterationMode,
-      callCount,
-      errorAttempts,
       isParallel,
       isMultiMode,
-    )
-    if (logEnabled) {
-      traceExit(`ok`)
+      limitPerMode,
+      argKeys,
     }
 
     if (logEnabled) {
-      traceEnter(`verifyBestError`)
+      traceEnter('verifyInvariants')
     }
-    verifyBestError(
-      result.bestError,
-      findBestError,
-      dontThrowIfError,
-      errorIndex,
-      errorVariantArgs,
-      errorVariantCallCount,
-      retriesToError,
-      cycles,
-      attemptsPerVariant,
-      forwardModeCycles,
-      iterationMode,
-      isMultiMode,
-    )
+    verifyInvariants(result, verificationState, verificationParams)
     if (logEnabled) {
-      traceExit(`ok`)
+      traceExit('ok')
     }
 
     if (logEnabled) {
-      traceEnter(`verifySeenValues`)
+      traceEnter('verifyDeterministicBehavior')
+    }
+    verifyDeterministicBehavior(result, verificationState, verificationParams)
+    if (logEnabled) {
+      traceExit('ok')
+    }
+
+    if (logEnabled) {
+      traceEnter('verifySeenValues')
     }
     // Full coverage: all variants visited at least once (static templates, no error, deterministic mode, iterations > 0)
     const expectedIterationsForCoverage =
@@ -1460,7 +1350,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       attemptsPerVariant *
       forwardModeCycles
     const fullCoverage =
-      errorIndex === null &&
+      !errorActuallyOccurred &&
       totalVariantsCount !== null &&
       totalVariantsCount > 0 &&
       iterationMode !== 'random' &&
@@ -1476,40 +1366,21 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       fullCoverage,
     )
     if (logEnabled) {
-      traceExit(`ok`)
+      traceExit('ok')
     }
 
     if (logEnabled) {
-      traceEnter(
-        `verifyCallCount(${callCount}, ${totalVariantsCount}, ${errorIndex}, ${cycles}, ${attemptsPerVariant}, ${forwardModeCycles}, ${iterationMode}, ${isMultiMode})`,
-      )
-    }
-    verifyCallCount(
-      callCount,
-      totalVariantsCount,
-      errorIndex,
-      cycles,
-      attemptsPerVariant,
-      forwardModeCycles,
-      iterationMode,
-      isMultiMode,
-    )
-    if (logEnabled) {
-      traceExit(`ok`)
-    }
-
-    if (logEnabled) {
-      traceEnter(`verifyDynamicArgs`)
+      traceEnter('verifyDynamicArgs')
     }
     verifyDynamicArgs(dynamicArgsReceived, argKeys)
     if (logEnabled) {
-      traceExit(`ok`)
+      traceExit('ok')
     }
 
     // Verify position persistence for multi-mode configuration
     if (isMultiMode && totalVariantsCount !== null && totalVariantsCount > 1) {
       if (logEnabled) {
-        traceEnter(`verifyPositionPersistence`)
+        traceEnter('verifyPositionPersistence')
       }
       verifyPositionPersistence(
         variantIndicesSeen,
@@ -1521,7 +1392,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
         errorIndex,
       )
       if (logEnabled) {
-        traceExit(`ok`)
+        traceExit('ok')
       }
     }
 
@@ -1576,8 +1447,9 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     // Error is thrown when: (1) no findBestError, or (2) findBestError but dontThrowIfError=false
     // Use errorAttempts > retriesToError since that directly reflects when innerTest throws
     // Works for all modes: forward, backward, random
+    const errorActuallyOccurred = errorAttempts > retriesToError
     const errorExpected =
-      (!findBestError || !dontThrowIfError) && errorAttempts > retriesToError
+      (!findBestError || !dontThrowIfError) && errorActuallyOccurred
     if (errorExpected) {
       if (logEnabled) {
         log('</execution>')
@@ -1586,7 +1458,21 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       }
       verifyExpectedError(err)
       if (logEnabled) {
-        traceExit(`ok (expected error)`)
+        traceExit(`ok`)
+      }
+
+      // Verify logs in error path too
+      if (logEnabled) {
+        traceEnter('verifyLogs')
+      }
+      verifyLogs(
+        logEntries,
+        errorActuallyOccurred,
+        findBestError,
+        dontThrowIfError,
+      )
+      if (logEnabled) {
+        traceExit(`ok`)
         log('</verification>')
         log('</test>')
       }
@@ -1607,9 +1493,6 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
 
 export const testVariants = createTestVariants(
   async (options: StressTestArgs) => {
-    // if (Math.random() < 0.0001) {
-    //   throw new Error('TEST')
-    // }
     try {
       await executeStressTest(options)
     } catch (err) {
