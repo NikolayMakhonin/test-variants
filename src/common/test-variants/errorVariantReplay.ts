@@ -19,9 +19,9 @@ export type ReplayErrorVariantsOptions<Args extends Obj, SavedArgs> = {
   /** Save error variants configuration */
   saveErrorVariants: SaveErrorVariantsOptions<Args, SavedArgs>
   /** Whether to use replayed errors for findBestError mode */
-  useToFindBestError?: boolean
+  useToFindBestError?: null | boolean
   /** Whether findBestError is enabled */
-  findBestErrorEnabled?: boolean
+  findBestErrorEnabled?: null | boolean
 }
 
 /**

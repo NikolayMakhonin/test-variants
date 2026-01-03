@@ -256,6 +256,19 @@ const result = await testVariants({
 }
 ```
 
+### Debug mode
+
+When a test error occurs, the library automatically triggers JavaScript's `debugger` statement.
+If you're running tests with a JS debugger attached:
+
+1. Execution pauses at the `debugger` statement in the error handler
+2. Set breakpoints in your test code where you want to investigate
+3. Resume execution - if resuming took more than 50ms (meaning you were stepping through), the same failing variant will repeat
+4. The variant repeats up to 5 times, allowing step-by-step debugging of the exact failing case
+5. After 5 debug iterations or if you resume quickly (<50ms), the error is thrown normally
+
+This enables debugging the exact parameter combination that caused the failure without manually recreating it.
+
 ### Logs format
 ```
 [test-variants] start, memory: 139MB

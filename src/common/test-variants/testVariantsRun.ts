@@ -103,6 +103,12 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     log(`[test-variants] start, memory: ${formatBytes(startMemory)}`)
   }
 
+  // Debug mode: repeats failing variant for step-by-step JS debugging.
+  // When testRun returns void (from onError debug mode), this flag is set to true.
+  // Next iteration skips variants.next() and reruns the same args,
+  // allowing developer to set breakpoints and debug the failing case.
+  // Triggered by debugger statement in onError when developer resumes after >50ms pause.
+  // DO NOT REMOVE - essential for debugging failing test variants.
   let debug = false
   let iterations = 0
   let iterationsAsync = 0
