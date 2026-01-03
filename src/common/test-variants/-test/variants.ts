@@ -83,6 +83,13 @@ import type {
   TestVariantsRunOptions,
   TestVariantsRunResult,
 } from '../types'
+import {
+  delay,
+  isPromiseLike,
+  waitTimeControllerMock,
+} from '@flemist/async-utils'
+import { AbortControllerFast } from '@flemist/abort-controller-fast'
+import { TimeControllerMock } from '@flemist/time-controller'
 
 // region Types
 
@@ -120,6 +127,8 @@ type StressTestArgs = {
   modesCountMax: number
   withEquals: boolean | null
   parallel: number | boolean | null
+  async: boolean | null
+  delay: boolean | null
   seed: number
 }
 
@@ -127,6 +136,7 @@ type StressTestArgs = {
 
 const PARALLEL_MAX = 10
 const TIME_MAX = 10
+const LIMIT_MAX = 10000
 
 // region Helpers
 
@@ -665,6 +675,68 @@ function generateTemplate(
   return Object.freeze(template)
 }
 
+const MODES_DEFAULT: readonly ModeConfig[] = Object.freeze([
+  { mode: 'forward' },
+])
+
+function upperEstimateCallCountMax(
+  variantsCount: number,
+  runOptions: TestVariantsRunOptions<TestArgs>,
+): number {
+  if (variantsCount === 0) {
+    return 0
+  }
+
+  let total: number
+
+  if (runOptions.findBestError) {
+    total = LIMIT_MAX
+  } else {
+    const globalCycles = Math.max(1, runOptions.cycles ?? 1)
+    const modes = runOptions.iterationModes ?? MODES_DEFAULT
+
+    // Calculate max calls per global cycle (all modes once)
+    let maxPerGlobalCycle = 0
+    for (let i = 0, len = modes.length; i < len; i++) {
+      const mode = modes[i]
+      switch (mode.mode) {
+        case 'forward':
+        case 'backward': {
+          const modeCycles = mode.cycles ?? 1
+          const attempts = mode.attemptsPerVariant ?? 1
+          let modeMax = variantsCount * modeCycles * attempts
+          // Apply mode limitTests
+          if (mode.limitTests != null) {
+            modeMax = Math.min(modeMax, mode.limitTests)
+          }
+          maxPerGlobalCycle += modeMax
+          break
+        }
+        case 'random': {
+          let modeMax = variantsCount
+          // Apply mode limitTests
+          if (mode.limitTests != null) {
+            modeMax = Math.min(modeMax, mode.limitTests)
+          }
+          maxPerGlobalCycle += modeMax
+          break
+        }
+        default: {
+          throw new Error(`Unknown mode type: ${(mode as any).mode}`)
+        }
+      }
+    }
+
+    total = maxPerGlobalCycle * globalCycles
+  }
+
+  if (runOptions.limitTests != null) {
+    total = Math.min(total, runOptions.limitTests)
+  }
+
+  return total
+}
+
 function generateRunOptions(
   rnd: Random,
   options: StressTestArgs,
@@ -777,7 +849,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   )
   const retriesToError = generateBoundaryInt(rnd, options.retriesToErrorMax)
 
-  const callCountMax = 0 // TODO: calculate it in separate helper function
+  const callCountMax = upperEstimateCallCountMax(variantsCount, runOptions)
 
   // Tracking state
   let callCount = 0
@@ -868,8 +940,31 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     }
   }
 
+  const asyncFunc = options.async
+  const shouldDelay = options.delay
+  const abortController = new AbortControllerFast()
+  const abortSignal = abortController.signal
+  const timeController = new TimeControllerMock()
+  const limitTime = runOptions.limitTime
+
   // Create test function
-  const testFunc = createTestVariants(function innerTest(args: TestArgs): void {
+  const testFunc = createTestVariants(function innerTest(
+    args: TestArgs,
+    callOptions,
+  ) {
+    if (callOptions.abortSignal !== abortSignal) {
+      throw new Error(`testFunc: abortSignal mismatch`)
+    }
+    if (callOptions.abortSignal.aborted) {
+      throw new Error(`testFunc: call after aborted`)
+    }
+    if (callOptions.timeController !== timeController) {
+      throw new Error(`testFunc: timeController mismatch`)
+    }
+    if (limitTime != null && timeController.now() > limitTime) {
+      throw new Error(`testFunc: aborted due to time limit`)
+    }
+
     if (callCount > callCountMax) {
       throw new Error(
         `testFunc: callCount ${callCount} exceeded max ${callCountMax}`,
@@ -878,20 +973,37 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     deepFreezeJsonLike(args)
     callCount++
 
-    // Check if this is the error variant
-    const isErrorVariant = errorIndex != null && callCount === errorIndex + 1
-    if (isErrorVariant) {
-      errorAttempts++
-      if (errorAttempts > retriesToError) {
-        errorAttempts = 0
-        lastErrorVariantArgs = args
-        lastError = new TestError(`Test error at variant ${callCount - 1}`)
-        throw lastError
+    function call() {
+      const isErrorVariant = errorIndex != null && callCount === errorIndex + 1
+      if (isErrorVariant) {
+        errorAttempts++
+        if (errorAttempts > retriesToError) {
+          errorAttempts = 0
+          lastErrorVariantArgs = args
+          lastError = new TestError(`Test error at variant ${callCount - 1}`)
+          throw lastError
+        }
       }
+
+      return { iterationsSync: 10, iterationsAsync: 1000000 }
+    }
+
+    if ((asyncFunc == null && callCount % 2 === 0) || asyncFunc) {
+      if (shouldDelay) {
+        delay(1, abortSignal, timeController).then(call)
+      }
+      return Promise.resolve().then(() => call())
+    } else {
+      return call()
     }
   })
 
-  const result = await testFunc(template)(runOptions)
+  let resultPromise = testFunc(template)(runOptions)
+  if (isPromiseLike(resultPromise)) {
+    resultPromise = await waitTimeControllerMock(timeController, resultPromise)
+  }
+
+  // TODO: Validate result and logs
 }
 
 export const testVariants = createTestVariants(
