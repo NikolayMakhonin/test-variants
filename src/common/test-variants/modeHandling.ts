@@ -1,5 +1,7 @@
 import type { Obj } from '@flemist/simple-utils'
 import type {
+  BackwardModeConfig,
+  ForwardModeConfig,
   ModeConfig,
   TestVariantsTemplate,
   LimitArgOnError,
@@ -36,17 +38,16 @@ export type ModeState = {
 }
 
 /** Check if mode is sequential (forward or backward) */
-export function isSequentialMode(modeConfig: ModeConfig): boolean {
+export function isSequentialMode(
+  modeConfig: ModeConfig,
+): modeConfig is ForwardModeConfig | BackwardModeConfig {
   return modeConfig.mode === 'forward' || modeConfig.mode === 'backward'
 }
 
 /** Get attemptsPerVariant for mode; returns 1 for random mode */
 export function getModeRepeatsPerVariant(modeConfig: ModeConfig): number {
   if (isSequentialMode(modeConfig)) {
-    return (
-      (modeConfig as { attemptsPerVariant?: number | null })
-        .attemptsPerVariant ?? 1
-    )
+    return modeConfig.attemptsPerVariant ?? 1
   }
   return 1
 }
@@ -54,7 +55,7 @@ export function getModeRepeatsPerVariant(modeConfig: ModeConfig): number {
 /** Get cycles for sequential modes; returns 1 for random mode */
 export function getModeCycles(modeConfig: ModeConfig): number {
   if (isSequentialMode(modeConfig)) {
-    return (modeConfig as { cycles?: number | null }).cycles ?? 1
+    return modeConfig.cycles ?? 1
   }
   return 1
 }

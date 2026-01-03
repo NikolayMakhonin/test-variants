@@ -230,11 +230,13 @@ export function testVariantsIterator<Args extends Obj>(
   } = options
   const modes = options.iterationModes ?? DEFAULT_MODES
   const timeController = options.timeController ?? timeControllerDefault
+  // Object.keys returns string[] but we know keys are keyof Args
   const keys = Object.keys(argsTemplates) as (keyof Args)[]
   const templates: TestVariantsTemplate<Args, any>[] =
     Object.values(argsTemplates)
   const keysCount = keys.length
-  const keySet = new Set(keys as string[])
+  // Keys are strings for Args extends Obj (Record<string, unknown>)
+  const keySet = new Set<string>(keys as string[])
 
   // Initialize state
   const indexes: number[] = []
@@ -255,6 +257,7 @@ export function testVariantsIterator<Args extends Obj>(
   }
 
   const state: IteratorState<Args> = {
+    // Empty object populated during iteration via variantNavigation
     args: {} as Args,
     indexes,
     argValues,
@@ -288,6 +291,7 @@ export function testVariantsIterator<Args extends Obj>(
       const seed = getSeed(seedParams)
       return { ...state.args, seed }
     }
+    // API design: when getSeed is null, seed property is absent but type includes it
     return { ...state.args } as ArgsWithSeed<Args>
   }
 

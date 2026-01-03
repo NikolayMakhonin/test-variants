@@ -56,4 +56,5 @@ export function resetLog(): void {
   logLast.length = 0
 }
 
-;(globalThis as any).__getStressTestLogLast = getLogLast
+// Test-only, for stress test log retrieval
+globalThis.__getStressTestLogLast = getLogLast

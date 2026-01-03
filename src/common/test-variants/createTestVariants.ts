@@ -8,7 +8,7 @@ import {
 import { testVariantsRun } from 'src/common/test-variants/testVariantsRun'
 import type { Obj } from '@flemist/simple-utils'
 import { testVariantsIterator } from 'src/common/test-variants/testVariantsIterator'
-import {
+import type {
   TestVariantsRunOptions,
   TestVariantsRunResult,
   TestVariantsTemplates,
@@ -51,8 +51,9 @@ export function createTestVariants<Args extends Obj>(
       const logDebug =
         logOpts && typeof logOpts === 'object' ? logOpts.debug : false
 
+      // Extended templates include extra args beyond Args; iterator accepts base Args structure
       const variants = testVariantsIterator<Args>({
-        argsTemplates: args as any,
+        argsTemplates: args as TestVariantsTemplates<Args>,
         getSeed: options?.getSeed,
         iterationModes: options?.iterationModes,
         equals: options?.findBestError?.equals,

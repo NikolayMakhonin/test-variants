@@ -3,6 +3,13 @@ import type {
   TestVariantsLogOptions,
 } from 'src/common/test-variants/types'
 
+/** Chrome-specific performance.memory API (non-standard) */
+type PerformanceMemory = {
+  usedJSHeapSize: number
+  totalJSHeapSize: number
+  jsHeapSizeLimit: number
+}
+
 /** Default log options when logging is enabled */
 export const logOptionsDefault: Required<TestVariantsLogOptions> = {
   start: true,
@@ -61,11 +68,14 @@ export function getMemoryUsage(): number | null {
     }
   }
   // Browser (Chrome only, non-standard)
-  if (typeof performance !== 'undefined' && (performance as any).memory) {
-    try {
-      return (performance as any).memory.usedJSHeapSize
-    } catch {
-      // ignore
+  if (typeof performance !== 'undefined') {
+    const memory = (performance as { memory?: PerformanceMemory }).memory
+    if (memory) {
+      try {
+        return memory.usedJSHeapSize
+      } catch {
+        // ignore
+      }
     }
   }
   return null

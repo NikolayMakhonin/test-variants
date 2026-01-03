@@ -31,7 +31,7 @@ export async function parseErrorVariantFile<Args extends Obj, SavedArgs>(
   jsonToArgs?: null | ((json: SavedArgs) => ArgsWithSeed<Args>),
 ): Promise<ArgsWithSeed<Args>> {
   const content = await fs.promises.readFile(filePath, 'utf-8')
-  let json: SavedArgs
+  let json: unknown
   try {
     json = JSON.parse(content)
   } catch (err) {
@@ -40,7 +40,7 @@ export async function parseErrorVariantFile<Args extends Obj, SavedArgs>(
 
   if (jsonToArgs) {
     try {
-      return jsonToArgs(json)
+      return jsonToArgs(json as SavedArgs)
     } catch (err) {
       throw new Error(
         `[saveErrorVariants] jsonToArgs failed for file: ${filePath}`,
@@ -48,7 +48,8 @@ export async function parseErrorVariantFile<Args extends Obj, SavedArgs>(
     }
   }
 
-  return json as unknown as ArgsWithSeed<Args>
+  // When jsonToArgs is not provided, assume JSON structure matches ArgsWithSeed<Args>
+  return json as ArgsWithSeed<Args>
 }
 
 /** Generates default error variant file path: YYYY-MM-DD_HH-mm-ss_<hash>.json (UTC) */

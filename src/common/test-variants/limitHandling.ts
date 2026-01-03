@@ -252,6 +252,7 @@ export function updateArgLimits<Args extends Obj>(
   for (let i = 0; i < keysCount; i++) {
     const valueIndex = newIndexes[i]
     if (typeof limitArgOnError === 'function') {
+      // keyof Args is string for Args extends Obj (Record<string, unknown>)
       const shouldLimit = limitArgOnError({
         name: keys[i] as string,
         valueIndex,
