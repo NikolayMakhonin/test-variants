@@ -4,11 +4,8 @@ import type {
   LimitArgOnError,
   TestVariantsIteratorLimit,
   TestVariantsTemplate,
-} from 'src/common/test-variants/types'
-import {
-  calcTemplateValues,
-  type NavigationState,
-} from 'src/common/test-variants/variantNavigation'
+} from './types'
+import { calcTemplateValues, type NavigationState } from './variantNavigation'
 
 /** Pending limit waiting for position match during iteration */
 export type PendingLimit<Args extends Obj> = {

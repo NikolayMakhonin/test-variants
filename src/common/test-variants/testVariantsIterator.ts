@@ -7,11 +7,11 @@ import type {
   TestVariantsIterator,
   TestVariantsIteratorOptions,
   TestVariantsTemplate,
-} from 'src/common/test-variants/types'
+} from './types'
 import {
   calcTemplateValues,
   resetIterationPositionToStart,
-} from 'src/common/test-variants/variantNavigation'
+} from './variantNavigation'
 import {
   createLimit,
   extendTemplatesForArgs,
@@ -19,7 +19,7 @@ import {
   processPendingLimits,
   updateArgLimits,
   validateArgsKeys,
-} from 'src/common/test-variants/limitHandling'
+} from './limitHandling'
 import {
   advanceByMode,
   createModeState,
@@ -27,7 +27,7 @@ import {
   isModeExhausted,
   isSequentialMode,
   type ModeState,
-} from 'src/common/test-variants/modeHandling'
+} from './modeHandling'
 import { log } from 'src/common/helpers/log'
 
 /** Iterator internal state; extends LimitState with additional iterator-specific fields */

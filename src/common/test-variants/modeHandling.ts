@@ -5,15 +5,15 @@ import type {
   ModeConfig,
   TestVariantsTemplate,
   LimitArgOnError,
-} from 'src/common/test-variants/types'
-import type { NavigationState } from 'src/common/test-variants/variantNavigation'
+} from './types'
+import type { NavigationState } from './variantNavigation'
 import {
   advanceVariant,
   randomPickVariant,
   resetIterationPositionToEnd,
   resetIterationPositionToStart,
   retreatVariant,
-} from 'src/common/test-variants/variantNavigation'
+} from './variantNavigation'
 
 /** State per mode */
 export type ModeState = {

@@ -1,11 +1,14 @@
-import { type IAbortSignalFast } from '@flemist/abort-controller-fast'
 import { isPromiseLike, type PromiseOrValue } from '@flemist/async-utils'
 import { formatAny, type Obj } from '@flemist/simple-utils'
-import type { ITimeController } from '@flemist/time-controller'
-import {
+import type {
   ArgsWithSeed,
-  type TestVariantsLogOptions,
-} from 'src/common/test-variants/types'
+  TestVariantsLogOptions,
+  TestVariantsTest,
+  TestVariantsTestOptions,
+  TestVariantsTestResult,
+  TestVariantsTestRun,
+  TestVariantsTestRunResult,
+} from './types'
 
 export type ErrorEvent<Args extends Obj> = {
   error: any
@@ -23,29 +26,6 @@ export type TestVariantsCreateTestRunOptions<Args extends Obj> = {
   /** Logging options; null/true uses defaults; false disables all */
   log?: null | boolean | TestVariantsLogOptions
 }
-
-export type TestVariantsTestRunResult = void | {
-  iterationsAsync: number
-  iterationsSync: number
-}
-
-export type TestVariantsTestOptions = {
-  abortSignal: IAbortSignalFast
-  timeController: ITimeController
-}
-
-export type TestVariantsTestRun<Args extends Obj> = (
-  args: ArgsWithSeed<Args>,
-  tests: number,
-  options: TestVariantsTestOptions,
-) => PromiseOrValue<TestVariantsTestRunResult>
-
-export type TestVariantsTestResult = number | void | TestVariantsTestRunResult
-
-export type TestVariantsTest<Args extends Obj> = (
-  args: ArgsWithSeed<Args>,
-  options: TestVariantsTestOptions,
-) => PromiseOrValue<TestVariantsTestResult>
 
 /** Normalize test result to standard format */
 function normalizeTestResult(

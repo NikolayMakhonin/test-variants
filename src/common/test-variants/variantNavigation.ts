@@ -1,8 +1,5 @@
 import type { Obj } from '@flemist/simple-utils'
-import type {
-  LimitArgOnError,
-  TestVariantsTemplate,
-} from 'src/common/test-variants/types'
+import type { LimitArgOnError, TestVariantsTemplate } from './types'
 
 /** State required for variant navigation */
 export type NavigationState<Args extends Obj> = {

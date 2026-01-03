@@ -1,8 +1,8 @@
 import { describe, it } from 'vitest'
 import * as assert from 'node:assert'
-import { testVariantsRun } from 'src/common/test-variants/testVariantsRun'
-import { testVariantsIterator } from 'src/common/test-variants/testVariantsIterator'
-import { TestVariantsTestRun } from './testVariantsCreateTestRun'
+import { testVariantsRun } from './testVariantsRun'
+import { testVariantsIterator } from './testVariantsIterator'
+import type { TestVariantsTestRun } from './types'
 
 describe('test-variants > testVariantsRun', { timeout: 10 * 60 * 1000 }, () => {
   it('findBestError with limitArgOnError should constrain second cycle', async () => {

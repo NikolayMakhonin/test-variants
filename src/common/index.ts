@@ -10,11 +10,11 @@ export {
   type TestVariantsLogOptions,
   type TestVariantsRunOptions,
   type TestVariantsRunResult,
-} from 'src/common/test-variants/types'
+  type TestVariantsTestOptions,
+  type TestVariantsTestResult,
+} from './test-variants/types'
 export {
   type ErrorEvent,
   type OnErrorCallback,
-  type TestVariantsTestOptions,
-  type TestVariantsTestResult,
-} from 'src/common/test-variants/testVariantsCreateTestRun'
+} from './test-variants/testVariantsCreateTestRun'
 export { createTestVariants } from './test-variants/createTestVariants'

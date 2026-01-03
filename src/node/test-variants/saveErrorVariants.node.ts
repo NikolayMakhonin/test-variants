@@ -2,7 +2,7 @@ import { describe, it, beforeEach, afterEach } from 'vitest'
 import * as assert from 'node:assert'
 import * as fs from 'fs'
 import * as path from 'path'
-import { createTestVariants } from './createTestVariants'
+import { createTestVariants } from '../index'
 import {
   generateErrorVariantFilePath,
   readErrorVariantFiles,

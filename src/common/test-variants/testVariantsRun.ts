@@ -1,7 +1,4 @@
-import type {
-  TestVariantsTestOptions,
-  TestVariantsTestRun,
-} from './testVariantsCreateTestRun'
+import type { TestVariantsTestOptions, TestVariantsTestRun } from './types'
 import { AbortControllerFast } from '@flemist/abort-controller-fast'
 import { combineAbortSignals, isPromiseLike } from '@flemist/async-utils'
 import { type IPool, Pool, poolWait } from '@flemist/time-limits'
@@ -9,19 +6,13 @@ import { garbageCollect } from 'src/common/garbage-collect/garbageCollect'
 import type { Obj } from '@flemist/simple-utils'
 import type {
   ArgsWithSeed,
+  SaveErrorVariantsStore,
   TestVariantsBestError,
   TestVariantsIterator,
-  TestVariantsRunOptions,
+  TestVariantsRunOptionsInternal,
   TestVariantsRunResult,
-} from 'src/common/test-variants/types'
-import {
-  generateErrorVariantFilePath,
-  saveErrorVariantFile,
-} from 'src/common/test-variants/saveErrorVariants'
-import { deepEqualJsonLike } from '@flemist/simple-utils'
-import { fileLock } from '@flemist/simple-utils/node'
+} from './types'
 import { log } from 'src/common/helpers/log'
-import * as path from 'path'
 import { timeControllerDefault } from '@flemist/time-controller'
 import {
   formatBytes,
@@ -30,23 +21,18 @@ import {
   getMemoryUsage,
   logOptionsDefault,
   resolveLogOptions,
-} from 'src/common/test-variants/progressLogging'
-import { replayErrorVariants } from 'src/common/test-variants/replayErrorVariants'
+} from './progressLogging'
 
 export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   testRun: TestVariantsTestRun<Args>,
   variants: TestVariantsIterator<Args>,
-  options?: null | TestVariantsRunOptions<Args, SavedArgs>,
+  options?: null | TestVariantsRunOptionsInternal<Args, SavedArgs>,
 ): Promise<TestVariantsRunResult<Args>> {
-  const saveErrorVariants = options?.saveErrorVariants
-  const sessionDate = new Date()
-  const errorVariantFilePath = saveErrorVariants
-    ? path.resolve(
-        saveErrorVariants.dir,
-        saveErrorVariants.getFilePath?.({ sessionDate }) ??
-          generateErrorVariantFilePath({ sessionDate }),
-      )
-    : null
+  const saveErrorVariantsOptions = options?.saveErrorVariants
+  const store: SaveErrorVariantsStore<Args> | null =
+    saveErrorVariantsOptions && options?.createSaveErrorVariantsStore
+      ? options.createSaveErrorVariantsStore(saveErrorVariantsOptions)
+      : null
 
   const GC_Iterations = options?.GC_Iterations ?? 1000000
   const GC_IterationsAsync = options?.GC_IterationsAsync ?? 10000
@@ -92,13 +78,11 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   }
 
   // Replay phase: run previously saved error variants before normal iteration
-  if (saveErrorVariants) {
-    await replayErrorVariants({
+  if (store) {
+    await store.replay({
       testRun,
       variants,
-      saveErrorVariants,
       testOptions,
-      useToFindBestError: saveErrorVariants.useToFindBestError,
       findBestErrorEnabled: !!findBestError,
     })
   }
@@ -131,30 +115,6 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   let modeChanged = false
 
   const pool: IPool | null = parallel <= 1 ? null : new Pool(parallel)
-
-  // Track last saved error args to prevent duplicate writes
-  let lastSavedLimitArgs: Args | null = null
-
-  // Save current limit args to file if changed since last save
-  async function saveCurrentLimit(): Promise<void> {
-    if (!errorVariantFilePath || !variants.limit || !saveErrorVariants) {
-      return
-    }
-    const currentArgs = variants.limit.args
-    if (deepEqualJsonLike(currentArgs, lastSavedLimitArgs)) {
-      return
-    }
-    lastSavedLimitArgs = { ...currentArgs }
-    await fileLock({
-      filePath: errorVariantFilePath,
-      func: () =>
-        saveErrorVariantFile(
-          currentArgs,
-          errorVariantFilePath,
-          saveErrorVariants.argsToJson,
-        ),
-    })
-  }
 
   function onCompleted() {
     if (logCompleted) {
@@ -323,20 +283,13 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
         } catch (err) {
           if (findBestError) {
             variants.addLimit({ args, error: err })
-            await saveCurrentLimit()
+            if (store && variants.limit) {
+              await store.save(variants.limit.args)
+            }
             debug = false
           } else {
-            // Save error variant even without findBestError
-            if (errorVariantFilePath) {
-              await fileLock({
-                filePath: errorVariantFilePath,
-                func: () =>
-                  saveErrorVariantFile(
-                    args,
-                    errorVariantFilePath,
-                    saveErrorVariants?.argsToJson,
-                  ),
-              })
+            if (store) {
+              await store.save(args)
             }
             throw err
           }
@@ -380,7 +333,9 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
           } catch (err) {
             if (findBestError) {
               variants.addLimit({ args: capturedArgs, error: err })
-              void saveCurrentLimit()
+              if (store && variants.limit) {
+                void store.save(variants.limit.args)
+              }
               debug = false
               // Abort current cycle after first error - next cycle will use new limits
               // This prevents in-flight parallel tests from continuing to error and spam logs
@@ -391,17 +346,8 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
             }
             // Store error and abort to throw after pool drains
             else if (!abortControllerParallel.signal.aborted) {
-              // Save error variant even without findBestError
-              if (errorVariantFilePath) {
-                void fileLock({
-                  filePath: errorVariantFilePath,
-                  func: () =>
-                    saveErrorVariantFile(
-                      capturedArgs,
-                      errorVariantFilePath,
-                      saveErrorVariants?.argsToJson,
-                    ),
-                })
+              if (store) {
+                void store.save(capturedArgs)
               }
               abortControllerParallel.abort(err)
             }

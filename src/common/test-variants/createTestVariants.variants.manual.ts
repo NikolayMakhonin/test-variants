@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest'
 import { getRandomSeed } from '@flemist/simple-utils'
-import { testVariants } from 'src/common/test-variants/-test/variants'
+import { testVariants } from './-test/variants'
 
 // Manual test file for human usage only
 

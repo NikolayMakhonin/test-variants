@@ -1,7 +1,4 @@
-import type {
-  ModeConfig,
-  TestVariantsLogOptions,
-} from 'src/common/test-variants/types'
+import type { ModeConfig, TestVariantsLogOptions } from './types'
 
 /** Chrome-specific performance.memory API (non-standard) */
 type PerformanceMemory = {

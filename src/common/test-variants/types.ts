@@ -1,4 +1,5 @@
 import type { IAbortSignalFast } from '@flemist/abort-controller-fast'
+import type { PromiseOrValue } from '@flemist/async-utils'
 import type { Obj } from '@flemist/simple-utils'
 import type { ITimeController } from '@flemist/time-controller'
 
@@ -182,7 +183,90 @@ export type TestVariantsTemplates<Args extends Obj> = {
 
 // endregion
 
+// region Test function types
+
+/** Result of test run (internal format with separate sync/async counts) */
+export type TestVariantsTestRunResult = void | {
+  iterationsAsync: number
+  iterationsSync: number
+}
+
+/** Options passed to test function */
+export type TestVariantsTestOptions = {
+  abortSignal: IAbortSignalFast
+  timeController: ITimeController
+}
+
+/** Test run function (internal - wraps user's test with error handling) */
+export type TestVariantsTestRun<Args extends Obj> = (
+  args: ArgsWithSeed<Args>,
+  tests: number,
+  options: TestVariantsTestOptions,
+) => PromiseOrValue<TestVariantsTestRunResult>
+
+/** Result of user's test function (number treated as iterationsSync) */
+export type TestVariantsTestResult = number | void | TestVariantsTestRunResult
+
+/** User's test function */
+export type TestVariantsTest<Args extends Obj> = (
+  args: ArgsWithSeed<Args>,
+  options: TestVariantsTestOptions,
+) => PromiseOrValue<TestVariantsTestResult>
+
+// endregion
+
+// region SaveErrorVariantsStore types
+
+/**
+ * Store for saving and loading error-causing parameter combinations.
+ * Node.js implementation uses file system. Browser returns null (not supported).
+ */
+export type SaveErrorVariantsStore<Args extends Obj> = {
+  /**
+   * Save error-causing args to storage.
+   * Handles concurrency protection and deduplication internally.
+   */
+  save(args: ArgsWithSeed<Args>): Promise<void>
+  /**
+   * Replay saved error variants before normal iteration.
+   * If error occurs during replay:
+   * - In findBestError mode (useToFindBestError + findBestErrorEnabled): adds limit and continues
+   * - Otherwise: throws the error
+   */
+  replay(options: SaveErrorVariantsStoreReplayOptions<Args>): Promise<void>
+}
+
+/** Options for SaveErrorVariantsStore.replay method */
+export type SaveErrorVariantsStoreReplayOptions<Args extends Obj> = {
+  /** Test run function */
+  testRun: TestVariantsTestRun<Args>
+  /** Iterator to add limits to */
+  variants: TestVariantsIterator<Args>
+  /** Options passed to test function */
+  testOptions: TestVariantsTestOptions
+  /** Whether findBestError is enabled */
+  findBestErrorEnabled?: null | boolean
+}
+
+/** Factory function for creating SaveErrorVariantsStore */
+export type CreateSaveErrorVariantsStore<Args extends Obj, SavedArgs = Args> = (
+  options: SaveErrorVariantsOptions<Args, SavedArgs>,
+) => SaveErrorVariantsStore<Args> | null
+
+// endregion
+
 // region Run options types
+
+/** Internal run options with injected dependencies */
+export type TestVariantsRunOptionsInternal<
+  Args extends Obj = Obj,
+  SavedArgs = Args,
+> = TestVariantsRunOptions<Args, SavedArgs> & {
+  createSaveErrorVariantsStore?: null | CreateSaveErrorVariantsStore<
+    Args,
+    SavedArgs
+  >
+}
 
 /** Options for finding the earliest failing variant across multiple test runs */
 export type TestVariantsFindBestErrorOptions = {

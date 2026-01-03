@@ -2,17 +2,17 @@ import { type PromiseOrValue } from '@flemist/async-utils'
 
 import {
   testVariantsCreateTestRun,
-  TestVariantsTest,
-  TestVariantsCreateTestRunOptions,
-} from 'src/common/test-variants/testVariantsCreateTestRun'
-import { testVariantsRun } from 'src/common/test-variants/testVariantsRun'
+  type TestVariantsCreateTestRunOptions,
+} from './testVariantsCreateTestRun'
+import type { TestVariantsTest } from './types'
+import { testVariantsRun } from './testVariantsRun'
 import type { Obj } from '@flemist/simple-utils'
-import { testVariantsIterator } from 'src/common/test-variants/testVariantsIterator'
+import { testVariantsIterator } from './testVariantsIterator'
 import type {
-  TestVariantsRunOptions,
+  TestVariantsRunOptionsInternal,
   TestVariantsRunResult,
   TestVariantsTemplates,
-} from 'src/common/test-variants/types'
+} from './types'
 
 /** Extended templates type that allows additional args beyond the base Args type */
 export type TestVariantsTemplatesExt<
@@ -29,7 +29,7 @@ export type TestVariantsTemplatesExt<
 export type TestVariantsCall<Args extends Obj> = <SavedArgs = Args>(
   options?:
     | null
-    | (TestVariantsRunOptions<Args, SavedArgs> &
+    | (TestVariantsRunOptionsInternal<Args, SavedArgs> &
         TestVariantsCreateTestRunOptions<Args>),
 ) => PromiseOrValue<TestVariantsRunResult<Args>>
 

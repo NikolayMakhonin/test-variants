@@ -11,7 +11,7 @@
  * - @/ai/project/base/docs/rules/common/code.md
  * - @/ai/project/base/docs/rules/common/naming.md
  * - @/ai/project/base/docs/rules/common/logging.md
- * - @/ai/project/base/docs/rules/code/TypeScript/rules/ultra-performance.md
+ * - @/ai/project/base/docs/rules/code/TypeScript/rules/lib.md
  * - @/ai/project/base/docs/rules/code/test-development/principles.md
  *
  * After completing modifications, execute code review:
@@ -55,7 +55,7 @@
  * Write all code, comments, and logs in English following all project text writing rules
  */
 
-import { createTestVariants } from 'src/common/test-variants/createTestVariants'
+import { createTestVariants } from '#this'
 import {
   deepCloneJsonLike,
   deepEqualJsonLike,
@@ -75,7 +75,7 @@ import type {
   ModeConfig,
   TestVariantsRunOptions,
   TestVariantsRunResult,
-} from 'src/common/test-variants/types'
+} from '../types'
 
 // region Debug Logging
 
@@ -1531,6 +1531,9 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
 
 export const testVariants = createTestVariants(
   async (options: StressTestArgs) => {
+    if (Math.random() < 0.0001) {
+      throw new Error('TEST')
+    }
     try {
       await executeStressTest(options)
     } catch (err) {
