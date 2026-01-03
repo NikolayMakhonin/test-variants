@@ -73,8 +73,12 @@ import {
   resetLog,
 } from 'src/common/helpers/log'
 import type {
+  LimitArgOnError,
+  LimitArgOnErrorOptions,
   ModeConfig,
   ModeType,
+  TestVariantsFindBestErrorOptions,
+  TestVariantsLogOptions,
   TestVariantsLogType,
   TestVariantsRunOptions,
   TestVariantsRunResult,
@@ -112,14 +116,17 @@ type StressTestArgs = {
   attemptsPerVariantMax: number
   cyclesMax: number
   forwardModeCyclesMax: number
-  iterationMode: 'forward' | 'backward' | 'random' | null
-  modeConfig: 'single' | 'multi' | null
+  modeType: 'forward' | 'backward' | 'random' | null
+  modesCountMax: number
   withEquals: boolean | null
   parallel: number | boolean | null
   seed: number
 }
 
 // endregion
+
+const PARALLEL_MAX = 10
+const TIME_MAX = 10
 
 // region Generators
 
@@ -288,10 +295,111 @@ function generateErrorIndex(
   return randomInt(rnd, 1, totalCount - 1)
 }
 
+function generateLimitArgOnErrorFunc(
+  argKeys: readonly string[],
+  template: Template,
+): LimitArgOnError {
+  return function limitArgOnError(options: LimitArgOnErrorOptions): boolean {
+    if (options == null || typeof options !== 'object') {
+      throw new Error(
+        `limitArgOnError: options must be object, got ${typeof options}`,
+      )
+    }
+    if (!options.name) {
+      throw new Error(
+        `limitArgOnError: name must be not empty string, got ${typeof options.name}`,
+      )
+    }
+
+    let argIndex = -1
+    for (let i = 0, len = argKeys.length; i < len; i++) {
+      if (argKeys[i] === options.name) {
+        argIndex = i
+        break
+      }
+    }
+    if (argIndex < 0) {
+      throw new Error(`limitArgOnError: unknown arg name "${options.name}"`)
+    }
+
+    if (!Number.isInteger(options.valueIndex)) {
+      throw new Error(
+        `limitArgOnError: valueIndex must be integer, got ${options.valueIndex}`,
+      )
+    }
+    if (options.valueIndex < 0) {
+      throw new Error(
+        `limitArgOnError: valueIndex must be non-negative, got ${options.valueIndex}`,
+      )
+    }
+
+    if (!Array.isArray(options.values)) {
+      throw new Error(
+        `limitArgOnError: values must be array, got ${typeof options.values}`,
+      )
+    }
+    if (options.values.length === 0) {
+      throw new Error(`limitArgOnError: values must be non-empty array`)
+    }
+    if (options.valueIndex >= options.values.length) {
+      throw new Error(
+        `limitArgOnError: valueIndex ${options.valueIndex} >= values.length ${options.values.length}`,
+      )
+    }
+
+    const templateValues = template[options.name]
+    if (typeof templateValues === 'function') {
+      // Dynamic template - can't validate values statically
+    } else {
+      if (options.values.length !== templateValues.length) {
+        throw new Error(
+          `limitArgOnError: values.length ${options.values.length} !== template.length ${templateValues.length}`,
+        )
+      }
+      for (let i = 0, len = options.values.length; i < len; i++) {
+        if (!deepEqualJsonLike(options.values[i], templateValues[i])) {
+          throw new Error(
+            `limitArgOnError: values[${i}] mismatch with template`,
+          )
+        }
+      }
+    }
+
+    if (options.maxValueIndex === void 0) {
+      throw new Error(`limitArgOnError: options.maxValueIndex is missing`)
+    }
+    if (options.maxValueIndex !== null) {
+      if (!Number.isInteger(options.maxValueIndex)) {
+        throw new Error(
+          `limitArgOnError: maxValueIndex must be integer, got ${options.maxValueIndex}`,
+        )
+      }
+      if (options.maxValueIndex < 0) {
+        throw new Error(
+          `limitArgOnError: maxValueIndex must be non-negative, got ${options.maxValueIndex}`,
+        )
+      }
+      if (options.maxValueIndex >= options.values.length) {
+        throw new Error(
+          `limitArgOnError: maxValueIndex ${options.maxValueIndex} >= values.length ${options.values.length}`,
+        )
+      }
+    }
+
+    // Limit only odd indices
+    return options.valueIndex % 2 === 1
+  }
+}
+
 function generateLimitArgOnError(
   rnd: Random,
   limitArgOnError: false | true | 'func' | null,
-): false | true | 'func' {
+  argKeys: readonly string[],
+  template: Template,
+): boolean | LimitArgOnError {
+  if (limitArgOnError === 'func') {
+    return generateLimitArgOnErrorFunc(argKeys, template)
+  }
   if (limitArgOnError !== null) {
     return limitArgOnError
   }
@@ -302,7 +410,7 @@ function generateLimitArgOnError(
   if (choice === 1) {
     return true
   }
-  return 'func'
+  return generateLimitArgOnErrorFunc(argKeys, template)
 }
 
 function generateModeType(rnd: Random, modeOption: ModeType | null): ModeType {
@@ -321,17 +429,97 @@ function generateModeType(rnd: Random, modeOption: ModeType | null): ModeType {
 
 function generateParallel(
   rnd: Random,
-  parallel: number | boolean | null,
+  parallelOption: number | boolean | null,
   max: number,
 ): number | boolean {
-  if (parallel !== null) {
-    return parallel
+  if (parallelOption !== null) {
+    return parallelOption
   }
   // 1/4 chance for true/false
   if (randomBoolean(rnd, 0.25)) {
     return randomBoolean(rnd)
   }
   return Math.max(1, generateBoundaryInt(rnd, max))
+}
+
+function generateSeedFunc(
+  rnd: Random,
+  withSeed: boolean | null,
+): (() => number) | undefined {
+  const enabled = generateBoolean(rnd, withSeed)
+  if (!enabled) {
+    return void 0
+  }
+  let seed = 0
+  return function getSeed(): number {
+    return seed++
+  }
+}
+
+function equals(a: unknown, b: unknown): boolean {
+  if (a === b) {
+    return true
+  }
+  if (a == null || b == null) {
+    return false
+  }
+  if (typeof a !== 'object' || typeof b !== 'object') {
+    return false
+  }
+  return (a as ObjectValue).value === (b as ObjectValue).value
+}
+
+function generateEqualsFunc(
+  rnd: Random,
+  withEquals: boolean | null,
+): ((a: unknown, b: unknown) => boolean) | undefined {
+  const enabled = generateBoolean(rnd, withEquals)
+  if (!enabled) {
+    return void 0
+  }
+  return equals
+}
+
+function generateFindBestErrorOptions(
+  rnd: Random,
+  findBestError: boolean | null,
+  withEquals: boolean | null,
+  limitArgOnError: false | true | 'func' | null,
+  includeErrorVariant: boolean | null,
+  dontThrowIfError: boolean | null,
+  argKeys: readonly string[],
+  template: Template,
+): TestVariantsFindBestErrorOptions | undefined {
+  const enabled = generateBoolean(rnd, findBestError)
+  if (!enabled) {
+    return void 0
+  }
+  return {
+    equals: generateEqualsFunc(rnd, withEquals),
+    limitArgOnError: generateLimitArgOnError(
+      rnd,
+      limitArgOnError,
+      argKeys,
+      template,
+    ),
+    includeErrorVariant: generateBoolean(rnd, includeErrorVariant),
+    dontThrowIfError: generateBoolean(rnd, dontThrowIfError),
+  }
+}
+
+function generateLogOptions(
+  rnd: Random,
+  logFunc: (type: TestVariantsLogType, message: string) => void,
+): TestVariantsLogOptions {
+  return {
+    start: randomBoolean(rnd),
+    progress: randomBoolean(rnd) ? generateBoundaryInt(rnd, TIME_MAX) : false,
+    completed: randomBoolean(rnd),
+    error: randomBoolean(rnd),
+    modeChange: randomBoolean(rnd),
+    debug: randomBoolean(rnd),
+    func: logFunc,
+  }
 }
 
 function generateMode(
@@ -454,6 +642,46 @@ function generateTemplate(
   return Object.freeze(template)
 }
 
+function generateRunOptions(
+  rnd: Random,
+  options: StressTestArgs,
+  argKeys: readonly string[],
+  template: Template,
+  variantsCount: number,
+  logFunc: (type: TestVariantsLogType, message: string) => void,
+  onError: (event: { error: unknown; args: TestArgs; tests: number }) => void,
+): TestVariantsRunOptions<TestArgs> {
+  const limitTests = generateLimit(rnd, variantsCount)
+  const limitTime = generateBoundaryInt(rnd, TIME_MAX)
+  return {
+    onError,
+    log: generateLogOptions(rnd, logFunc),
+    parallel: generateParallel(rnd, options.parallel, PARALLEL_MAX),
+    cycles: generateBoundaryInt(rnd, options.cyclesMax),
+    getSeed: generateSeedFunc(rnd, options.withSeed),
+    iterationModes: generateModes(
+      rnd,
+      variantsCount,
+      options.cyclesMax,
+      options.attemptsPerVariantMax,
+      options.modesCountMax,
+      options.modeType,
+    ),
+    findBestError: generateFindBestErrorOptions(
+      rnd,
+      options.findBestError,
+      options.withEquals,
+      options.limitArgOnError,
+      options.includeErrorVariant,
+      options.dontThrowIfError,
+      argKeys,
+      template,
+    ),
+    limitTests: limitTests === 0 ? void 0 : limitTests,
+    limitTime: limitTime === 0 ? void 0 : limitTime,
+  }
+}
+
 // endregion
 
 // region Debug Logging
@@ -476,8 +704,6 @@ async function runWithLogs<T>(fn: () => T | Promise<T>): Promise<T> {
 
 async function executeStressTest(options: StressTestArgs): Promise<void> {
   const rnd = new Random(options.seed)
-
-  // TODO: implement
 }
 
 export const testVariants = createTestVariants(
