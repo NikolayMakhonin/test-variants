@@ -679,7 +679,43 @@ const MODES_DEFAULT: readonly ModeConfig[] = Object.freeze([
   { mode: 'forward' },
 ])
 
-function upperEstimateCallCountMax(
+function estimateModeChangesMin(
+  modes: readonly ModeConfig[],
+  callCount: number,
+): number {
+  if (callCount === 0) {
+    return 0
+  }
+
+  const modesCount = modes.length
+  if (modesCount === 0) {
+    return 0
+  }
+
+  // At least 1 mode change when first mode starts
+  if (modesCount === 1) {
+    return 1
+  }
+
+  // Find minimum limitTests across modes
+  let minLimit = Infinity
+  for (let i = 0; i < modesCount; i++) {
+    const limit = modes[i].limitTests
+    if (limit != null && limit > 0 && limit < minLimit) {
+      minLimit = limit
+    }
+  }
+
+  if (minLimit === Infinity) {
+    // No limits - only 1 mode change (first mode runs until completion)
+    return 1
+  }
+
+  // Lower bound: ceil(callCount / minLimit) mode switches
+  return Math.min(Math.ceil(callCount / minLimit), callCount)
+}
+
+function estimateCallCountMax(
   variantsCount: number,
   runOptions: TestVariantsRunOptions<TestArgs>,
 ): number {
@@ -849,7 +885,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   )
   const retriesToError = generateBoundaryInt(rnd, options.retriesToErrorMax)
 
-  const callCountMax = upperEstimateCallCountMax(variantsCount, runOptions)
+  const callCountMax = estimateCallCountMax(variantsCount, runOptions)
 
   // Tracking state
   let callCount = 0
@@ -890,9 +926,9 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       throw new Error(`logFunc: log after completed`)
     }
 
-    if (callCount === 0) {
-      if (type !== 'start') {
-        throw new Error(`logFunc: first log is not start`)
+    if (type === 'start') {
+      if (logStart) {
+        throw new Error(`logFunc: start logged multiple times`)
       }
       if (!logStartEnabled) {
         throw new Error(`logFunc: start log when not enabled`)
@@ -900,11 +936,9 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       logStart = true
       return
     }
-    if (type === 'start') {
-      throw new Error(`logFunc: start logged multiple times`)
-    }
-    if (!logStart) {
-      throw new Error(`logFunc: log before start`)
+
+    if (callCount === 0) {
+      throw new Error(`logFunc: log before test started`)
     }
 
     if (type === 'completed') {
@@ -1138,15 +1172,14 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
       )
     }
   }
-  if (
-    logModeChangesEnabled &&
-    runOptions.iterationModes &&
-    runOptions.iterationModes.length > 1
-  ) {
-    const logModeChangesExpected = 0 // TODO: helper to estimate lower bound
-    if (logModeChanges < logModeChangesExpected) {
+  if (logModeChangesEnabled && runOptions.iterationModes) {
+    const modeChangesMin = estimateModeChangesMin(
+      runOptions.iterationModes,
+      callCount,
+    )
+    if (logModeChanges < modeChangesMin) {
       throw new Error(
-        `Mode changes log count ${logModeChanges} < expected minimum ${logModeChangesExpected}`,
+        `Mode changes log count ${logModeChanges} < expected minimum ${modeChangesMin}`,
       )
     }
   }
