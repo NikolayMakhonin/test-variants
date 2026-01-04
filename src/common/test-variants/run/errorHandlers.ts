@@ -4,7 +4,7 @@ import type {
   ArgsWithSeed,
   TestVariantsIterator,
   SaveErrorVariantsStore,
-} from '../types'
+} from 'src/common/test-variants/types'
 import type { TestVariantsRunState } from './createRunState'
 
 export type ErrorHandlerDeps<Args extends Obj> = {

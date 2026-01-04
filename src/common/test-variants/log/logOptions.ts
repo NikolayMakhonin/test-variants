@@ -2,9 +2,9 @@ import type {
   TestVariantsLogFunc,
   TestVariantsLogOptions,
   TestVariantsLogType,
-} from '../types'
+} from 'src/common/test-variants/types'
 import { log } from 'src/common/helpers/log'
-import { type RequiredNonNullable } from '@flemist/simple-utils'
+import type { RequiredNonNullable } from '@flemist/simple-utils'
 
 /** Default log function - outputs using log helper */
 const logFuncDefault: TestVariantsLogFunc = (

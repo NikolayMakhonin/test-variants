@@ -1,9 +1,13 @@
 import { isPromiseLike } from '@flemist/async-utils'
 import { poolWait } from '@flemist/time-limits'
 import type { Obj } from '@flemist/simple-utils'
-import type { ArgsWithSeed } from '../types'
+import type { ArgsWithSeed } from 'src/common/test-variants/types'
 import type { RunContext } from './RunContext'
-import { logModeChange, logProgress, type RunLoggerDeps } from './runLogger'
+import {
+  logModeChange,
+  logProgress,
+  type RunLoggerDeps,
+} from 'src/common/test-variants/log/runLogger'
 import { shouldTriggerGC, triggerGC, type GCConfig } from './gcManager'
 import {
   handleSyncError,

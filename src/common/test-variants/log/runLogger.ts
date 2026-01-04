@@ -4,8 +4,8 @@ import type {
   TestVariantsLogOptions,
   TestVariantsIterator,
   ModeConfig,
-} from '../types'
-import type { TestVariantsRunState } from './createRunState'
+} from 'src/common/test-variants/types'
+import type { TestVariantsRunState } from 'src/common/test-variants/run/createRunState'
 import { formatBytes, formatDuration, formatModeConfig } from './format'
 import { getMemoryUsage } from './getMemoryUsage'
 

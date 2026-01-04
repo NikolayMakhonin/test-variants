@@ -1,7 +1,10 @@
 import type { Obj } from '@flemist/simple-utils'
-import { Equals, TestVariantsTemplates } from 'src/common/test-variants/types'
+import type {
+  Equals,
+  TestVariantsTemplates,
+  TestVariantsTemplatesWithExtra,
+} from 'src/common/test-variants/types'
 import { findValueIndex } from 'src/common/test-variants/helpers/findValueIndex'
-import { TestVariantsTemplatesWithExtra } from '../types'
 
 /** Extend template arg with extra value */
 function extendTemplateWithValue<Args extends Obj>(

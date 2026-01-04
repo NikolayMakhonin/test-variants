@@ -4,7 +4,7 @@ import type {
   TestVariantsResult,
   TestVariantsBestError,
   FindBestErrorOptions,
-} from '../types'
+} from 'src/common/test-variants/types'
 import type { TestVariantsRunState } from './createRunState'
 
 /** Create test variants run result */

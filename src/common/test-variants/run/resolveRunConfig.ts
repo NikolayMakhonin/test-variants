@@ -7,9 +7,9 @@ import type {
   FindBestErrorOptions,
   SaveErrorVariantsStore,
   OnModeChangeCallback,
-} from '../types'
+} from 'src/common/test-variants/types'
 import { timeControllerDefault } from '@flemist/time-controller'
-import { resolveLogOptions } from './logOptions'
+import { resolveLogOptions } from 'src/common/test-variants/log/logOptions'
 
 /** Resolved configuration for test variants run */
 export type TestVariantsRunConfig<Args extends Obj> = {

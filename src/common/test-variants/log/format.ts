@@ -1,4 +1,4 @@
-import type { ModeConfig } from 'src/common'
+import type { ModeConfig } from 'src/common/test-variants/types'
 
 /** Format duration in human-readable form */
 export function formatDuration(ms: number): string {

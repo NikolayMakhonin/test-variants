@@ -8,7 +8,7 @@ import type {
   TestVariantsTestRun,
   TestVariantsIterator,
   TestVariantsTestOptions,
-} from '../types'
+} from 'src/common/test-variants/types'
 import type { TestVariantsRunConfig } from './resolveRunConfig'
 import type { TestVariantsRunState } from './createRunState'
 
