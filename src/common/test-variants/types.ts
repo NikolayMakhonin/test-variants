@@ -282,7 +282,7 @@ export type TestVariantsRunOptionsInternal<
 }
 
 /** Options for finding the earliest failing variant across multiple test runs */
-export type TestVariantsFindBestErrorOptions = {
+export type FindBestErrorOptions = {
   /** Custom equality for comparing arg values when finding indexes */
   equals?: null | ((a: any, b: any) => boolean)
   /** Limit per-arg indexes on error; boolean enables/disables, function for custom per-arg logic */
@@ -320,9 +320,26 @@ export type OnErrorCallback<Args extends Obj> = (
   event: ErrorEvent<Args>,
 ) => PromiseOrValue<void>
 
+/** Mode change event passed to onModeChange callback */
+export type ModeChangeEvent = {
+  /** Current mode configuration */
+  mode: ModeConfig
+  /** Current mode index in iterationModes array */
+  modeIndex: number
+  /** Number of tests run before this mode change */
+  tests: number
+}
+
+/** Callback invoked when iteration mode changes */
+export type OnModeChangeCallback = (
+  event: ModeChangeEvent,
+) => PromiseOrValue<void>
+
 export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
   /** Callback invoked when a test variant throws an error */
   onError?: null | OnErrorCallback<Args>
+  /** Callback invoked when iteration mode changes */
+  onModeChange?: null | OnModeChangeCallback
   /** Wait for garbage collection after iterations */
   GC_Iterations?: null | number
   /** Same as GC_Iterations but only for async test variants, required for 10000 and more of Promise rejections */
@@ -340,7 +357,7 @@ export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
   getSeed?: null | ((params: GetSeedParams) => any)
   /** Iteration modes (variant traversal methods); each mode runs until its limits are reached */
   iterationModes?: null | ModeConfig[]
-  findBestError?: null | TestVariantsFindBestErrorOptions
+  findBestError?: null | FindBestErrorOptions
   /** Save error-causing args to files and replay them before normal iteration */
   saveErrorVariants?: null | SaveErrorVariantsOptions<Args, SavedArgs>
   /** Tests only first N variants, ignores the rest. If null or not specified, tests all variants */

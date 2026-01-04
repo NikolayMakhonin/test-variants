@@ -44,6 +44,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   const dontThrowIfError = findBestError?.dontThrowIfError
   const limitTime = options?.limitTime
   const timeController = options?.timeController ?? timeControllerDefault
+  const onModeChange = options?.onModeChange
 
   const parallel =
     options?.parallel === true
@@ -144,6 +145,16 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
       `[test-variants] ${formatModeConfig(variants.modeConfig, variants.modeIndex)}`,
     )
   }
+  if (onModeChange && variants.modeConfig) {
+    const result = onModeChange({
+      mode: variants.modeConfig,
+      modeIndex: variants.modeIndex,
+      tests: iterations,
+    })
+    if (isPromiseLike(result)) {
+      await result
+    }
+  }
   while (variants.minCompletedCount < cycles && !timeLimitExceeded) {
     if (logOpts.debug) {
       logOpts.func(
@@ -176,6 +187,16 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
         }
         modeChanged = true
         prevModeIndex = variants.modeIndex
+        if (onModeChange && variants.modeConfig) {
+          const result = onModeChange({
+            mode: variants.modeConfig,
+            modeIndex: variants.modeIndex,
+            tests: iterations,
+          })
+          if (isPromiseLike(result)) {
+            await result
+          }
+        }
       }
 
       if (logOpts.progress || GC_Interval || limitTime) {

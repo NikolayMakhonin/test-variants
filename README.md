@@ -239,6 +239,14 @@ const result = await testVariants({
     tests,  // number of tests run before the error (including attemptsPerVariant)
   }) => void | Promise<void>,
 
+  // Called when iteration mode changes
+  // Invoked at test start and when switching to next mode
+  onModeChange: ({
+    mode,      // current mode configuration (ModeConfig)
+    modeIndex, // current mode index in iterationModes array
+    tests,     // number of tests run before this mode change
+  }) => void | Promise<void>,
+
   // Time controller for all internal delays, timeouts and getting current time
   // Used inside testVariants instead of direct setTimeout, Date.now calls, etc
   // Intended only for testing and debugging the test-variants library itself
