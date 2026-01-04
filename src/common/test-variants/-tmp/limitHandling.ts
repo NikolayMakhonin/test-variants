@@ -31,7 +31,7 @@ export type LimitState<Args extends Obj> = VariantNavigationState<Args> & {
 export function isPositionReached<Args extends Obj>(
   state: VariantNavigationState<Args>,
   pendingArgs: Args,
-  keys: (keyof Args)[],
+  keys: (ArgName<Args>)[],
   keysCount: number,
   equals?: null | Equals,
 ): boolean {
@@ -67,7 +67,7 @@ export function calcArgIndexes<Args extends Obj>(
   state: VariantNavigationState<Args>,
   limitArgs: Args,
   templates: TestVariantsTemplate<Args, any>[],
-  keys: (keyof Args)[],
+  keys: (ArgName<Args>)[],
   keysCount: number,
   equals?: null | Equals,
 ): number[] | null {
@@ -87,7 +87,7 @@ export function calcArgIndexes<Args extends Obj>(
 export function filterPendingLimits<Args extends Obj>(
   state: LimitState<Args>,
   templates: TestVariantsTemplate<Args, any>[],
-  keys: (keyof Args)[],
+  keys: (ArgName<Args>)[],
   keysCount: number,
   equals?: null | Equals,
 ): void {
@@ -126,7 +126,7 @@ export function updateArgLimits<Args extends Obj>(
   limitArgs: Args,
   oldLimitArgs: Args | null,
   templates: TestVariantsTemplate<Args, any>[],
-  keys: (keyof Args)[],
+  keys: (ArgName<Args>)[],
   keysCount: number,
   equals?: null | Equals,
   limitArgOnError?: null | boolean | LimitArgOnError,
@@ -165,7 +165,7 @@ export function updateArgLimits<Args extends Obj>(
   for (let i = 0; i < keysCount; i++) {
     const valueIndex = newIndexes[i]
     if (typeof limitArgOnError === 'function') {
-      // keyof Args is string for Args extends Obj (Record<string, unknown>)
+      // ArgName<Args> is string for Args extends Obj (Record<string, unknown>)
       const shouldLimit = limitArgOnError({
         name: keys[i] as string,
         valueIndex,
@@ -197,7 +197,7 @@ export function createLimit<Args extends Obj>(
 export function processPendingLimits<Args extends Obj>(
   state: LimitState<Args>,
   templates: TestVariantsTemplate<Args, any>[],
-  keys: (keyof Args)[],
+  keys: (ArgName<Args>)[],
   keysCount: number,
   equals?: null | Equals,
   limitArgOnError?: null | boolean | LimitArgOnError,

@@ -56,7 +56,7 @@ type IteratorState<Args extends Obj> = LimitState<Args> & {
 function resetIteratorState<Args extends Obj>(
   state: IteratorState<Args>,
   templates: TestVariantsTemplate<Args, any>[],
-  keys: (keyof Args)[],
+  keys: (ArgName<Args>)[],
   keysCount: number,
 ): void {
   state.index = -1
@@ -91,7 +91,7 @@ function tryRestoreSavedPosition<Args extends Obj>(
   state: IteratorState<Args>,
   modeState: ModeState,
   templates: TestVariantsTemplate<Args, any>[],
-  keys: (keyof Args)[],
+  keys: (ArgName<Args>)[],
   keysCount: number,
 ): boolean {
   // Clear args before reconstruction
@@ -127,7 +127,7 @@ function tryRestoreSavedPosition<Args extends Obj>(
 function switchToNextMode<Args extends Obj>(
   state: IteratorState<Args>,
   templates: TestVariantsTemplate<Args, any>[],
-  keys: (keyof Args)[],
+  keys: (ArgName<Args>)[],
   keysCount: number,
   savePosition: boolean,
   now: number,
@@ -243,8 +243,8 @@ export function testVariantsIterator<Args extends Obj>(
   const logFunc = logOpts.func
   const modes = options.iterationModes ?? DEFAULT_MODES
   const timeController = options.timeController ?? timeControllerDefault
-  // Object.keys returns string[] but we know keys are keyof Args
-  const keys = Object.keys(argsTemplates) as (keyof Args)[]
+  // Object.keys returns string[] but we know keys are ArgName<Args>
+  const keys = Object.keys(argsTemplates) as (ArgName<Args>)[]
   const templates: TestVariantsTemplate<Args, any>[] =
     Object.values(argsTemplates)
   const keysCount = keys.length
