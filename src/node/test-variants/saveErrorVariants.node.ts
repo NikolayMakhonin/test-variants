@@ -9,7 +9,7 @@ import {
   parseErrorVariantFile,
   saveErrorVariantFile,
 } from './saveErrorVariants'
-import { logOptionsDisabled } from 'src/common/test-variants/helpers/logOptions'
+import { logOptionsDisabled } from 'src/common/test-variants/log/logOptions'
 
 const TEST_DIR = path.join(process.cwd(), '-tmp', '-test', 'saveErrorVariants')
 

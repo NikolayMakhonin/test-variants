@@ -9,13 +9,13 @@ import type {
   TestVariantsRunOptionsInternal,
   TestVariantsResult,
 } from './types'
-import { getMemoryUsage } from './helpers/getMemoryUsage'
-import { resolveRunConfig } from './helpers/resolveRunConfig'
-import { createRunState } from './helpers/createRunState'
-import { logStart, logCompleted } from './helpers/runLogger'
-import { runIterationLoop } from './helpers/runIterationLoop'
-import { createRunResult } from './helpers/createRunResult'
-import type { RunContext } from './helpers/RunContext'
+import { getMemoryUsage } from './log/getMemoryUsage'
+import { resolveRunConfig } from './run/resolveRunConfig'
+import { createRunState } from './run/createRunState'
+import { logStart, logCompleted } from './log/runLogger'
+import { runIterationLoop } from './run/runIterationLoop'
+import { createRunResult } from './run/createRunResult'
+import type { RunContext } from './run/RunContext'
 
 export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   testRun: TestVariantsTestRun<Args>,

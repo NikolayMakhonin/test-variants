@@ -7,7 +7,7 @@ import type {
 import { testVariantsRun } from './testVariantsRun'
 import type { Obj } from '@flemist/simple-utils'
 import { testVariantsIterator } from './testVariantsIterator'
-import { resolveLogOptions } from 'src/common/test-variants/helpers/logOptions'
+import { resolveLogOptions } from './log/logOptions'
 
 export function createTestVariants<Args extends Obj>(
   test: TestVariantsTest<Args>,

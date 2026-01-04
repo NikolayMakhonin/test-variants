@@ -17,9 +17,9 @@ export {
   type TestVariantsTestOptions,
   type TestVariantsTestResult,
 } from '../common'
-export { TestVariantsSetArgs } from 'src/common/test-variants/types'
-export { TestVariantsCall } from 'src/common/test-variants/types'
-export { TestVariantsTemplatesExt } from 'src/common/test-variants/types'
+export type { TestVariantsSetArgs } from 'src/common/test-variants/types'
+export type { TestVariantsCall } from 'src/common/test-variants/types'
+export type { TestVariantsTemplatesExt } from 'src/common/test-variants/types'
 
 import type { Obj } from '@flemist/simple-utils'
 import { createTestVariants as createTestVariantsCommon } from '../common/test-variants/createTestVariants'
