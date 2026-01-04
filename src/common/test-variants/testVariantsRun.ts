@@ -6,59 +6,59 @@ import { garbageCollect } from 'src/common/garbage-collect/garbageCollect'
 import type { Obj } from '@flemist/simple-utils'
 import type {
   ArgsWithSeed,
-  SaveErrorVariantsStore,
-  TestVariantsBestError,
   TestVariantsIterator,
   TestVariantsRunOptionsInternal,
   TestVariantsResult,
 } from './types'
-import { timeControllerDefault } from '@flemist/time-controller'
-import { resolveLogOptions } from './helpers/logOptions'
+import { getMemoryUsage } from './helpers/getMemoryUsage'
+import { resolveRunConfig } from './helpers/resolveRunConfig'
+import { createRunState } from './helpers/createRunState'
 import {
-  formatBytes,
-  formatDuration,
-  formatModeConfig,
-} from 'src/common/test-variants/helpers/format'
-import { getMemoryUsage } from 'src/common/test-variants/helpers/getMemoryUsage'
+  logStart,
+  logCompleted,
+  logProgress,
+  type RunLoggerDeps,
+} from './helpers/runLogger'
+import { shouldTriggerGC, triggerGC, type GCConfig } from './helpers/gcManager'
+import { isTimeLimitExceeded } from './helpers/isTimeLimitExceeded'
+import {
+  handleSyncError,
+  handleParallelError,
+  type ErrorHandlerDeps,
+} from './helpers/errorHandlers'
+import {
+  handleModeChange,
+  type ModeChangeHandlerDeps,
+} from './helpers/handleModeChange'
+import { createRunResult } from './helpers/createRunResult'
 
 export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   testRun: TestVariantsTestRun<Args>,
   variants: TestVariantsIterator<Args>,
   options?: null | TestVariantsRunOptionsInternal<Args, SavedArgs>,
 ): Promise<TestVariantsResult<Args>> {
-  const saveErrorVariantsOptions = options?.saveErrorVariants
-  const store: SaveErrorVariantsStore<Args> | null =
-    saveErrorVariantsOptions && options?.createSaveErrorVariantsStore
-      ? options.createSaveErrorVariantsStore(saveErrorVariantsOptions)
-      : null
+  // Resolve configuration
+  const config = resolveRunConfig(options)
+  const {
+    store,
+    logOpts,
+    abortSignalExternal,
+    findBestError,
+    cycles,
+    dontThrowIfError,
+    limitTime,
+    timeController,
+    onModeChange,
+    parallel,
+    limitTests,
+  } = config
 
-  const GC_Iterations = options?.GC_Iterations ?? 1000000
-  const GC_IterationsAsync = options?.GC_IterationsAsync ?? 10000
-  const GC_Interval = options?.GC_Interval ?? 1000
-
-  const logOpts = resolveLogOptions(options?.log)
-
-  const abortSignalExternal = options?.abortSignal
-  const findBestError = options?.findBestError
-  const cycles = options?.cycles ?? 1
-  const dontThrowIfError = findBestError?.dontThrowIfError
-  const limitTime = options?.limitTime
-  const timeController = options?.timeController ?? timeControllerDefault
-  const onModeChange = options?.onModeChange
-
-  const parallel =
-    options?.parallel === true
-      ? 2 ** 31
-      : !options?.parallel || options.parallel <= 0
-        ? 1
-        : options.parallel
-
+  // Setup abort signals
   const abortControllerParallel = new AbortControllerFast()
   const abortSignal = combineAbortSignals(
     abortSignalExternal,
     abortControllerParallel.signal,
   )
-  const abortSignalAll = abortSignal
 
   const testOptions: TestVariantsTestOptions = {
     abortSignal,
@@ -66,8 +66,8 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   }
 
   // Apply initial limits
-  if (options?.limitTests != null) {
-    variants.addLimit({ index: options.limitTests })
+  if (limitTests != null) {
+    variants.addLimit({ index: limitTests })
   }
 
   // Replay phase: run previously saved error variants before normal iteration
@@ -80,56 +80,42 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     })
   }
 
-  let prevCycleVariantsCount: null | number = null
-  let prevCycleDuration: null | number = null
-  const startTime = timeController.now()
-  let cycleStartTime = startTime
-
+  // Initialize state
   const startMemory = getMemoryUsage()
-  if (logOpts.start) {
-    let msg = `[test-variants] start`
-    if (startMemory != null) {
-      msg += `, memory: ${formatBytes(startMemory)}`
-    }
-    logOpts.func('start', msg)
+  const state = createRunState(timeController, startMemory)
+
+  // Setup dependencies for helpers
+  const gcConfig: GCConfig = {
+    GC_Iterations: config.GC_Iterations,
+    GC_IterationsAsync: config.GC_IterationsAsync,
+    GC_Interval: config.GC_Interval,
   }
 
-  // Debug mode: repeats failing variant for step-by-step JS debugging.
-  // When testRun returns void (from onError debug mode), this flag is set to true.
-  // Next iteration skips variants.next() and reruns the same args,
-  // allowing developer to set breakpoints and debug the failing case.
-  // Triggered by debugger statement in onError when developer resumes after >50ms pause.
-  // DO NOT REMOVE - essential for debugging failing test variants.
-  let debug = false
-  let iterations = 0
-  let iterationsAsync = 0
-  let prevLogTime = timeController.now()
-  let prevLogMemory = startMemory
-  let prevGC_Time = prevLogTime
-  let prevGC_Iterations = iterations
-  let prevGC_IterationsAsync = iterationsAsync
-  let prevModeIndex = -1
-  let modeChanged = false
+  const loggerDeps: RunLoggerDeps = {
+    logOpts,
+    timeController,
+    findBestError: !!findBestError,
+  }
+
+  const errorHandlerDeps: ErrorHandlerDeps<Args> = {
+    variants,
+    store,
+    abortControllerParallel,
+    findBestError: !!findBestError,
+  }
+
+  const modeChangeDeps: ModeChangeHandlerDeps<Args> = {
+    logOpts,
+    onModeChange,
+    variants,
+  }
 
   const pool: IPool | null = parallel <= 1 ? null : new Pool(parallel)
 
-  function onCompleted() {
-    if (logOpts.completed) {
-      const totalElapsed = timeController.now() - startTime
-      let logMsg = `[test-variants] end, tests: ${iterations} (${formatDuration(totalElapsed)}), async: ${iterationsAsync}`
-      if (startMemory != null) {
-        const memory = getMemoryUsage()
-        if (memory != null) {
-          const diff = memory - startMemory
-          logMsg += `, memory: ${formatBytes(memory)} (${diff >= 0 ? '+' : ''}${formatBytes(diff)})`
-        }
-      }
-      logOpts.func('completed', logMsg)
-    }
-  }
+  // Log start
+  logStart(logOpts, startMemory)
 
-  // Main iteration using iterator
-  let timeLimitExceeded = false
+  // Start iteration
   variants.start()
   if (logOpts.debug) {
     logOpts.func(
@@ -137,40 +123,34 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
       `[debug] start() called: cycleIndex=${variants.cycleIndex}, modeIndex=${variants.modeIndex}, minCompletedCount=${variants.minCompletedCount}, cycles=${cycles}`,
     )
   }
-  // Always show current mode at start
-  if (logOpts.modeChange) {
-    prevModeIndex = variants.modeIndex
-    logOpts.func(
-      'modeChange',
-      `[test-variants] ${formatModeConfig(variants.modeConfig, variants.modeIndex)}`,
-    )
-  }
-  if (onModeChange && variants.modeConfig) {
-    const result = onModeChange({
-      mode: variants.modeConfig,
-      modeIndex: variants.modeIndex,
-      tests: iterations,
-    })
-    if (isPromiseLike(result)) {
-      await result
-    }
-  }
-  while (variants.minCompletedCount < cycles && !timeLimitExceeded) {
+
+  // Handle initial mode
+  await handleModeChange(modeChangeDeps, state, true)
+
+  // Main iteration loop
+  while (variants.minCompletedCount < cycles && !state.timeLimitExceeded) {
     if (logOpts.debug) {
       logOpts.func(
         'debug',
         `[debug] outer loop: minCompletedCount=${variants.minCompletedCount} < cycles=${cycles}`,
       )
     }
+
     // Check time limit at start of each round
-    if (limitTime && timeController.now() - startTime >= limitTime) {
-      timeLimitExceeded = true
+    if (isTimeLimitExceeded(timeController, state.startTime, limitTime)) {
+      state.timeLimitExceeded = true
       break
     }
 
     let args: ArgsWithSeed<Args> = null!
+
+    // Inner iteration loop
     while (!abortSignalExternal?.aborted) {
-      if (!debug) {
+      // Debug mode: repeats failing variant for step-by-step JS debugging.
+      // When testRun returns void (from onError debug mode), debug flag is set to true.
+      // Next iteration skips variants.next() and reruns the same args,
+      // allowing developer to set breakpoints and debug the failing case.
+      if (!state.debug) {
         const nextArgs = variants.next()
         if (nextArgs == null) {
           break
@@ -178,105 +158,24 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
         args = nextArgs
       }
 
-      if (variants.modeIndex !== prevModeIndex) {
-        if (logOpts.debug) {
-          logOpts.func(
-            'debug',
-            `[debug] mode switch: modeIndex=${variants.modeIndex}, index=${variants.index}`,
-          )
-        }
-        modeChanged = true
-        prevModeIndex = variants.modeIndex
-        if (onModeChange && variants.modeConfig) {
-          const result = onModeChange({
-            mode: variants.modeConfig,
-            modeIndex: variants.modeIndex,
-            tests: iterations,
-          })
-          if (isPromiseLike(result)) {
-            await result
-          }
-        }
-      }
+      // Handle mode change
+      await handleModeChange(modeChangeDeps, state, false)
 
-      if (logOpts.progress || GC_Interval || limitTime) {
+      // Progress logging, time limit check, and GC
+      if (logOpts.progress || gcConfig.GC_Interval || limitTime) {
         const now = timeController.now()
 
-        if (limitTime && now - startTime >= limitTime) {
-          timeLimitExceeded = true
+        if (isTimeLimitExceeded(timeController, state.startTime, limitTime)) {
+          state.timeLimitExceeded = true
           break
         }
 
-        if (logOpts.progress && now - prevLogTime >= logOpts.progress) {
-          // the log is required to prevent the karma browserNoActivityTimeout
-          // Log mode change together with progress when mode changed
-          if (logOpts.modeChange && modeChanged) {
-            logOpts.func(
-              'modeChange',
-              `[test-variants] ${formatModeConfig(variants.modeConfig, variants.modeIndex)}`,
-            )
-            modeChanged = false
-          }
-          let logMsg = '[test-variants] '
-          const cycleElapsed = now - cycleStartTime
-          const totalElapsed = now - startTime
-          if (findBestError) {
-            logMsg += `cycle: ${variants.cycleIndex}, variant: ${variants.index}`
-            let max = variants.count
-            if (max != null) {
-              if (
-                prevCycleVariantsCount != null &&
-                prevCycleVariantsCount < max
-              ) {
-                max = prevCycleVariantsCount
-              }
-            }
-            if (max != null) {
-              let estimatedCycleTime: number
-              if (
-                prevCycleDuration != null &&
-                prevCycleVariantsCount != null &&
-                variants.index < prevCycleVariantsCount &&
-                cycleElapsed < prevCycleDuration
-              ) {
-                const adjustedDuration = prevCycleDuration - cycleElapsed
-                const adjustedCount = prevCycleVariantsCount - variants.index
-                const speedForRemaining = adjustedDuration / adjustedCount
-                const remainingTime = (max - variants.index) * speedForRemaining
-                estimatedCycleTime = cycleElapsed + remainingTime
-              } else {
-                estimatedCycleTime = (cycleElapsed * max) / variants.index
-              }
-              logMsg += `/${max} (${formatDuration(cycleElapsed)}/${formatDuration(estimatedCycleTime)})`
-            } else {
-              logMsg += ` (${formatDuration(cycleElapsed)})`
-            }
-          } else {
-            logMsg += `variant: ${variants.index} (${formatDuration(cycleElapsed)})`
-          }
-          logMsg += `, tests: ${iterations} (${formatDuration(totalElapsed)}), async: ${iterationsAsync}`
-          if (prevLogMemory != null) {
-            const memory = getMemoryUsage()
-            if (memory != null) {
-              const diff = memory - prevLogMemory
-              logMsg += `, memory: ${formatBytes(memory)} (${diff >= 0 ? '+' : ''}${formatBytes(diff)})`
-              prevLogMemory = memory
-            }
-          }
-          logOpts.func('progress', logMsg)
-          prevLogTime = now
+        if (logOpts.progress && now - state.prevLogTime >= logOpts.progress) {
+          logProgress(loggerDeps, state, variants)
         }
 
-        if (
-          (GC_Iterations && iterations - prevGC_Iterations >= GC_Iterations) ||
-          (GC_IterationsAsync &&
-            iterationsAsync - prevGC_IterationsAsync >= GC_IterationsAsync) ||
-          (GC_Interval && now - prevGC_Time >= GC_Interval)
-        ) {
-          prevGC_Iterations = iterations
-          prevGC_IterationsAsync = iterationsAsync
-          prevGC_Time = now
-          await garbageCollect(1)
+        if (shouldTriggerGC(gcConfig, state, now)) {
+          await triggerGC(state, now)
         }
       }
 
@@ -284,15 +183,17 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
         continue
       }
 
+      // Execute test - sync or parallel path
       if (!pool || abortSignal.aborted) {
+        // Sync execution
         try {
           // Pass current iterations count (tests run before this one)
-          let promiseOrIterations = testRun(args, iterations, testOptions)
+          let promiseOrIterations = testRun(args, state.iterations, testOptions)
           if (isPromiseLike(promiseOrIterations)) {
             promiseOrIterations = await promiseOrIterations
           }
           if (!promiseOrIterations) {
-            debug = true
+            state.debug = true
             abortControllerParallel.abort()
             continue
           }
@@ -300,33 +201,20 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
             iterationsAsync: _iterationsAsync,
             iterationsSync: _iterationsSync,
           } = promiseOrIterations
-          iterationsAsync += _iterationsAsync
-          iterations += _iterationsSync + _iterationsAsync
+          state.iterationsAsync += _iterationsAsync
+          state.iterations += _iterationsSync + _iterationsAsync
         } catch (err) {
-          if (findBestError) {
-            variants.addLimit({ args, error: err })
-            if (store && variants.limit) {
-              await store.save(variants.limit.args)
-            }
-            debug = false
-          } else {
-            if (store) {
-              await store.save(args)
-            }
-            throw err
-          }
+          await handleSyncError(errorHandlerDeps, state, args, err)
         }
       } else {
+        // Parallel execution
         if (!pool.hold(1)) {
-          await poolWait({
-            pool,
-            count: 1,
-            hold: true,
-          })
+          await poolWait({ pool, count: 1, hold: true })
         }
+
         // Capture args and iterations count (iterator moves in parallel mode)
         const capturedArgs = args
-        const capturedIterations = iterations
+        const capturedIterations = state.iterations
 
         void (async () => {
           try {
@@ -342,7 +230,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
               promiseOrIterations = await promiseOrIterations
             }
             if (!promiseOrIterations) {
-              debug = true
+              state.debug = true
               abortControllerParallel.abort()
               return
             }
@@ -350,29 +238,10 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
               iterationsAsync: _iterationsAsync,
               iterationsSync: _iterationsSync,
             } = promiseOrIterations
-            iterationsAsync += _iterationsAsync
-            iterations += _iterationsSync + _iterationsAsync
+            state.iterationsAsync += _iterationsAsync
+            state.iterations += _iterationsSync + _iterationsAsync
           } catch (err) {
-            if (findBestError) {
-              variants.addLimit({ args: capturedArgs, error: err })
-              if (store && variants.limit) {
-                void store.save(variants.limit.args)
-              }
-              debug = false
-              // Abort current cycle after first error - next cycle will use new limits
-              // This prevents in-flight parallel tests from continuing to error and spam logs
-              // Use explicit null reason to distinguish from real errors
-              if (!abortControllerParallel.signal.aborted) {
-                abortControllerParallel.abort(null)
-              }
-            }
-            // Store error and abort to throw after pool drains
-            else if (!abortControllerParallel.signal.aborted) {
-              if (store) {
-                void store.save(capturedArgs)
-              }
-              abortControllerParallel.abort(err)
-            }
+            handleParallelError(errorHandlerDeps, state, capturedArgs, err)
           } finally {
             void pool.release(1)
           }
@@ -383,18 +252,18 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     if (logOpts.debug) {
       logOpts.func(
         'debug',
-        `[debug] inner loop exited: modeIndex=${variants.modeIndex}, index=${variants.index}, count=${variants.count}, iterations=${iterations}`,
+        `[debug] inner loop exited: modeIndex=${variants.modeIndex}, index=${variants.index}, count=${variants.count}, iterations=${state.iterations}`,
       )
     }
 
     // Track cycle metrics for logging
-    prevCycleVariantsCount = variants.count
-    prevCycleDuration = timeController.now() - cycleStartTime
-    cycleStartTime = timeController.now()
+    state.prevCycleVariantsCount = variants.count
+    state.prevCycleDuration = timeController.now() - state.cycleStartTime
+    state.cycleStartTime = timeController.now()
 
     // Check time limit at end of each round
-    if (limitTime && timeController.now() - startTime >= limitTime) {
-      timeLimitExceeded = true
+    if (isTimeLimitExceeded(timeController, state.startTime, limitTime)) {
+      state.timeLimitExceeded = true
       break
     }
 
@@ -413,42 +282,21 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     }
   }
 
+  // Wait for all parallel tasks to complete
   if (pool) {
-    await poolWait({
-      pool,
-      count: parallel,
-      hold: true,
-    })
+    await poolWait({ pool, count: parallel, hold: true })
     void pool.release(parallel)
   }
 
   // Only throw if abort has a real error reason (not flow control abort for findBestError)
-  const count = variants.count ?? 0
   // Flow control abort uses null reason; real errors use Error instances
-  if (abortSignalAll?.aborted && abortSignalAll.reason != null) {
-    throw abortSignalAll.reason
+  if (abortSignal?.aborted && abortSignal.reason != null) {
+    throw abortSignal.reason
   }
 
-  onCompleted()
+  // Completion
+  logCompleted(logOpts, timeController, state)
   await garbageCollect(1)
 
-  // Construct bestError from iterator state
-  // When includeErrorVariant is true, count is error_index + 1, so compute actual error index
-  const includeErrorVariant = findBestError?.includeErrorVariant
-  const bestError: TestVariantsBestError<Args> | null = variants.limit
-    ? {
-        error: variants.limit.error,
-        args: variants.limit.args,
-        tests: includeErrorVariant ? Math.max(0, count - 1) : count,
-      }
-    : null
-
-  if (bestError && !dontThrowIfError) {
-    throw bestError.error
-  }
-
-  return {
-    iterations,
-    bestError,
-  }
+  return createRunResult(state, variants, findBestError, dontThrowIfError)
 }
