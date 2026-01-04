@@ -1,25 +1,17 @@
 import type { Obj } from '@flemist/simple-utils'
-import type { AbortControllerFast } from '@flemist/abort-controller-fast'
 import type { ArgsWithSeed } from 'src/common/test-variants/types'
-import type { TestVariantsIterator } from 'src/common/test-variants/iterator/types'
-import type { SaveErrorVariantsStore } from './types'
+import type { RunContext } from './RunContext'
 import type { TestVariantsRunState } from './createRunState'
-
-export type ErrorHandlerDeps<Args extends Obj> = {
-  variants: TestVariantsIterator<Args>
-  store: SaveErrorVariantsStore<Args> | null
-  abortControllerParallel: AbortControllerFast
-  findBestError: boolean
-}
 
 /** Handle error in sync execution mode */
 export async function handleSyncError<Args extends Obj>(
-  deps: ErrorHandlerDeps<Args>,
+  ctx: RunContext<Args>,
   state: TestVariantsRunState,
   args: ArgsWithSeed<Args>,
   error: unknown,
 ): Promise<void> {
-  const { variants, store, findBestError } = deps
+  const { variants, config } = ctx
+  const { store, findBestError } = config
 
   if (findBestError) {
     variants.addLimit({ args, error })
@@ -37,12 +29,13 @@ export async function handleSyncError<Args extends Obj>(
 
 /** Handle error in parallel execution mode */
 export function handleParallelError<Args extends Obj>(
-  deps: ErrorHandlerDeps<Args>,
+  ctx: RunContext<Args>,
   state: TestVariantsRunState,
   args: ArgsWithSeed<Args>,
   error: unknown,
 ): void {
-  const { variants, store, abortControllerParallel, findBestError } = deps
+  const { variants, config, abortControllerParallel } = ctx
+  const { store, findBestError } = config
 
   if (findBestError) {
     variants.addLimit({ args, error })
@@ -50,9 +43,6 @@ export function handleParallelError<Args extends Obj>(
       void store.save(variants.limit.args)
     }
     state.debug = false
-    // Abort current cycle after first error - next cycle will use new limits
-    // This prevents in-flight parallel tests from continuing to error and spam logs
-    // Use explicit null reason to distinguish from real errors
     if (!abortControllerParallel.signal.aborted) {
       abortControllerParallel.abort(null)
     }

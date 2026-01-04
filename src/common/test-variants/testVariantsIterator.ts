@@ -6,7 +6,7 @@ import type {
 
 /** Creates test variants iterator with limiting capabilities */
 export function testVariantsIterator<Args extends Obj>(
-  options: TestVariantsIteratorOptions<Args>,
+  _options: TestVariantsIteratorOptions<Args>,
 ): TestVariantsIterator<Args> {
-  // TODO
+  throw new Error('Not implemented')
 }
