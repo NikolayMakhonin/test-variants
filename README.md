@@ -85,8 +85,8 @@ const result = await testVariants({
   log: boolean | {
     // message about test start
     start: boolean,           // default: true
-    // every N milliseconds shows progress info and statistics
-    progressInterval: number, // default: 5000 (milliseconds)
+    // every N milliseconds shows progress info and statistics; false/0 to disable
+    progress: number | false, // default: 5000 (milliseconds)
     // message about test completion
     completed: boolean,       // default: true
     // full error log with stack trace
@@ -95,6 +95,8 @@ const result = await testVariants({
     modeChange: boolean,      // default: true
     // debug logging for internal behavior
     debug: boolean,           // default: false
+    // custom log function; receives log type and formatted message
+    func: (type: 'start' | 'progress' | 'completed' | 'error' | 'modeChange' | 'debug', message: string) => void,
   },
 
   // for aborting async operations inside the test

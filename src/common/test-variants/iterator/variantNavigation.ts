@@ -56,29 +56,28 @@ export function getArgValuesMaxIndexExclusive(
   return Math.min(argLimit + 1, valuesLen)
 }
 
-/** Reset iteration position to beginning (for `forward` mode) */
+/** Reset iteration position to beginning (for `forward` mode); returns true if valid position exists */
 export function resetVariantNavigationToStart<Args extends Obj>(
   state: VariantNavigationState<Args>,
   templates: TestVariantsTemplatesWithExtra<Args, any>,
   argsKeys: (keyof Args)[],
+  limitArgOnError?: null | boolean | LimitArgOnError,
   equals?: null | Equals,
-): void {
+): boolean {
   const argsKeysLength = argsKeys.length
+  if (argsKeysLength <= 0) {
+    return false
+  }
   state.attemptIndex = 0
   for (let i = 0; i < argsKeysLength; i++) {
     state.indexes[i] = -1
     state.argValues[i] = []
-    // high performance way to delete property
+    // high performance alternative to delete property
     state.args[argsKeys[i]] = void 0 as any
   }
-  if (argsKeysLength > 0) {
-    state.argValues[0] = calcArgValues(
-      templates,
-      state.args,
-      argsKeys[0],
-      equals,
-    )
-  }
+  state.argValues[0] = calcArgValues(templates, state.args, argsKeys[0], equals)
+  const maxIndex = getArgValuesMaxIndexExclusive(state, 0)
+  return maxIndex > 0
 }
 
 /** Reset iteration position to end (for `backward` mode); returns true if valid position exists */
@@ -86,15 +85,21 @@ export function resetVariantNavigationToEnd<Args extends Obj>(
   state: VariantNavigationState<Args>,
   templates: TestVariantsTemplatesWithExtra<Args, any>,
   argsKeys: (keyof Args)[],
+  limitArgOnError?: null | boolean | LimitArgOnError,
   equals?: null | Equals,
 ): boolean {
   const keysCount = argsKeys.length
+  if (keysCount <= 0) {
+    return false
+  }
+
   state.attemptIndex = 0
   for (let i = 0; i < keysCount; i++) {
-    // high performance way to delete property
+    // high performance alternative to delete property
     state.args[argsKeys[i]] = void 0 as any
   }
-  // Set each arg to its max value within limits
+
+  // Set all positions to their limit value (error boundary)
   for (let i = 0; i < keysCount; i++) {
     state.argValues[i] = calcArgValues(
       templates,
@@ -109,11 +114,20 @@ export function resetVariantNavigationToEnd<Args extends Obj>(
     state.indexes[i] = maxIndex
     state.args[argsKeys[i]] = state.argValues[i][maxIndex]
   }
-  return true
+
+  // Retreat to position strictly below error (respects limitArgOnError for subsequent positions)
+  return retreatVariantNavigation(
+    state,
+    templates,
+    argsKeys,
+    limitArgOnError,
+    equals,
+  )
 }
 
 export function isVariantNavigationAtStart<Args extends Obj>(
   state: VariantNavigationState<Args>,
+  limitArgOnError?: null | boolean | LimitArgOnError,
 ): boolean {
   for (let i = 0, len = state.indexes.length; i < len; i++) {
     if (state.indexes[i] > 0) {
@@ -123,16 +137,25 @@ export function isVariantNavigationAtStart<Args extends Obj>(
   return true
 }
 
-export function isVariantNavigationAtEndOrBeyond<Args extends Obj>(
+export function isVariantNavigationBeyondEnd<Args extends Obj>(
   state: VariantNavigationState<Args>,
+  limitArgOnError?: null | boolean | LimitArgOnError,
 ): boolean {
+  let belowMax = false
   for (let i = 0, len = state.indexes.length; i < len; i++) {
-    const maxIndex = getArgValuesMaxIndexExclusive(state, i) - 1
+    let maxIndex: number
+    if (!belowMax || limitArgOnError) {
+      maxIndex = getArgValuesMaxIndexExclusive(state, i) - 1
+    } else {
+      maxIndex = state.argValues[i].length - 1
+    }
     if (state.indexes[i] < maxIndex) {
-      return false
+      belowMax = true
+    } else if (state.indexes[i] > maxIndex) {
+      return true
     }
   }
-  return true
+  return !belowMax
 }
 
 /** Advance to next variant in cartesian product; returns true if successful */
@@ -140,18 +163,32 @@ export function advanceVariantNavigation<Args extends Obj>(
   state: VariantNavigationState<Args>,
   templates: TestVariantsTemplatesWithExtra<Args, any>,
   keys: (keyof Args)[],
+  limitArgOnError?: null | boolean | LimitArgOnError,
   equals?: null | Equals,
 ): boolean {
   const keysCount = keys.length
   for (let keyIndex = keysCount - 1; keyIndex >= 0; keyIndex--) {
     const valueIndex = state.indexes[keyIndex] + 1
-    const maxIndex = getArgValuesMaxIndexExclusive(state, keyIndex)
+
+    let belowMax = !isVariantNavigationBeyondEnd(state, limitArgOnError)
+
+    const maxIndex = belowMax
+      ? state.argValues[keyIndex].length
+      : getArgValuesMaxIndexExclusive(state, keyIndex)
+
     if (valueIndex < maxIndex) {
       state.indexes[keyIndex] = valueIndex
       state.args[keys[keyIndex]] = state.argValues[keyIndex][valueIndex]
+
+      // Update belowMaxSoFar for subsequent keys
+      if (!belowMax && !limitArgOnError) {
+        belowMax =
+          valueIndex < getArgValuesMaxIndexExclusive(state, keyIndex) - 1
+      }
+
       // Clear subsequent keys from args before calculating their template values
       for (let i = keyIndex + 1; i < keysCount; i++) {
-        // high performance way to delete property
+        // high performance alternative to delete property
         state.args[keys[i]] = void 0 as any
       }
       for (keyIndex++; keyIndex < keysCount; keyIndex++) {
@@ -161,7 +198,9 @@ export function advanceVariantNavigation<Args extends Obj>(
           keys[keyIndex],
           equals,
         )
-        const keyMaxIndex = getArgValuesMaxIndexExclusive(state, keyIndex)
+        const keyMaxIndex = belowMax
+          ? state.argValues[keyIndex].length
+          : getArgValuesMaxIndexExclusive(state, keyIndex)
         if (keyMaxIndex <= 0) {
           break
         }
@@ -180,33 +219,58 @@ export function advanceVariantNavigation<Args extends Obj>(
 export function retreatVariantNavigation<Args extends Obj>(
   state: VariantNavigationState<Args>,
   templates: TestVariantsTemplatesWithExtra<Args, any>,
-  keys: (keyof Args)[],
+  argsKeys: (keyof Args)[],
+  limitArgOnError?: null | boolean | LimitArgOnError,
   equals?: null | Equals,
 ): boolean {
-  const keysCount = keys.length
+  if (isVariantNavigationBeyondEnd(state, limitArgOnError)) {
+    return resetVariantNavigationToEnd(
+      state,
+      templates,
+      argsKeys,
+      limitArgOnError,
+      equals,
+    )
+  }
+
+  const keysCount = argsKeys.length
   for (let keyIndex = keysCount - 1; keyIndex >= 0; keyIndex--) {
     const valueIndex = state.indexes[keyIndex] - 1
     if (valueIndex >= 0) {
       state.indexes[keyIndex] = valueIndex
-      state.args[keys[keyIndex]] = state.argValues[keyIndex][valueIndex]
+      state.args[argsKeys[keyIndex]] = state.argValues[keyIndex][valueIndex]
+
+      // Check if we're now below max (for lexicographic constraint)
+      let belowMaxSoFar = false
+      if (!limitArgOnError) {
+        for (let i = 0; i <= keyIndex; i++) {
+          if (state.indexes[i] < getArgValuesMaxIndexExclusive(state, i) - 1) {
+            belowMaxSoFar = true
+            break
+          }
+        }
+      }
+
       // Set subsequent keys to their max values
       for (let i = keyIndex + 1; i < keysCount; i++) {
-        // high performance way to delete property
-        state.args[keys[i]] = void 0 as any
+        // high performance alternative to delete property
+        state.args[argsKeys[i]] = void 0 as any
       }
       for (keyIndex++; keyIndex < keysCount; keyIndex++) {
         state.argValues[keyIndex] = calcArgValues(
           templates,
           state.args,
-          keys[keyIndex],
+          argsKeys[keyIndex],
           equals,
         )
-        const maxIndex = getArgValuesMaxIndexExclusive(state, keyIndex) - 1
+        const maxIndex = belowMaxSoFar
+          ? state.argValues[keyIndex].length - 1
+          : getArgValuesMaxIndexExclusive(state, keyIndex) - 1
         if (maxIndex < 0) {
           break
         }
         state.indexes[keyIndex] = maxIndex
-        state.args[keys[keyIndex]] = state.argValues[keyIndex][maxIndex]
+        state.args[argsKeys[keyIndex]] = state.argValues[keyIndex][maxIndex]
       }
       if (keyIndex >= keysCount) {
         return true
@@ -272,7 +336,7 @@ export function randomPickVariantNavigation<Args extends Obj>(
   }
 
   if (!belowMax) {
-    return randomPickVariantNavigation(
+    return retreatVariantNavigation(
       state,
       templates,
       keys,

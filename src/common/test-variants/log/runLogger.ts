@@ -109,8 +109,10 @@ export function logProgress<Args extends Obj>(
         const speedForRemaining = adjustedDuration / adjustedCount
         const remainingTime = (max - variants.index) * speedForRemaining
         estimatedCycleTime = cycleElapsed + remainingTime
-      } else {
+      } else if (variants.index > 0) {
         estimatedCycleTime = (cycleElapsed * max) / variants.index
+      } else {
+        estimatedCycleTime = 0
       }
       logMsg += `/${max} (${formatDuration(cycleElapsed)}/${formatDuration(estimatedCycleTime)})`
     } else {
