@@ -89,5 +89,5 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   logCompleted(logOpts, timeController, state)
   await garbageCollect(1)
 
-  return createRunResult(state, variants, findBestError, dontThrowIfError)
+  return createRunResult(state, variants, dontThrowIfError)
 }

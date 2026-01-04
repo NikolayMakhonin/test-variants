@@ -40,7 +40,7 @@ export function logCompleted(
     return
   }
   const totalElapsed = timeController.now() - state.startTime
-  let logMsg = `[test-variants] end, tests: ${state.iterations} (${formatDuration(totalElapsed)}), async: ${state.iterationsAsync}`
+  let logMsg = `[test-variants] end, tests: ${state.tests} (${formatDuration(totalElapsed)}), async: ${state.iterationsAsync}`
   if (state.startMemory != null) {
     const memory = getMemoryUsage()
     if (memory != null) {
@@ -120,7 +120,7 @@ export function logProgress<Args extends Obj>(
     logMsg += `variant: ${variants.index} (${formatDuration(cycleElapsed)})`
   }
 
-  logMsg += `, tests: ${state.iterations} (${formatDuration(totalElapsed)}), async: ${state.iterationsAsync}`
+  logMsg += `, tests: ${state.tests} (${formatDuration(totalElapsed)}), async: ${state.iterationsAsync}`
 
   if (state.prevLogMemory != null) {
     const memory = getMemoryUsage()

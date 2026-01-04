@@ -14,9 +14,10 @@ function extendTemplateWithValue<Args extends Obj>(
   keyIndex: number,
   equals?: null | Equals,
 ): void {
-  const value = addingArgs[keys[keyIndex]]
+  const key = keys[keyIndex]
+  const value = addingArgs[key]
 
-  const template = templates.templates[keyIndex] as any[]
+  const template = templates.templates[key] as any[]
   if (typeof template !== 'function') {
     if (findValueIndex(template, value, equals) >= 0) {
       return
@@ -29,12 +30,12 @@ function extendTemplateWithValue<Args extends Obj>(
     return
   }
 
-  const extra = templates.extra[keyIndex]
+  const extra = templates.extra[key]
   if (findValueIndex(extra, value, equals) >= 0) {
     return
   }
 
-  extra[keyIndex].push(value)
+  extra.push(value)
 }
 
 /** Extend templates with all missing values from saved args */

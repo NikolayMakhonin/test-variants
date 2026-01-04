@@ -168,9 +168,8 @@ const result = await testVariants({
   // and tests run faster
   findBestError: {
     equals: (a, b) => boolean,
-    // Additional constraint on top of the main lexicographic one
-    // Specifies that each argument value must not exceed
-    // the argument value of the last variant that caused an error
+    // Extra per-arg constraint (does NOT replace lexicographic, both apply):
+    // each arg[i] <= errorArg[i]
     limitArgOnError: boolean | Function,  // default: false
     limitArgOnError: true,                // rule applies to all arguments
     // Custom rule, whether to limit argument value

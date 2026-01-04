@@ -29,7 +29,7 @@ function handleInitialMode<Args extends Obj>(
     const result = onModeChange({
       mode: variants.modeConfig,
       modeIndex: variants.modeIndex,
-      tests: state.iterations,
+      tests: state.tests,
     })
     if (isPromiseLike(result)) return result
   }
@@ -58,7 +58,7 @@ function handleModeChangeIfNeeded<Args extends Obj>(
     const result = onModeChange({
       mode: variants.modeConfig,
       modeIndex: variants.modeIndex,
-      tests: state.iterations,
+      tests: state.tests,
     })
     if (isPromiseLike(result)) return result
   }
@@ -133,9 +133,11 @@ function executeSequentialTest<Args extends Obj>(
   args: ArgsWithSeed<Args>,
 ): PromiseOrValue<TestResult> {
   const { testRun, testOptions, abortControllerParallel, state } = ctx
+  const tests = state.tests
+  state.tests++
 
   try {
-    const promiseOrResult = testRun(args, state.iterations, testOptions)
+    const promiseOrResult = testRun(args, tests, testOptions)
 
     if (isPromiseLike(promiseOrResult)) {
       return promiseOrResult.then(
@@ -149,7 +151,7 @@ function executeSequentialTest<Args extends Obj>(
           return { shouldContinue: false }
         },
         err =>
-          handleSyncError(ctx, state, args, err).then(() => ({
+          handleSyncError(ctx, state, args, err, tests).then(() => ({
             shouldContinue: false,
           })),
       )
@@ -163,7 +165,7 @@ function executeSequentialTest<Args extends Obj>(
     updateStateFromResult(ctx, promiseOrResult)
     return { shouldContinue: false }
   } catch (err) {
-    return handleSyncError(ctx, state, args, err).then(() => ({
+    return handleSyncError(ctx, state, args, err, tests).then(() => ({
       shouldContinue: false,
     }))
   }
@@ -185,17 +187,14 @@ function scheduleParallelTest<Args extends Obj>(
   if (!pool) return
 
   const capturedArgs = args
-  const capturedIterations = state.iterations
+  const capturedTests = state.tests
+  state.tests++
 
   void (async () => {
     try {
       if (abortSignal?.aborted) return
 
-      let promiseOrResult = testRun(
-        capturedArgs,
-        capturedIterations,
-        testOptions,
-      )
+      let promiseOrResult = testRun(capturedArgs, capturedTests, testOptions)
       if (isPromiseLike(promiseOrResult)) {
         promiseOrResult = await promiseOrResult
       }
@@ -208,7 +207,7 @@ function scheduleParallelTest<Args extends Obj>(
 
       updateStateFromResult(ctx, promiseOrResult)
     } catch (err) {
-      handleParallelError(ctx, state, capturedArgs, err)
+      handleParallelError(ctx, state, capturedArgs, err, capturedTests)
     } finally {
       void pool.release(1)
     }

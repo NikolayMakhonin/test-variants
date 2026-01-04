@@ -2,7 +2,6 @@ import type { Obj } from '@flemist/simple-utils'
 import type {
   TestVariantsResult,
   TestVariantsBestError,
-  FindBestErrorOptions,
 } from 'src/common/test-variants/types'
 import type { TestVariantsIterator } from 'src/common/test-variants/iterator/types'
 import type { TestVariantsRunState } from './createRunState'
@@ -11,17 +10,13 @@ import type { TestVariantsRunState } from './createRunState'
 export function createRunResult<Args extends Obj>(
   state: TestVariantsRunState,
   variants: TestVariantsIterator<Args>,
-  findBestError: FindBestErrorOptions | null | undefined,
   dontThrowIfError: boolean | null | undefined,
 ): TestVariantsResult<Args> {
-  const count = variants.count ?? 0
-  const includeErrorVariant = findBestError?.includeErrorVariant
-
   const bestError: TestVariantsBestError<Args> | null = variants.limit
     ? {
         error: variants.limit.error,
         args: variants.limit.args,
-        tests: includeErrorVariant ? Math.max(0, count - 1) : count,
+        tests: variants.limit.tests,
       }
     : null
 

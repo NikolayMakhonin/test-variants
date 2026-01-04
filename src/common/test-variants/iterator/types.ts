@@ -15,6 +15,8 @@ export type ModeType = ModeConfig['mode']
 export type TestVariantsIteratorLimit<Args extends Obj> = {
   args: ArgsWithSeed<Args>
   error?: unknown
+  /** Number of tests run when this limit was applied */
+  tests: number
 }
 
 /** Options for addLimit method */
@@ -22,6 +24,8 @@ export type AddLimitOptions<Args extends Obj> = {
   args?: null | ArgsWithSeed<Args>
   index?: null | number
   error?: unknown
+  /** Number of tests run when this limit is applied */
+  tests?: null | number
 }
 
 /** Options for creating test variants iterator */

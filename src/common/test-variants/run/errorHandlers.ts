@@ -9,12 +9,13 @@ export async function handleSyncError<Args extends Obj>(
   state: TestVariantsRunState,
   args: ArgsWithSeed<Args>,
   error: unknown,
+  tests: number,
 ): Promise<void> {
   const { variants, config } = ctx
   const { store, findBestError } = config
 
   if (findBestError) {
-    variants.addLimit({ args, error })
+    variants.addLimit({ args, error, tests })
     if (store && variants.limit) {
       await store.save(variants.limit.args)
     }
@@ -33,12 +34,13 @@ export function handleParallelError<Args extends Obj>(
   state: TestVariantsRunState,
   args: ArgsWithSeed<Args>,
   error: unknown,
+  tests: number,
 ): void {
   const { variants, config, abortControllerParallel } = ctx
   const { store, findBestError } = config
 
   if (findBestError) {
-    variants.addLimit({ args, error })
+    variants.addLimit({ args, error, tests })
     if (store && variants.limit) {
       void store.save(variants.limit.args)
     }

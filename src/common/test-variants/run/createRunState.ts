@@ -13,6 +13,9 @@ export type TestVariantsRunState = {
 
   // Iteration state
   debug: boolean
+  /** Number of test function calls */
+  tests: number
+  /** Sum of iterationsSync + iterationsAsync from test results */
   iterations: number
   iterationsAsync: number
 
@@ -47,6 +50,7 @@ export function createRunState(
     cycleStartTime: startTime,
     startMemory,
     debug: false,
+    tests: 0,
     iterations: 0,
     iterationsAsync: 0,
     prevLogTime: startTime,
