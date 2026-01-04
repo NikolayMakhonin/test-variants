@@ -12,7 +12,8 @@ export type TestVariantsRunState = {
   startMemory: number | null
 
   // Iteration state
-  debug: boolean
+  /** Few repeats of error variant if JS debugger is attached */
+  debugMode: boolean
   /** Number of test function calls */
   tests: number
   /** Sum of iterationsSync + iterationsAsync from test results */
@@ -49,7 +50,7 @@ export function createRunState(
     startTime,
     cycleStartTime: startTime,
     startMemory,
-    debug: false,
+    debugMode: false,
     tests: 0,
     iterations: 0,
     iterationsAsync: 0,

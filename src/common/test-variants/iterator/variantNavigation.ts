@@ -61,7 +61,6 @@ export function resetVariantNavigationToStart<Args extends Obj>(
   state: VariantNavigationState<Args>,
   templates: TestVariantsTemplatesWithExtra<Args, any>,
   argsKeys: (keyof Args)[],
-  limitArgOnError?: null | boolean | LimitArgOnError,
   equals?: null | Equals,
 ): boolean {
   const argsKeysLength = argsKeys.length
@@ -127,7 +126,6 @@ export function resetVariantNavigationToEnd<Args extends Obj>(
 
 export function isVariantNavigationAtStart<Args extends Obj>(
   state: VariantNavigationState<Args>,
-  limitArgOnError?: null | boolean | LimitArgOnError,
 ): boolean {
   for (let i = 0, len = state.indexes.length; i < len; i++) {
     if (state.indexes[i] > 0) {
@@ -137,7 +135,11 @@ export function isVariantNavigationAtStart<Args extends Obj>(
   return true
 }
 
-export function isVariantNavigationBeyondEnd<Args extends Obj>(
+/**
+ * Check if any position is strictly below its max
+ * When limitArgOnError is true, also check that each argument not exceeds its max.
+ */
+export function isVariantNavigationBelowMax<Args extends Obj>(
   state: VariantNavigationState<Args>,
   limitArgOnError?: null | boolean | LimitArgOnError,
 ): boolean {
@@ -149,13 +151,14 @@ export function isVariantNavigationBeyondEnd<Args extends Obj>(
     } else {
       maxIndex = state.argValues[i].length - 1
     }
+    if (state.indexes[i] > maxIndex) {
+      return false
+    }
     if (state.indexes[i] < maxIndex) {
       belowMax = true
-    } else if (state.indexes[i] > maxIndex) {
-      return true
     }
   }
-  return !belowMax
+  return belowMax
 }
 
 /** Advance to next variant in cartesian product; returns true if successful */
@@ -170,7 +173,7 @@ export function advanceVariantNavigation<Args extends Obj>(
   for (let keyIndex = keysCount - 1; keyIndex >= 0; keyIndex--) {
     const valueIndex = state.indexes[keyIndex] + 1
 
-    let belowMax = !isVariantNavigationBeyondEnd(state, limitArgOnError)
+    let belowMax = isVariantNavigationBelowMax(state, limitArgOnError)
 
     const maxIndex = belowMax
       ? state.argValues[keyIndex].length

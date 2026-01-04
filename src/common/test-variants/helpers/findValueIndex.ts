@@ -4,7 +4,7 @@ export function findValueIndex<T>(
   value: T,
   equals?: null | ((a: T, b: T) => boolean),
 ): number {
-  for (let i = 0; i < values.length; i++) {
+  for (let i = 0, len = values.length; i < len; i++) {
     if (equals ? equals(values[i], value) : values[i] === value) {
       return i
     }

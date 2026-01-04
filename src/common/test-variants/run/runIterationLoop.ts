@@ -143,10 +143,11 @@ function executeSequentialTest<Args extends Obj>(
       return promiseOrResult.then(
         result => {
           if (!result) {
-            state.debug = true
+            state.debugMode = true
             abortControllerParallel.abort()
             return { shouldContinue: true }
           }
+          state.debugMode = false
           updateStateFromResult(ctx, result)
           return { shouldContinue: false }
         },
@@ -158,10 +159,11 @@ function executeSequentialTest<Args extends Obj>(
     }
 
     if (!promiseOrResult) {
-      state.debug = true
+      state.debugMode = true
       abortControllerParallel.abort()
       return { shouldContinue: true }
     }
+    state.debugMode = false
     updateStateFromResult(ctx, promiseOrResult)
     return { shouldContinue: false }
   } catch (err) {
@@ -200,11 +202,12 @@ function scheduleParallelTest<Args extends Obj>(
       }
 
       if (!promiseOrResult) {
-        state.debug = true
+        state.debugMode = true
         abortControllerParallel.abort()
         return
       }
 
+      state.debugMode = false
       updateStateFromResult(ctx, promiseOrResult)
     } catch (err) {
       handleParallelError(ctx, state, capturedArgs, err, capturedTests)
@@ -262,7 +265,7 @@ export async function runIterationLoop<Args extends Obj>(
     let args: ArgsWithSeed<Args> = null!
 
     while (!abortSignalExternal?.aborted) {
-      if (!state.debug) {
+      if (!state.debugMode) {
         const nextArgs = variants.next()
         if (nextArgs == null) break
         args = nextArgs

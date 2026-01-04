@@ -19,7 +19,7 @@ export async function handleSyncError<Args extends Obj>(
     if (store && variants.limit) {
       await store.save(variants.limit.args)
     }
-    state.debug = false
+    state.debugMode = false
   } else {
     if (store) {
       await store.save(args)
@@ -44,7 +44,7 @@ export function handleParallelError<Args extends Obj>(
     if (store && variants.limit) {
       void store.save(variants.limit.args)
     }
-    state.debug = false
+    state.debugMode = false
     if (!abortControllerParallel.signal.aborted) {
       abortControllerParallel.abort(null)
     }
