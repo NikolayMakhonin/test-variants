@@ -231,7 +231,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
                 max = prevCycleVariantsCount
               }
             }
-            if (max != null && variants.index > 0) {
+            if (max != null) {
               let estimatedCycleTime: number
               if (
                 prevCycleDuration != null &&
