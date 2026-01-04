@@ -51,10 +51,6 @@ export class OnModeChangeInvariant {
     }
   }
 
-  getModeChangeCount(): number {
-    return this.modeChangeCount
-  }
-
   validateFinal(callCount: number): void {
     if (callCount > 0 && this.modeChangeCount === 0) {
       throw new Error(

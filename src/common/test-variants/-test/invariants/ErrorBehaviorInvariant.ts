@@ -10,9 +10,8 @@ import { TestArgs } from 'src/common/test-variants/-test/types'
  * findBestError and dontThrowIfError options.
  *
  * ## Validated Rules
- * - When error expected and findBestError.dontThrowIfError=true: no error thrown, bestError populated
- * - When error expected and findBestError enabled: error thrown after finding best
- * - When error expected without findBestError: error thrown immediately
+ * - When error expected and dontThrowIfError=true: no error thrown, bestError populated
+ * - When error expected and dontThrowIfError=false: error thrown, matches lastError
  * - When no error expected: no error thrown, bestError is null
  */
 export class ErrorBehaviorInvariant {

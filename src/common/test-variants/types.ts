@@ -65,7 +65,7 @@ export type LimitArgOnErrorOptions = {
   /** Arg value's index in template values array */
   valueIndex: number
   /** Current template values array for this arg */
-  values: any[]
+  values: readonly any[]
   /** Current max value index limit for this arg; null if no limit */
   maxValueIndex: number | null
 }

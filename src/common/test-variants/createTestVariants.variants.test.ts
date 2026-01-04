@@ -17,7 +17,7 @@ describe(
       await testVariants({
         argType: ['static', 'dynamic', null],
         retriesToErrorMax: [0, 1, 2],
-        valueType: ['primitive', 'object', null],
+        argValueType: ['primitive', 'object', null],
         modeType: ['forward', 'backward', 'random', null],
         modesCountMax: [1, 2, 3],
         findBestError: [false, true, null],
@@ -30,20 +30,22 @@ describe(
         dontThrowIfError: ({ findBestError }) =>
           findBestError !== false ? [false, true, null] : [true],
         cyclesMax: [0, 1, 2],
+        modeCyclesMax: [0, 1, 2],
+        modeAttemptsMax: [0, 1, 2],
         withSeed: [false, true, null],
         attemptsPerVariantMax: [0, 1, 2],
-        forwardModeCyclesMax: [0, 1, 2],
         argsCountMax: [0, 1, 2, 3],
-        valuesPerArgMax: [0, 1, 2],
-        valuesCountMax: [1, 5],
+        argValuesCountMax: [0, 1, 2],
+        argValueMax: [1, 5],
         parallel: [false, 1, 4, 8, true, null],
-        errorPosition: ['none', 'first', 'last', null],
+        errorVariantIndex: ['none', 0, 'last', 'after-last', null],
         async: [false, true, null],
         delay: [false, true, null],
+        withLog: [false, true, null],
       })({
         limitTime,
         getSeed: getRandomSeed,
-        cycles: 1,
+        cycles: 1e9,
         findBestError: {
           limitArgOnError: true,
         },
@@ -53,22 +55,22 @@ describe(
           // Never use it here. findBestError with limitArgOnError is completely enough here.
           useToFindBestError: false,
         },
-        iterationModes: [
-          {
-            mode: 'forward',
-            limitTests: 10,
-          },
-          {
-            mode: 'random',
-            limitTests: 100,
-          },
-          {
-            mode: 'backward',
-            limitTests: 1,
-            attemptsPerVariant: 10,
-          },
-        ],
-        parallel: 10,
+        // iterationModes: [
+        //   {
+        //     mode: 'forward',
+        //     limitTests: 10,
+        //   },
+        //   {
+        //     mode: 'random',
+        //     limitTests: 100,
+        //   },
+        //   {
+        //     mode: 'backward',
+        //     limitTests: 1,
+        //     attemptsPerVariant: 10,
+        //   },
+        // ],
+        parallel: 1,
       })
 
       // Validate stress test execution time

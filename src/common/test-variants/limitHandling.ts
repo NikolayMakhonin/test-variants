@@ -23,7 +23,7 @@ export type LimitState<Args extends Obj> = NavigationState<Args> & {
 
 /** Find index of value in array; returns -1 if not found */
 export function findValueIndex<T>(
-  values: T[],
+  values: readonly T[],
   value: T,
   equals?: null | ((a: T, b: T) => boolean),
 ): number {

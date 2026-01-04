@@ -5,9 +5,10 @@
  * Active when callCount >= 2. Validates concurrency matches configuration.
  *
  * ## Validated Rules
+ * - Concurrent calls never exceed parallelLimit
+ * - All calls complete (concurrentCalls === 0) after test execution
  * - Sync-only tests (isAsync=false) never have parallel execution
  * - With parallel > 1 and async calls, actual parallelism occurs
- * - Concurrent calls never exceed parallelLimit
  */
 export class ParallelInvariant {
   private concurrentCalls = 0
@@ -42,6 +43,11 @@ export class ParallelInvariant {
    * @param isAsync - Whether async execution was used (null = mixed)
    */
   validateFinal(callCount: number, isAsync: boolean | null): void {
+    if (this.concurrentCalls !== 0) {
+      throw new Error(
+        `[test][ParallelInvariant] concurrentCalls ${this.concurrentCalls} !== 0 after completion`,
+      )
+    }
     if (callCount >= 2) {
       if (isAsync === false) {
         if (this.maxConcurrentCalls > 1) {

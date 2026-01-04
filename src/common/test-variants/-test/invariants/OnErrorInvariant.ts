@@ -15,6 +15,8 @@ import { TestError } from 'src/common/test-variants/-test/helpers/TestError'
  * - args parameter matches the error variant args
  * - tests parameter matches callCount
  * - error parameter matches the thrown error
+ * - If error occurred, onError was called at least once
+ * - If no error occurred, onError was never called
  */
 export class OnErrorInvariant {
   private onErrorCount = 0
@@ -47,6 +49,19 @@ export class OnErrorInvariant {
     if (event.error !== expectedError) {
       throw new Error(
         `[test][OnErrorInvariant] error does not match expectedError`,
+      )
+    }
+  }
+
+  validateFinal(lastError: TestError | null): void {
+    if (lastError != null && this.onErrorCount === 0) {
+      throw new Error(
+        `[test][OnErrorInvariant] error occurred but onError was not called`,
+      )
+    }
+    if (lastError == null && this.onErrorCount > 0) {
+      throw new Error(
+        `[test][OnErrorInvariant] onError called ${this.onErrorCount} times but no error occurred`,
       )
     }
   }

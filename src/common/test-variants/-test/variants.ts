@@ -165,6 +165,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   const iterationsInvariant = new IterationsInvariant(
     ITERATIONS_SYNC,
     ITERATIONS_ASYNC,
+    options.async,
   )
   const callOptionsInvariant = new CallOptionsInvariant(
     abortSignal,
@@ -183,7 +184,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   }): void {
     onErrorInvariant.onError(
       event,
-      errorVariantController.getErrorVariantArgs(),
+      errorVariantController.errorVariantArgs,
       callController.callCount,
       errorVariantController.lastError,
     )
@@ -249,6 +250,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   logInvariant.validateFinal(callCount, timeController.now(), lastError)
   parallelInvariant.validateFinal(callCount, options.async)
   onModeChangeInvariant.validateFinal(callCount)
+  onErrorInvariant.validateFinal(lastError)
   callCountInvariant.validateFinal(callCount)
 
   abortController.abort()
