@@ -1,6 +1,10 @@
 import type { Template, TemplateArray, TestArgs } from '../types'
 
-export type ForEachVariantCallback = (args: TestArgs, index: number) => void
+/** @return true to break */
+export type ForEachVariantCallback = (
+  args: TestArgs,
+  index: number,
+) => boolean | null | undefined | void
 
 export function forEachVariant(
   template: Template,
@@ -9,10 +13,18 @@ export function forEachVariant(
 ): number {
   const keysLen = argKeys.length
   let index = 0
+  let stop = false
 
   function iterate(keyIndex: number, args: TestArgs): void {
+    if (stop) {
+      return
+    }
     if (keyIndex >= keysLen) {
-      callback?.(args, index)
+      const result = callback?.(args, index)
+      if (result === true) {
+        stop = true
+        return
+      }
       index++
       return
     }
@@ -28,19 +40,6 @@ export function forEachVariant(
   }
 
   iterate(0, {})
-  return index
-}
 
-export function getVariantArgsByIndex(
-  template: Template,
-  argKeys: string[],
-  targetIndex: number,
-): TestArgs | null {
-  let result: TestArgs | null = null
-  forEachVariant(template, argKeys, (args, index) => {
-    if (index === targetIndex) {
-      result = { ...args }
-    }
-  })
-  return Object.freeze(result)
+  return index
 }

@@ -18,7 +18,7 @@ import type {
   ModeConfig,
   TestVariantsLogType,
   TestVariantsRunOptions,
-  TestVariantsRunResult,
+  TestVariantsResult,
 } from '../types'
 
 // region Log Capture
@@ -235,7 +235,7 @@ type VerificationParams = {
 
 /** Verify universal invariants that hold for ALL configurations */
 function verifyInvariants(
-  result: TestVariantsRunResult<TestArgs>,
+  result: TestVariantsResult<TestArgs>,
   state: VerificationState,
   params: VerificationParams,
 ): void {
@@ -362,7 +362,7 @@ function verifyInvariants(
 
 /** Verify deterministic behavior for forward/backward modes without parallel */
 function verifyDeterministicBehavior(
-  result: TestVariantsRunResult<TestArgs>,
+  result: TestVariantsResult<TestArgs>,
   state: VerificationState,
   params: VerificationParams,
 ): void {

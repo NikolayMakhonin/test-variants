@@ -13,7 +13,7 @@ export {
   type FindBestErrorOptions,
   type TestVariantsLogOptions,
   type TestVariantsRunOptions,
-  type TestVariantsRunResult,
+  type TestVariantsResult,
   type TestVariantsTestOptions,
   type TestVariantsTestResult,
 } from '../common'

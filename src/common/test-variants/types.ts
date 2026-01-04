@@ -302,7 +302,7 @@ export type TestVariantsBestError<Args extends Obj> = {
 }
 
 /** Result of test variants run */
-export type TestVariantsRunResult<Args extends Obj> = {
+export type TestVariantsResult<Args extends Obj> = {
   iterations: number
   bestError: null | TestVariantsBestError<Args>
 }

@@ -1,11 +1,7 @@
-import type { ModeConfig, TestVariantsRunOptions } from 'src/common'
+import type { TestVariantsRunOptions } from 'src/common'
 import type { NumberRange } from '@flemist/simple-utils'
 import { TestArgs } from '../types'
-import { LIMIT_MAX } from '../constants'
-
-export const MODES_DEFAULT: readonly ModeConfig[] = Object.freeze([
-  { mode: 'forward' },
-])
+import { LIMIT_MAX, MODES_DEFAULT } from '../constants'
 
 export function estimateCallCount(
   variantsCount: number,

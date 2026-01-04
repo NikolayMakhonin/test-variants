@@ -1,4 +1,4 @@
-import type { FindBestErrorOptions, TestVariantsRunResult } from 'src/common'
+import type { FindBestErrorOptions, TestVariantsResult } from 'src/common'
 import { TestError } from 'src/common/test-variants/-test/helpers/TestError'
 import { TestArgs } from 'src/common/test-variants/-test/types'
 
@@ -41,7 +41,7 @@ export class ErrorBehaviorInvariant {
     callCount: number,
     thrownError: unknown,
     lastError: TestError | null,
-    result: TestVariantsRunResult<TestArgs> | null,
+    result: TestVariantsResult<TestArgs> | null,
   ): void {
     const errorExpected =
       (this.errorVariantIndex != null &&

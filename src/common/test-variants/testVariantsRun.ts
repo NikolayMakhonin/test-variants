@@ -10,7 +10,7 @@ import type {
   TestVariantsBestError,
   TestVariantsIterator,
   TestVariantsRunOptionsInternal,
-  TestVariantsRunResult,
+  TestVariantsResult,
 } from './types'
 import { timeControllerDefault } from '@flemist/time-controller'
 import {
@@ -25,7 +25,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   testRun: TestVariantsTestRun<Args>,
   variants: TestVariantsIterator<Args>,
   options?: null | TestVariantsRunOptionsInternal<Args, SavedArgs>,
-): Promise<TestVariantsRunResult<Args>> {
+): Promise<TestVariantsResult<Args>> {
   const saveErrorVariantsOptions = options?.saveErrorVariants
   const store: SaveErrorVariantsStore<Args> | null =
     saveErrorVariantsOptions && options?.createSaveErrorVariantsStore

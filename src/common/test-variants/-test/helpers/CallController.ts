@@ -29,6 +29,7 @@ export class CallController {
     this._timeController = timeController
   }
 
+  /** Use inside test func */
   call(start: () => void, end: () => void): PromiseOrValue<TestFuncResult> {
     this._callCount++
 

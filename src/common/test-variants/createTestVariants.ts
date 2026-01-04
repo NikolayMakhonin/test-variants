@@ -7,7 +7,7 @@ import type { Obj } from '@flemist/simple-utils'
 import { testVariantsIterator } from './testVariantsIterator'
 import type {
   TestVariantsRunOptionsInternal,
-  TestVariantsRunResult,
+  TestVariantsResult,
   TestVariantsTemplates,
 } from './types'
 import { resolveLogOptions } from 'src/common/test-variants/progressLogging'
@@ -26,7 +26,7 @@ export type TestVariantsTemplatesExt<
 
 export type TestVariantsCall<Args extends Obj> = <SavedArgs = Args>(
   options?: null | TestVariantsRunOptionsInternal<Args, SavedArgs>,
-) => PromiseOrValue<TestVariantsRunResult<Args>>
+) => PromiseOrValue<TestVariantsResult<Args>>
 
 export type TestVariantsSetArgs<Args extends Obj> = <ArgsExtra extends Obj>(
   args: TestVariantsTemplatesExt<Omit<Args, 'seed'>, Omit<ArgsExtra, 'seed'>>,

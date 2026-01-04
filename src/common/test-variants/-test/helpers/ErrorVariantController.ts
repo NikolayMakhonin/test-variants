@@ -8,15 +8,18 @@ import { TestError } from 'src/common/test-variants/-test/helpers/TestError'
 export class ErrorVariantController {
   private _retries = 0
   private _lastError: TestError | null = null
-  private readonly _errorVariantArgs: TestArgs | null
+  private readonly _errorVariantArgs: TestArgs | undefined | null
   private readonly _retriesToError: number
 
-  constructor(errorVariantArgs: TestArgs | null, retriesToError: number) {
+  constructor(
+    errorVariantArgs: TestArgs | null | undefined,
+    retriesToError: number,
+  ) {
     this._errorVariantArgs = errorVariantArgs
     this._retriesToError = retriesToError
   }
 
-  /** Run inside test func */
+  /** Use inside test func */
   onCall(args: TestArgs): void {
     const isErrorVariant = deepEqualJsonLike(args, this.errorVariantArgs)
     if (isErrorVariant) {
@@ -34,6 +37,6 @@ export class ErrorVariantController {
   }
 
   get errorVariantArgs(): TestArgs | null {
-    return this._errorVariantArgs
+    return this._errorVariantArgs ?? null
   }
 }

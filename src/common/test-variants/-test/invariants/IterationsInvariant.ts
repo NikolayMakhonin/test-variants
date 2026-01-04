@@ -1,4 +1,4 @@
-import type { TestVariantsRunResult } from 'src/common'
+import type { TestVariantsResult } from 'src/common'
 import { TestArgs } from 'src/common/test-variants/-test/types'
 
 /**
@@ -35,7 +35,7 @@ export class IterationsInvariant {
    */
   validate(
     callCount: number,
-    result: TestVariantsRunResult<TestArgs> | null,
+    result: TestVariantsResult<TestArgs> | null,
   ): void {
     if (result == null) {
       return

@@ -4,38 +4,37 @@ import type { NumberRange } from '@flemist/simple-utils'
  * Validates call count bounds
  *
  * ## Applicability
- * Active for all test executions. Validates every test function call.
+ * - Every test function call
  *
- * ## Validated Rules
- * - callCount never exceeds callCountMax
- * - callCount is at least callCountMin after test completion
+ * ## Invariants
+ * - callCount never exceeds callCountRange
  */
 export class CallCountInvariant {
-  private readonly callCountMin: number
-  private readonly callCountMax: number
+  private readonly _callCountRange: NumberRange
 
   constructor(callCountRange: NumberRange) {
-    this.callCountMin = callCountRange[0]
-    this.callCountMax = callCountRange[1]
+    this._callCountRange = callCountRange
   }
 
+  /** Use inside test func */
   onCall(callCount: number): void {
-    if (callCount > this.callCountMax) {
+    if (callCount > this._callCountRange[1]) {
       throw new Error(
-        `[test][CallCountInvariant] callCount ${callCount} exceeded max ${this.callCountMax}`,
+        `[test][CallCountInvariant] callCount ${callCount} exceeded max ${this._callCountRange[1]}`,
       )
     }
   }
 
+  /** Run after test variants completion */
   validateFinal(callCount: number): void {
-    if (callCount < this.callCountMin) {
+    if (callCount < this._callCountRange[0]) {
       throw new Error(
-        `[test][CallCountInvariant] callCount ${callCount} < min ${this.callCountMin}`,
+        `[test][CallCountInvariant] callCount ${callCount} < min ${this._callCountRange[0]}`,
       )
     }
-    if (callCount > this.callCountMax) {
+    if (callCount > this._callCountRange[1]) {
       throw new Error(
-        `[test][CallCountInvariant] callCount ${callCount} > max ${this.callCountMax}`,
+        `[test][CallCountInvariant] callCount ${callCount} > max ${this._callCountRange[1]}`,
       )
     }
   }
