@@ -57,10 +57,8 @@
  */
 
 import { createTestVariants } from '#this'
-import { formatAny, Random } from '@flemist/simple-utils'
+import { Random } from '@flemist/simple-utils'
 import type { ModeChangeEvent, TestVariantsLogType } from '../types'
-import { AbortControllerFast } from '@flemist/abort-controller-fast'
-import { TimeControllerMock } from '@flemist/time-controller'
 import { isLogEnabled, runWithLogs } from './log'
 import { StressTestArgs, TestArgs } from './types'
 import { deepFreezeJsonLike } from './helpers/deepFreezeJsonLike'
@@ -120,10 +118,6 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
 
   // endregion
 
-  const abortController = new AbortControllerFast()
-  const abortSignal = abortController.signal
-  const timeController = new TimeControllerMock()
-
   const callCountRange = estimateCallCount(variantsCount, runOptions)
   // const _iterationModes = runOptions.iterationModes ?? MODES_DEFAULT
   // const modeChangesRange = estimateModeChanges(
@@ -131,13 +125,26 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   //   callCountRange[1],
   // )
 
+  if (isLogEnabled()) {
+    log('<template>')
+    log(template)
+    log('</template>')
+    log('<runOptions>')
+    log(runOptions)
+    log('</runOptions>')
+    log('<expected>')
+    log('retriesToError: ', retriesToError)
+    log('errorVariantIndex: ', errorVariantIndex)
+    log('variants: ', variants)
+    log('</expected>')
+    log('<estimation>')
+    log('callCountRange: ', callCountRange)
+    // log('modeChangesRange: ', modeChangesRange)
+    log('</estimation>')
+  }
+
   // Initialize controllers
-  const callController = new CallController(
-    options.async,
-    options.delay,
-    abortSignal,
-    timeController,
-  )
+  const callController = new CallController(options.async, options.delay)
   const errorVariantController = new ErrorVariantController(
     variants.error?.args,
     retriesToError,
@@ -217,26 +224,26 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   })
 
   const { result, thrownError } = await runWithTimeController(
-    timeController,
+    callController.timeController,
     () =>
       testFunc(template)({
         ...runOptions,
-        abortSignal,
-        timeController,
+        abortSignal: callController.abortSignal,
+        timeController: callController.timeController,
       }),
   )
 
   if (isLogEnabled()) {
     if (result != null) {
       log('<result>')
-      log(formatAny(result))
+      log(result)
       log('</result>')
     } else {
       log('<noResult/>')
     }
     if (thrownError) {
       log('<thrownError>')
-      log(formatAny(thrownError))
+      log(thrownError)
       log('</thrownError>')
     } else {
       log('<noThrownError/>')
@@ -253,9 +260,9 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   // parallelInvariant.validateFinal(callCount, options.async)
   // onModeChangeInvariant.validateFinal(callCount)
   // onErrorInvariant.validateFinal(lastError)
-  callCountInvariant.validateFinal(callCount)
+  callCountInvariant.validateFinal(callCount, thrownError != null)
 
-  abortController.abort()
+  callController.finalize()
 }
 
 export const testVariants = createTestVariants(

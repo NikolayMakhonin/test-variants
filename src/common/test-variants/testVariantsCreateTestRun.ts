@@ -75,8 +75,8 @@ export function testVariantsCreateTestRun<Args extends Obj>(
     // and resumes (time elapsed > 50ms), we return without throwing,
     // causing testVariantsRun to repeat the same variant.
     const time0 = Date.now()
-    // eslint-disable-next-line no-debugger
-    debugger
+
+    // debugger
     if (Date.now() - time0 > 50 && debugIteration < 5) {
       logOpts.func(
         'debug',
