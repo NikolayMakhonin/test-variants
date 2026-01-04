@@ -26,7 +26,7 @@ export class ParallelInvariant {
     }
     if (this.concurrentCalls > this.parallelLimit) {
       throw new Error(
-        `testFunc: concurrent calls ${this.concurrentCalls} exceeded parallel limit ${this.parallelLimit}`,
+        `[test][ParallelInvariant] concurrentCalls ${this.concurrentCalls} exceeded limit ${this.parallelLimit}`,
       )
     }
   }
@@ -46,13 +46,13 @@ export class ParallelInvariant {
       if (isAsync === false) {
         if (this.maxConcurrentCalls > 1) {
           throw new Error(
-            `Sync tests should not have parallel execution but maxConcurrentCalls=${this.maxConcurrentCalls}`,
+            `[test][ParallelInvariant] sync tests should not have parallel but maxConcurrentCalls=${this.maxConcurrentCalls}`,
           )
         }
       } else if (this.parallelLimit > 1) {
         if (this.maxConcurrentCalls < 2) {
           throw new Error(
-            `Parallel execution expected (parallel=${this.parallelLimit}, calls=${callCount}) but maxConcurrentCalls=${this.maxConcurrentCalls}`,
+            `[test][ParallelInvariant] parallel expected (limit=${this.parallelLimit}, calls=${callCount}) but maxConcurrentCalls=${this.maxConcurrentCalls}`,
           )
         }
       }

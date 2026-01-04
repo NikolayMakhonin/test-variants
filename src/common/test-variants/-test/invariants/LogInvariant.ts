@@ -1,8 +1,8 @@
-import type { ModeConfig, TestVariantsLogOptions } from 'src/common'
+import type { TestVariantsLogOptions } from 'src/common'
 import type { TestVariantsLogType } from 'src/common/test-variants/types'
+import type { NumberRange } from '@flemist/simple-utils'
 import { isLogEnabled } from 'src/common/test-variants/-test/log'
 import { log } from 'src/common/helpers/log'
-import { estimateModeChanges } from 'src/common/test-variants/-test/estimations/estimateModeChanges'
 
 /**
  * Validates log callback behavior
@@ -38,13 +38,16 @@ export class LogInvariant {
   private readonly modeChangeEnabled: boolean
   private readonly errorEnabled: boolean
   private readonly debugEnabled: boolean
+  private readonly modeChangesRange: NumberRange
   private readonly getCallCount: () => number
 
   constructor(
     logOptions: TestVariantsLogOptions | boolean | undefined | null,
+    modeChangesRange: NumberRange,
     getCallCount: () => number,
   ) {
     this.logOptions = logOptions
+    this.modeChangesRange = modeChangesRange
     this.getCallCount = getCallCount
     if (typeof logOptions === 'boolean') {
       this.startEnabled = logOptions
@@ -65,18 +68,18 @@ export class LogInvariant {
 
   onLog(type: TestVariantsLogType, message: string): void {
     if (isLogEnabled()) {
-      log(`[${type}] ${message}`)
+      log(`[test][LogInvariant][onLog] type=${type} message=${message}`)
     }
     if (this.logCompleted) {
-      throw new Error(`logFunc: log after completed`)
+      throw new Error(`[test][LogInvariant] log after completed`)
     }
 
     if (type === 'start') {
       if (this.logStart) {
-        throw new Error(`logFunc: start logged multiple times`)
+        throw new Error(`[test][LogInvariant] start logged multiple times`)
       }
       if (!this.startEnabled) {
-        throw new Error(`logFunc: start log when not enabled`)
+        throw new Error(`[test][LogInvariant] start log when not enabled`)
       }
       this.logStart = true
       return
@@ -84,7 +87,7 @@ export class LogInvariant {
 
     if (type === 'modeChange') {
       if (!this.modeChangeEnabled) {
-        throw new Error(`logFunc: modeChange log when not enabled`)
+        throw new Error(`[test][LogInvariant] modeChange log when not enabled`)
       }
       this.logModeChanges++
       return
@@ -92,7 +95,7 @@ export class LogInvariant {
 
     if (type === 'debug') {
       if (!this.debugEnabled) {
-        throw new Error(`logFunc: debug log when not enabled`)
+        throw new Error(`[test][LogInvariant] debug log when not enabled`)
       }
       this.logDebugs++
       return
@@ -100,22 +103,22 @@ export class LogInvariant {
 
     if (type === 'completed') {
       if (this.logCompleted) {
-        throw new Error(`logFunc: completed logged multiple times`)
+        throw new Error(`[test][LogInvariant] completed logged multiple times`)
       }
       if (!this.completedEnabled) {
-        throw new Error(`logFunc: completed log when not enabled`)
+        throw new Error(`[test][LogInvariant] completed log when not enabled`)
       }
       this.logCompleted = true
       return
     }
 
     if (this.getCallCount() === 0) {
-      throw new Error(`logFunc: log before test started`)
+      throw new Error(`[test][LogInvariant] log before test started`)
     }
 
     if (type === 'progress') {
       if (!this.progressEnabled) {
-        throw new Error(`logFunc: progress log when not enabled`)
+        throw new Error(`[test][LogInvariant] progress log when not enabled`)
       }
       this.logProgressCount++
       return
@@ -123,35 +126,33 @@ export class LogInvariant {
 
     if (type === 'error') {
       if (!this.errorEnabled) {
-        throw new Error(`logFunc: error log when not enabled`)
+        throw new Error(`[test][LogInvariant] error log when not enabled`)
       }
       this.logErrors++
       return
     }
 
-    throw new Error(`logFunc: unknown log type "${type}"`)
+    throw new Error(`[test][LogInvariant] unknown log type "${type}"`)
   }
 
   /**
    * Validates final log state after test execution
-   *
-   * ## Applicability
-   * Call after test execution completes, only when debug logging is disabled
    */
   validateFinal(
     callCount: number,
     elapsedTime: number,
-    iterationModes: readonly ModeConfig[] | undefined | null,
     lastError: Error | null,
   ): void {
     if (isLogEnabled()) {
       return
     }
     if (this.startEnabled && !this.logStart) {
-      throw new Error(`Start log expected but not logged`)
+      throw new Error(`[test][LogInvariant] start log expected but not logged`)
     }
     if (this.completedEnabled && !this.logCompleted) {
-      throw new Error(`Completed log expected but not logged`)
+      throw new Error(
+        `[test][LogInvariant] completed log expected but not logged`,
+      )
     }
     const logProgressOption =
       typeof this.logOptions === 'boolean'
@@ -168,20 +169,20 @@ export class LogInvariant {
           : Math.floor(elapsedTime / logProgressOption)
       if (this.logProgressCount !== logProgressExpected) {
         throw new Error(
-          `Progress log count ${this.logProgressCount} !== expected ${logProgressExpected}`,
+          `[test][LogInvariant] progress log count ${this.logProgressCount} !== expected ${logProgressExpected}`,
         )
       }
     }
-    if (this.modeChangeEnabled && iterationModes) {
-      const modeChangesRange = estimateModeChanges(iterationModes, callCount)
-      if (this.logModeChanges < modeChangesRange[0]) {
-        throw new Error(
-          `Mode changes log count ${this.logModeChanges} < expected minimum ${modeChangesRange[0]}`,
-        )
-      }
+    if (
+      this.modeChangeEnabled &&
+      this.logModeChanges < this.modeChangesRange[0]
+    ) {
+      throw new Error(
+        `[test][LogInvariant] mode changes log count ${this.logModeChanges} < expected minimum ${this.modeChangesRange[0]}`,
+      )
     }
     if (this.errorEnabled && lastError != null && this.logErrors <= 0) {
-      throw new Error(`Error log expected but not logged`)
+      throw new Error(`[test][LogInvariant] error log expected but not logged`)
     }
   }
 }

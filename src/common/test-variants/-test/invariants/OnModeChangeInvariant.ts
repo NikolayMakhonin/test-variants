@@ -1,5 +1,5 @@
 import type { ModeChangeEvent, ModeConfig } from 'src/common'
-import { estimateModeChanges } from 'src/common/test-variants/-test/estimations/estimateModeChanges'
+import type { NumberRange } from '@flemist/simple-utils'
 
 /**
  * Validates onModeChange callback behavior
@@ -17,39 +17,38 @@ import { estimateModeChanges } from 'src/common/test-variants/-test/estimations/
  */
 export class OnModeChangeInvariant {
   private modeChangeCount = 0
-  private lastModeIndex = -1
   private readonly iterationModes: readonly ModeConfig[]
+  private readonly modeChangesRange: NumberRange
 
-  constructor(iterationModes: readonly ModeConfig[]) {
+  constructor(
+    iterationModes: readonly ModeConfig[],
+    modeChangesRange: NumberRange,
+  ) {
     this.iterationModes = iterationModes
+    this.modeChangesRange = modeChangesRange
   }
 
-  onModeChange(event: ModeChangeEvent, expectedCallCount: number): void {
+  onModeChange(event: ModeChangeEvent, callCount: number): void {
     this.modeChangeCount++
 
-    // Validate modeIndex is in valid range
     if (event.modeIndex < 0 || event.modeIndex >= this.iterationModes.length) {
       throw new Error(
-        `onModeChange: modeIndex ${event.modeIndex} out of range [0, ${this.iterationModes.length})`,
+        `[test][OnModeChangeInvariant] modeIndex ${event.modeIndex} out of range [0, ${this.iterationModes.length})`,
       )
     }
 
-    // Validate mode matches iterationModes[modeIndex]
     const expectedMode = this.iterationModes[event.modeIndex]
     if (event.mode !== expectedMode) {
       throw new Error(
-        `onModeChange: mode does not match iterationModes[${event.modeIndex}]`,
+        `[test][OnModeChangeInvariant] mode does not match iterationModes[${event.modeIndex}]`,
       )
     }
 
-    // Validate tests count
-    if (event.tests !== expectedCallCount) {
+    if (event.tests !== callCount) {
       throw new Error(
-        `onModeChange: tests ${event.tests} !== callCount ${expectedCallCount}`,
+        `[test][OnModeChangeInvariant] tests ${event.tests} !== callCount ${callCount}`,
       )
     }
-
-    this.lastModeIndex = event.modeIndex
   }
 
   getModeChangeCount(): number {
@@ -58,12 +57,13 @@ export class OnModeChangeInvariant {
 
   validateFinal(callCount: number): void {
     if (callCount > 0 && this.modeChangeCount === 0) {
-      throw new Error(`onModeChange: expected at least one mode change`)
-    }
-    const modeChangesRange = estimateModeChanges(this.iterationModes, callCount)
-    if (this.modeChangeCount < modeChangesRange[0]) {
       throw new Error(
-        `onModeChange: count ${this.modeChangeCount} < expected minimum ${modeChangesRange[0]}`,
+        `[test][OnModeChangeInvariant] expected at least one mode change`,
+      )
+    }
+    if (this.modeChangeCount < this.modeChangesRange[0]) {
+      throw new Error(
+        `[test][OnModeChangeInvariant] count ${this.modeChangeCount} < expected minimum ${this.modeChangesRange[0]}`,
       )
     }
   }

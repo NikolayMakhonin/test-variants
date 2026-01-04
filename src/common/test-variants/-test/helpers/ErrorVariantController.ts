@@ -3,51 +3,37 @@ import { TestArgs } from 'src/common/test-variants/-test/types'
 import { TestError } from 'src/common/test-variants/-test/helpers/TestError'
 
 /**
- * Controls error variant behavior during test execution
- *
- * Tracks error attempts and throws TestError when retry limit is exceeded.
- *
- * ## Behavior
- * - Compares current args with errorVariantArgs using deep equality
- * - Increments errorAttempts on each match
- * - Throws TestError when errorAttempts exceeds retriesToError
- * - Resets errorAttempts after throwing
+ * Emulates error thrown for error variant after N retries
  */
 export class ErrorVariantController {
-  private errorAttempts = 0
-  private lastError: TestError | null = null
-  private readonly errorVariantArgs: TestArgs | null
-  private readonly retriesToError: number
+  private _retries = 0
+  private _lastError: TestError | null = null
+  private readonly _errorVariantArgs: TestArgs | null
+  private readonly _retriesToError: number
 
   constructor(errorVariantArgs: TestArgs | null, retriesToError: number) {
-    this.errorVariantArgs = errorVariantArgs
-    this.retriesToError = retriesToError
+    this._errorVariantArgs = errorVariantArgs
+    this._retriesToError = retriesToError
   }
 
-  /**
-   * Checks if current args match error variant and throws if retry limit exceeded
-   *
-   * @param args - Current test args
-   * @param callIndex - Current call index (0-based)
-   * @throws TestError when errorAttempts exceeds retriesToError
-   */
-  onCall(args: TestArgs, callIndex: number): void {
+  /** Run inside test func */
+  onCall(args: TestArgs): void {
     const isErrorVariant = deepEqualJsonLike(args, this.errorVariantArgs)
     if (isErrorVariant) {
-      this.errorAttempts++
-      if (this.errorAttempts > this.retriesToError) {
-        this.errorAttempts = 0
-        this.lastError = new TestError(`Test error at variant ${callIndex}`)
+      this._retries++
+      if (this._retries > this._retriesToError) {
+        this._retries = 0
+        this._lastError = new TestError('TEST ERROR')
         throw this.lastError
       }
     }
   }
 
-  getLastError(): TestError | null {
-    return this.lastError
+  get lastError(): TestError | null {
+    return this._lastError
   }
 
-  getErrorVariantArgs(): TestArgs | null {
-    return this.errorVariantArgs
+  get errorVariantArgs(): TestArgs | null {
+    return this._errorVariantArgs
   }
 }

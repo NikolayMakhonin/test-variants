@@ -31,19 +31,23 @@ export class OnErrorInvariant {
     expectedError: TestError | null,
   ): void {
     if (this.onErrorCount > 0 && !this.findBestErrorEnabled) {
-      throw new Error(`onError called multiple times`)
+      throw new Error(`[test][OnErrorInvariant] onError called multiple times`)
     }
     this.onErrorCount++
     if (!deepEqualJsonLike(event.args, expectedArgs)) {
-      throw new Error(`onError: args do not match errorVariantArgs`)
+      throw new Error(
+        `[test][OnErrorInvariant] args do not match errorVariantArgs`,
+      )
     }
     if (event.tests !== expectedCallCount) {
       throw new Error(
-        `onError: tests ${event.tests} !== callCount ${expectedCallCount}`,
+        `[test][OnErrorInvariant] tests ${event.tests} !== callCount ${expectedCallCount}`,
       )
     }
     if (event.error !== expectedError) {
-      throw new Error(`onError: error does not match`)
+      throw new Error(
+        `[test][OnErrorInvariant] error does not match expectedError`,
+      )
     }
   }
 }

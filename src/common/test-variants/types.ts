@@ -199,7 +199,7 @@ export type TestVariantsTemplates<Args extends Obj> = {
 // region Test function types
 
 /** Result of test run (internal format with separate sync/async counts) */
-export type TestVariantsTestRunResult = void | {
+export type TestFuncResult = void | {
   iterationsAsync: number
   iterationsSync: number
 }
@@ -215,10 +215,10 @@ export type TestVariantsTestRun<Args extends Obj> = (
   args: ArgsWithSeed<Args>,
   tests: number,
   options: TestVariantsTestOptions,
-) => PromiseOrValue<TestVariantsTestRunResult>
+) => PromiseOrValue<TestFuncResult>
 
 /** Result of user's test function (number treated as iterationsSync) */
-export type TestVariantsTestResult = number | void | TestVariantsTestRunResult
+export type TestVariantsTestResult = number | void | TestFuncResult
 
 /** User's test function */
 export type TestVariantsTest<Args extends Obj> = (

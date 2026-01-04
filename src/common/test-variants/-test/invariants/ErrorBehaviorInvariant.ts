@@ -53,39 +53,59 @@ export class ErrorBehaviorInvariant {
 
     if (errorExpected) {
       if (lastError == null) {
-        throw new Error(`Error was expected but lastError is null`)
+        throw new Error(
+          `[test][ErrorBehaviorInvariant] error expected but lastError is null`,
+        )
       }
       if (this.findBestError && dontThrowIfError) {
         if (thrownError != null) {
-          throw new Error(`Error was thrown but dontThrowIfError=true`)
+          throw new Error(
+            `[test][ErrorBehaviorInvariant] error thrown but dontThrowIfError=true`,
+          )
         }
         if (result?.bestError == null) {
-          throw new Error(`bestError is null but error was expected`)
+          throw new Error(
+            `[test][ErrorBehaviorInvariant] bestError is null but error expected`,
+          )
         }
         if (result.bestError.error !== lastError) {
-          throw new Error(`bestError.error is not TestError`)
+          throw new Error(
+            `[test][ErrorBehaviorInvariant] bestError.error !== lastError`,
+          )
         }
       } else if (this.findBestError) {
         if (thrownError == null) {
-          throw new Error(`Error expected but not thrown (findBestError=true)`)
+          throw new Error(
+            `[test][ErrorBehaviorInvariant] error expected but not thrown (findBestError=true)`,
+          )
         }
         if (thrownError !== lastError) {
-          throw new Error(`Thrown error does not match lastError`)
+          throw new Error(
+            `[test][ErrorBehaviorInvariant] thrownError !== lastError`,
+          )
         }
       } else {
         if (thrownError == null) {
-          throw new Error(`Error expected but not thrown`)
+          throw new Error(
+            `[test][ErrorBehaviorInvariant] error expected but not thrown`,
+          )
         }
         if (thrownError !== lastError) {
-          throw new Error(`Thrown error does not match lastError`)
+          throw new Error(
+            `[test][ErrorBehaviorInvariant] thrownError !== lastError`,
+          )
         }
       }
     } else {
       if (thrownError != null) {
-        throw new Error(`No error expected but error was thrown`)
+        throw new Error(
+          `[test][ErrorBehaviorInvariant] no error expected but error thrown`,
+        )
       }
       if (result?.bestError != null) {
-        throw new Error(`bestError is set but no error was expected`)
+        throw new Error(
+          `[test][ErrorBehaviorInvariant] bestError is set but no error expected`,
+        )
       }
     }
   }

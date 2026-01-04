@@ -33,16 +33,16 @@ export class CallOptionsInvariant {
     timeController?: ITimeController
   }): void {
     if (callOptions.abortSignal !== this.abortSignal) {
-      throw new Error(`testFunc: abortSignal mismatch`)
+      throw new Error(`[test][CallOptionsInvariant] abortSignal mismatch`)
     }
     if (callOptions.abortSignal.aborted) {
-      throw new Error(`testFunc: call after aborted`)
+      throw new Error(`[test][CallOptionsInvariant] call after aborted`)
     }
     if (callOptions.timeController !== this.timeController) {
-      throw new Error(`testFunc: timeController mismatch`)
+      throw new Error(`[test][CallOptionsInvariant] timeController mismatch`)
     }
     if (this.limitTime != null && this.timeController.now() > this.limitTime) {
-      throw new Error(`testFunc: aborted due to time limit`)
+      throw new Error(`[test][CallOptionsInvariant] time limit exceeded`)
     }
   }
 }

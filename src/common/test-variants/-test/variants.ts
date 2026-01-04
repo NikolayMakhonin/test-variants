@@ -57,24 +57,18 @@
  */
 
 import { createTestVariants } from '#this'
-import { deepEqualJsonLike, Random } from '@flemist/simple-utils'
+import { formatAny, Random } from '@flemist/simple-utils'
 import type {
   ModeChangeEvent,
   TestVariantsLogType,
   TestVariantsRunResult,
 } from '../types'
-import {
-  delay,
-  isPromiseLike,
-  waitTimeControllerMock,
-} from '@flemist/async-utils'
 import { AbortControllerFast } from '@flemist/abort-controller-fast'
 import { TimeControllerMock } from '@flemist/time-controller'
 import { isLogEnabled, runWithLogs } from './log'
 import { StressTestArgs, TestArgs } from './types'
 import { deepFreezeJsonLike } from './helpers/deepFreezeJsonLike'
 import { forEachVariant, getVariantArgsByIndex } from './helpers/forEachVariant'
-import { TestError } from './helpers/TestError'
 import { generateBoundaryInt } from './generators/primitives'
 import { generateTemplate } from './generators/template'
 import { generateRunOptions } from './generators/run'
@@ -83,6 +77,8 @@ import {
   estimateCallCount,
   MODES_DEFAULT,
 } from './estimations/estimateCallCount'
+import { ITERATIONS_SYNC, ITERATIONS_ASYNC } from './constants'
+import { estimateModeChanges } from './estimations/estimateModeChanges'
 import { LogInvariant } from './invariants/LogInvariant'
 import { ErrorBehaviorInvariant } from './invariants/ErrorBehaviorInvariant'
 import { IterationsInvariant } from './invariants/IterationsInvariant'
@@ -92,6 +88,9 @@ import { OnErrorInvariant } from './invariants/OnErrorInvariant'
 import { OnModeChangeInvariant } from './invariants/OnModeChangeInvariant'
 import { CallOptionsInvariant } from './invariants/CallOptionsInvariant'
 import { ErrorVariantController } from './helpers/ErrorVariantController'
+import { CallController } from './helpers/CallController'
+import { runWithTimeController } from './helpers/runWithTimeController'
+import { log } from 'src/common/helpers/log'
 
 async function executeStressTest(options: StressTestArgs): Promise<void> {
   const rnd = new Random(options.seed)
@@ -122,40 +121,51 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     onModeChange,
   )
 
+  const abortController = new AbortControllerFast()
+  const abortSignal = abortController.signal
+  const timeController = new TimeControllerMock()
+
   const callCountRange = estimateCallCount(variantsCount, runOptions)
+  const iterationModes = runOptions.iterationModes ?? MODES_DEFAULT
+  const modeChangesRange = estimateModeChanges(
+    iterationModes,
+    callCountRange[1],
+  )
+
+  // Initialize controllers
+  const callController = new CallController(
+    options.async,
+    options.delay,
+    abortSignal,
+    timeController,
+  )
+  const errorVariantController = new ErrorVariantController(
+    errorVariantArgs,
+    retriesToError,
+  )
 
   // Initialize invariants
   const callCountInvariant = new CallCountInvariant(callCountRange)
-  const parallelLimit =
-    runOptions.parallel === true
-      ? Infinity
-      : typeof runOptions.parallel === 'number'
-        ? runOptions.parallel
-        : 1
-  const parallelInvariant = new ParallelInvariant(parallelLimit)
-  const logInvariant = new LogInvariant(runOptions.log, () =>
-    callCountInvariant.getCallCount(),
+  const parallelInvariant = new ParallelInvariant(runOptions.parallel)
+  const logInvariant = new LogInvariant(
+    runOptions.log,
+    modeChangesRange,
+    () => callController.callCount,
   )
   const onErrorInvariant = new OnErrorInvariant(!!runOptions.findBestError)
   const onModeChangeInvariant = new OnModeChangeInvariant(
-    runOptions.iterationModes ?? MODES_DEFAULT,
+    iterationModes,
+    modeChangesRange,
   )
   const errorBehaviorInvariant = new ErrorBehaviorInvariant(
     runOptions.findBestError,
     errorVariantIndex,
     retriesToError,
   )
-  const iterationsInvariant = new IterationsInvariant(10, 1000000)
-  const errorVariantController = new ErrorVariantController(
-    errorVariantArgs,
-    retriesToError,
+  const iterationsInvariant = new IterationsInvariant(
+    ITERATIONS_SYNC,
+    ITERATIONS_ASYNC,
   )
-
-  const isAsync = options.async
-  const shouldDelay = options.delay
-  const abortController = new AbortControllerFast()
-  const abortSignal = abortController.signal
-  const timeController = new TimeControllerMock()
   const callOptionsInvariant = new CallOptionsInvariant(
     abortSignal,
     timeController,
@@ -174,13 +184,13 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     onErrorInvariant.onError(
       event,
       errorVariantController.getErrorVariantArgs(),
-      callCountInvariant.getCallCount(),
-      errorVariantController.getLastError(),
+      callController.callCount,
+      errorVariantController.lastError,
     )
   }
 
   function onModeChange(event: ModeChangeEvent): void {
-    onModeChangeInvariant.onModeChange(event, callCountInvariant.getCallCount())
+    onModeChangeInvariant.onModeChange(event, callController.callCount)
   }
 
   // Create test function
@@ -189,70 +199,57 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     callOptions,
   ) {
     callOptionsInvariant.onCall(callOptions)
-
-    const callCount = callCountInvariant.onCall()
     deepFreezeJsonLike(args)
 
-    parallelInvariant.onCallStart()
-
-    function call() {
-      parallelInvariant.onCallEnd()
-      errorVariantController.onCall(args, callCount - 1)
-      return { iterationsSync: 10, iterationsAsync: 1000000 }
-    }
-
-    if ((isAsync == null && callCount % 2 === 0) || isAsync) {
-      if (shouldDelay) {
-        return delay(1, abortSignal, timeController).then(call)
-      }
-      return Promise.resolve().then(() => call())
-    } else {
-      const result = call()
-      return result
-    }
+    return callController.call(
+      () => {
+        callCountInvariant.onCall(callController.callCount)
+        parallelInvariant.onCallStart()
+      },
+      () => {
+        parallelInvariant.onCallEnd()
+        errorVariantController.onCall(args)
+      },
+    )
   })
 
-  let result: TestVariantsRunResult<TestArgs>
-  let thrownError: unknown = null
-  try {
-    const resultPromise = testFunc(template)({
-      ...runOptions,
-      abortSignal,
-      timeController,
-    })
-    if (isPromiseLike(resultPromise)) {
-      result = await waitTimeControllerMock(timeController, resultPromise)
+  const { result, thrownError } = await runWithTimeController(
+    timeController,
+    () =>
+      testFunc(template)({
+        ...runOptions,
+        abortSignal,
+        timeController,
+      }),
+  )
+
+  if (isLogEnabled()) {
+    if (result != null) {
+      log('<result>')
+      log(formatAny(result))
+      log('</result>')
     } else {
-      result = resultPromise
+      log('<noResult/>')
     }
-  } catch (err) {
-    if (!(err instanceof TestError)) {
-      throw err
+    if (thrownError) {
+      log('<thrownError>')
+      log(formatAny(thrownError))
+      log('</thrownError>')
+    } else {
+      log('<noThrownError/>')
     }
-    thrownError = err
-    result = null as any
   }
 
   // Validate using invariants
-  const callCount = callCountInvariant.getCallCount()
-  const lastError = errorVariantController.getLastError()
+  const callCount = callController.callCount
+  const lastError = errorVariantController.lastError
 
   errorBehaviorInvariant.validate(callCount, thrownError, lastError, result)
-
-  if (result != null) {
-    iterationsInvariant.validate(callCount, result, thrownError != null)
-  }
-
-  logInvariant.validateFinal(
-    callCount,
-    timeController.now(),
-    runOptions.iterationModes,
-    lastError,
-  )
-
-  parallelInvariant.validateFinal(callCount, isAsync)
+  iterationsInvariant.validate(callCount, result)
+  logInvariant.validateFinal(callCount, timeController.now(), lastError)
+  parallelInvariant.validateFinal(callCount, options.async)
   onModeChangeInvariant.validateFinal(callCount)
-  callCountInvariant.validateFinal()
+  callCountInvariant.validateFinal(callCount)
 
   abortController.abort()
 }

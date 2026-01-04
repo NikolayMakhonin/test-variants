@@ -13,7 +13,7 @@ import type {
   TestVariantsTestOptions,
   TestVariantsTestResult,
   TestVariantsTestRun,
-  TestVariantsTestRunResult,
+  TestFuncResult,
 } from './types'
 
 export type TestVariantsCreateTestRunOptions<Args extends Obj> = {
@@ -26,7 +26,7 @@ export type TestVariantsCreateTestRunOptions<Args extends Obj> = {
 function normalizeTestResult(
   value: TestVariantsTestResult,
   isAsync: boolean,
-): TestVariantsTestRunResult {
+): TestFuncResult {
   if (typeof value === 'number') {
     return { iterationsAsync: 0, iterationsSync: value }
   }
@@ -97,7 +97,7 @@ export function testVariantsCreateTestRun<Args extends Obj>(
     args: ArgsWithSeed<Args>,
     tests: number,
     options: TestVariantsTestOptions,
-  ): PromiseOrValue<TestVariantsTestRunResult> {
+  ): PromiseOrValue<TestFuncResult> {
     try {
       const promiseOrResult = test(args, options)
 

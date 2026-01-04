@@ -5,7 +5,7 @@ import type { LimitArgOnError, TestVariantsTemplate } from './types'
 export type NavigationState<Args extends Obj> = {
   args: Args
   indexes: number[]
-  argValues: any[][]
+  argValues: (readonly any[])[]
   argLimits: (number | null)[]
   extraValues: (any[] | null)[]
   repeatIndex: number
@@ -17,9 +17,9 @@ export function calcTemplateValues<Args extends Obj>(
   templates: TestVariantsTemplate<Args, any>[],
   args: Args,
   keyIndex: number,
-): any[] {
+): readonly any[] {
   const template = templates[keyIndex]
-  let values: any[]
+  let values: readonly any[]
   if (typeof template === 'function') {
     values = template(args)
   } else {
