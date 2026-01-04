@@ -1,11 +1,13 @@
 import type { Obj } from '@flemist/simple-utils'
 import type {
   ArgsWithSeed,
+  Equals,
   LimitArgOnError,
   TestVariantsIteratorLimit,
   TestVariantsTemplate,
+  VariantNavigationState,
 } from './types'
-import { calcTemplateValues, type NavigationState } from './variantNavigation'
+import { calcArgValues } from './variantNavigation'
 
 /** Pending limit waiting for position match during iteration */
 export type PendingLimit<Args extends Obj> = {
@@ -14,7 +16,7 @@ export type PendingLimit<Args extends Obj> = {
 }
 
 /** State required for limit handling */
-export type LimitState<Args extends Obj> = NavigationState<Args> & {
+export type LimitState<Args extends Obj> = VariantNavigationState<Args> & {
   pendingLimits: PendingLimit<Args>[]
   limit: TestVariantsIteratorLimit<Args> | null
   count: number | null
@@ -36,39 +38,33 @@ export function findValueIndex<T>(
 }
 
 /** Extend template with missing value from saved args */
-export function extendTemplateWithValue<Args extends Obj>(
-  state: NavigationState<Args>,
+function extendTemplateWithValue<Args extends Obj>(
+  state: VariantNavigationState<Args>,
   templates: TestVariantsTemplate<Args, any>[],
-  args: Args,
+  addingArgs: Args,
   keys: (keyof Args)[],
   keyIndex: number,
-  equals?: null | ((a: any, b: any) => boolean),
+  equals?: null | Equals,
 ): void {
-  const values = calcTemplateValues(state, templates, args, keyIndex)
-  const value = args[keys[keyIndex]]
+  const values = calcArgValues(templates, addingArgs, keyIndex)
+  const value = addingArgs[keys[keyIndex]]
   if (findValueIndex(values, value, equals) >= 0) {
     return // Already exists
   }
-  if (state.extraValues[keyIndex] == null) {
-    state.extraValues[keyIndex] = []
-  }
-  // Avoid duplicates in extraValues
-  if (findValueIndex(state.extraValues[keyIndex], value, equals) < 0) {
-    state.extraValues[keyIndex].push(value)
-  }
+  values[keyIndex].push(value)
 }
 
 /** Extend templates with all missing values from saved args */
 export function extendTemplatesForArgs<Args extends Obj>(
-  state: NavigationState<Args>,
-  savedArgs: Args,
+  state: VariantNavigationState<Args>,
   templates: TestVariantsTemplate<Args, any>[],
+  addingArgs: Args,
   keys: (keyof Args)[],
   keysCount: number,
-  equals?: null | ((a: any, b: any) => boolean),
+  equals?: null | Equals,
 ): void {
   for (let i = 0; i < keysCount; i++) {
-    extendTemplateWithValue(state, templates, savedArgs, keys, i, equals)
+    extendTemplateWithValue(state, templates, addingArgs, keys, i, equals)
   }
 }
 
@@ -95,11 +91,11 @@ export function validateArgsKeys<Args extends Obj>(
 
 /** Check if current position >= pending args position; returns false if current < pending or all args skipped */
 export function isPositionReached<Args extends Obj>(
-  state: NavigationState<Args>,
+  state: VariantNavigationState<Args>,
   pendingArgs: Args,
   keys: (keyof Args)[],
   keysCount: number,
-  equals?: null | ((a: any, b: any) => boolean),
+  equals?: null | Equals,
 ): boolean {
   let anyCompared = false
   for (let i = 0; i < keysCount; i++) {
@@ -130,16 +126,16 @@ export function isPositionReached<Args extends Obj>(
 
 /** Calculate indexes for given args; returns null if any value not found */
 export function calcArgIndexes<Args extends Obj>(
-  state: NavigationState<Args>,
+  state: VariantNavigationState<Args>,
   limitArgs: Args,
   templates: TestVariantsTemplate<Args, any>[],
   keys: (keyof Args)[],
   keysCount: number,
-  equals?: null | ((a: any, b: any) => boolean),
+  equals?: null | Equals,
 ): number[] | null {
   const indexes: number[] = []
   for (let i = 0; i < keysCount; i++) {
-    const values = calcTemplateValues(state, templates, limitArgs, i)
+    const values = calcArgValues(templates, limitArgs, i)
     const valueIndex = findValueIndex(values, limitArgs[keys[i]], equals)
     if (valueIndex < 0) {
       return null
@@ -173,7 +169,7 @@ export function filterPendingLimits<Args extends Obj>(
   templates: TestVariantsTemplate<Args, any>[],
   keys: (keyof Args)[],
   keysCount: number,
-  equals?: null | ((a: any, b: any) => boolean),
+  equals?: null | Equals,
 ): void {
   const pendingLimits = state.pendingLimits
   let writeIndex = 0
@@ -189,7 +185,7 @@ export function filterPendingLimits<Args extends Obj>(
       if (argLimit == null) {
         continue
       }
-      const values = calcTemplateValues(state, templates, pending.args, i)
+      const values = calcArgValues(templates, pending.args, i)
       const valueIndex = findValueIndex(values, pending.args[keys[i]], equals)
       if (valueIndex > argLimit) {
         keep = false
@@ -212,7 +208,7 @@ export function updateArgLimits<Args extends Obj>(
   templates: TestVariantsTemplate<Args, any>[],
   keys: (keyof Args)[],
   keysCount: number,
-  equals?: null | ((a: any, b: any) => boolean),
+  equals?: null | Equals,
   limitArgOnError?: null | boolean | LimitArgOnError,
   precomputedIndexes?: number[] | null,
 ): boolean {
@@ -253,7 +249,7 @@ export function updateArgLimits<Args extends Obj>(
       const shouldLimit = limitArgOnError({
         name: keys[i] as string,
         valueIndex,
-        values: calcTemplateValues(state, templates, limitArgs, i),
+        values: calcArgValues(templates, limitArgs, i),
         maxValueIndex: state.argLimits[i],
       })
       if (!shouldLimit) {
@@ -283,7 +279,7 @@ export function processPendingLimits<Args extends Obj>(
   templates: TestVariantsTemplate<Args, any>[],
   keys: (keyof Args)[],
   keysCount: number,
-  equals?: null | ((a: any, b: any) => boolean),
+  equals?: null | Equals,
   limitArgOnError?: null | boolean | LimitArgOnError,
   includeErrorVariant?: null | boolean,
 ): boolean {

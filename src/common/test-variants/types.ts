@@ -3,6 +3,8 @@ import type { PromiseOrValue } from '@flemist/async-utils'
 import type { Obj, RequiredNonNullable } from '@flemist/simple-utils'
 import type { ITimeController } from '@flemist/time-controller'
 
+export type Equals = (a: any, b: any) => boolean
+
 // region Mode configuration types
 
 /** Base mode configuration shared by all modes */
@@ -90,7 +92,7 @@ export type AddLimitOptions<Args extends Obj> = {
 export type TestVariantsIteratorOptions<Args extends Obj> = {
   argsTemplates: TestVariantsTemplates<Args>
   /** Custom equality for comparing arg values */
-  equals?: null | ((a: any, b: any) => boolean)
+  equals?: null | Equals
   /** Limit per-arg indexes on error; boolean enables/disables, function for custom per-arg logic */
   limitArgOnError?: null | boolean | LimitArgOnError
   /** When true, error variant is included in iteration (for debugging); default false excludes it */
@@ -284,7 +286,7 @@ export type TestVariantsRunOptionsInternal<
 /** Options for finding the earliest failing variant across multiple test runs */
 export type FindBestErrorOptions = {
   /** Custom equality for comparing arg values when finding indexes */
-  equals?: null | ((a: any, b: any) => boolean)
+  equals?: null | Equals
   /** Limit per-arg indexes on error; boolean enables/disables, function for custom per-arg logic */
   limitArgOnError?: null | boolean | LimitArgOnError
   /** When true, error variant is included in iteration (for debugging); default false excludes it */
@@ -366,4 +368,24 @@ export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
   limitTime?: null | number
   /** Time controller for testable time-dependent operations; null uses timeControllerDefault */
   timeController?: null | ITimeController
+}
+
+export type TestVariantsCreateTestRunOptions<Args extends Obj> = {
+  onError?: null | OnErrorCallback<Args>
+  /** Resolved logging options */
+  log: RequiredNonNullable<TestVariantsLogOptions>
+}
+
+/** State required for variant navigation */
+export type VariantNavigationState<Args extends Obj> = {
+  // Variant args
+  args: Args
+  // Value index by arg index
+  indexes: number[]
+  // Possible values by arg index
+  argValues: (readonly any[])[]
+  // Max value index by arg index
+  argLimits: (number | null)[]
+  // Repeat index for the same variant if attemptsPerVariant > 1
+  attemptIndex: number
 }

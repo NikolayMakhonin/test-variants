@@ -1,19 +1,18 @@
 import type { Obj } from '@flemist/simple-utils'
 import type {
-  BackwardModeConfig,
-  ForwardModeConfig,
+  LimitArgOnError,
   ModeConfig,
   TestVariantsTemplate,
-  LimitArgOnError,
+  VariantNavigationState,
 } from './types'
-import type { NavigationState } from './variantNavigation'
 import {
-  advanceVariant,
-  randomPickVariant,
-  resetIterationPositionToEnd,
-  resetIterationPositionToStart,
-  retreatVariant,
+  advanceVariantNavigation,
+  randomPickVariantNavigation,
+  resetVariantNavigationToEnd,
+  resetVariantNavigationToStart,
+  retreatVariantNavigation,
 } from './variantNavigation'
+import { isSequentialMode } from 'src/common/test-variants/helpers/mode'
 
 /** State per mode */
 export type ModeState = {
@@ -35,13 +34,6 @@ export type ModeState = {
   hadProgressInCycle: boolean
   /** Progress flag from previous cycle (saved before reset in start()) */
   hadProgressInPreviousCycle: boolean
-}
-
-/** Check if mode is sequential (forward or backward) */
-export function isSequentialMode(
-  modeConfig: ModeConfig,
-): modeConfig is ForwardModeConfig | BackwardModeConfig {
-  return modeConfig.mode === 'forward' || modeConfig.mode === 'backward'
 }
 
 /** Get attemptsPerVariant for mode; returns 1 for random mode */
@@ -108,7 +100,7 @@ function handleEmptyTemplateCycle(
 
 /** Advance in forward mode handling cycles; returns true if successful */
 export function advanceForwardMode<Args extends Obj>(
-  state: NavigationState<Args>,
+  state: VariantNavigationState<Args>,
   modeState: ModeState,
   templates: TestVariantsTemplate<Args, any>[],
   keys: (keyof Args)[],
@@ -119,20 +111,20 @@ export function advanceForwardMode<Args extends Obj>(
   if (keysCount === 0) {
     return handleEmptyTemplateCycle(modeState, index, cycles)
   }
-  if (advanceVariant(state, templates, keys, keysCount)) {
+  if (advanceVariantNavigation(state, templates, keys, keysCount)) {
     return true
   }
   if (modeState.cycle + 1 < cycles) {
     modeState.cycle++
-    resetIterationPositionToStart(state, templates, keys, keysCount)
-    return advanceVariant(state, templates, keys, keysCount)
+    resetVariantNavigationToStart(state, templates, keys, keysCount)
+    return advanceVariantNavigation(state, templates, keys, keysCount)
   }
   return false
 }
 
 /** Advance in backward mode handling cycles; returns true if successful */
 export function advanceBackwardMode<Args extends Obj>(
-  state: NavigationState<Args>,
+  state: VariantNavigationState<Args>,
   modeState: ModeState,
   templates: TestVariantsTemplate<Args, any>[],
   keys: (keyof Args)[],
@@ -144,14 +136,14 @@ export function advanceBackwardMode<Args extends Obj>(
     return handleEmptyTemplateCycle(modeState, index, cycles)
   }
   if (state.indexes[0] < 0) {
-    return resetIterationPositionToEnd(state, templates, keys, keysCount)
+    return resetVariantNavigationToEnd(state, templates, keys, keysCount)
   }
-  if (retreatVariant(state, templates, keys, keysCount)) {
+  if (retreatVariantNavigation(state, templates, keys, keysCount)) {
     return true
   }
   if (modeState.cycle + 1 < cycles) {
     modeState.cycle++
-    return resetIterationPositionToEnd(state, templates, keys, keysCount)
+    return resetVariantNavigationToEnd(state, templates, keys, keysCount)
   }
   return false
 }
@@ -159,7 +151,7 @@ export function advanceBackwardMode<Args extends Obj>(
 /** Advance variant based on mode type; returns true if successful */
 export function advanceByMode<Args extends Obj>(
   modeConfig: ModeConfig,
-  state: NavigationState<Args>,
+  state: VariantNavigationState<Args>,
   modeState: ModeState,
   templates: TestVariantsTemplate<Args, any>[],
   keys: (keyof Args)[],
@@ -168,7 +160,13 @@ export function advanceByMode<Args extends Obj>(
   limitArgOnError?: null | boolean | LimitArgOnError,
 ): boolean {
   if (modeConfig.mode === 'random') {
-    return randomPickVariant(state, templates, keys, keysCount, limitArgOnError)
+    return randomPickVariantNavigation(
+      state,
+      templates,
+      keys,
+      keysCount,
+      limitArgOnError,
+    )
   }
   if (modeConfig.mode === 'backward') {
     return advanceBackwardMode(

@@ -1,26 +1,15 @@
 import { isPromiseLike, type PromiseOrValue } from '@flemist/async-utils'
-import {
-  formatAny,
-  type Obj,
-  type RequiredNonNullable,
-} from '@flemist/simple-utils'
+import { formatAny, type Obj } from '@flemist/simple-utils'
 import type {
   ArgsWithSeed,
   ErrorEvent,
-  OnErrorCallback,
-  TestVariantsLogOptions,
+  TestFuncResult,
+  TestVariantsCreateTestRunOptions,
   TestVariantsTest,
   TestVariantsTestOptions,
   TestVariantsTestResult,
   TestVariantsTestRun,
-  TestFuncResult,
 } from './types'
-
-export type TestVariantsCreateTestRunOptions<Args extends Obj> = {
-  onError?: null | OnErrorCallback<Args>
-  /** Resolved logging options */
-  log: RequiredNonNullable<TestVariantsLogOptions>
-}
 
 /** Normalize test result to standard format */
 function normalizeTestResult(

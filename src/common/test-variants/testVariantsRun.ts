@@ -13,13 +13,13 @@ import type {
   TestVariantsResult,
 } from './types'
 import { timeControllerDefault } from '@flemist/time-controller'
+import { resolveLogOptions } from './helpers/logOptions'
 import {
   formatBytes,
   formatDuration,
   formatModeConfig,
-  getMemoryUsage,
-  resolveLogOptions,
-} from './progressLogging'
+} from 'src/common/test-variants/helpers/format'
+import { getMemoryUsage } from 'src/common/test-variants/helpers/getMemoryUsage'
 
 export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   testRun: TestVariantsTestRun<Args>,

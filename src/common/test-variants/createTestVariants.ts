@@ -10,7 +10,7 @@ import type {
   TestVariantsResult,
   TestVariantsTemplates,
 } from './types'
-import { resolveLogOptions } from 'src/common/test-variants/progressLogging'
+import { resolveLogOptions } from 'src/common/test-variants/helpers/logOptions'
 
 /** Extended templates type that allows additional args beyond the base Args type */
 export type TestVariantsTemplatesExt<

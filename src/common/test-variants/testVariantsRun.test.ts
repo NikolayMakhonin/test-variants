@@ -2,7 +2,7 @@ import { describe, it } from 'vitest'
 import * as assert from 'node:assert'
 import { testVariantsRun } from './testVariantsRun'
 import { testVariantsIterator } from './testVariantsIterator'
-import { logOptionsDisabled } from './progressLogging'
+import { logOptionsDisabled } from './helpers/logOptions'
 import type { TestVariantsTestRun } from './types'
 
 describe('test-variants > testVariantsRun', { timeout: 10 * 60 * 1000 }, () => {

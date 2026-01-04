@@ -3,7 +3,7 @@ import * as assert from 'node:assert'
 import type { Obj } from '@flemist/simple-utils'
 import type { TestVariantsIteratorOptions } from './types'
 import { testVariantsIterator } from './testVariantsIterator'
-import { logOptionsDisabled } from './progressLogging'
+import { logOptionsDisabled } from './helpers/logOptions'
 
 describe(
   'test-variants > testVariantsIterator',

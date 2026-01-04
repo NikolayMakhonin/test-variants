@@ -10,8 +10,8 @@ import type {
   TestVariantsTemplate,
 } from './types'
 import {
-  calcTemplateValues,
-  resetIterationPositionToStart,
+  calcArgValues,
+  resetVariantNavigationToStart,
 } from './variantNavigation'
 import {
   createLimit,
@@ -26,9 +26,9 @@ import {
   createModeState,
   getModeRepeatsPerVariant,
   isModeExhausted,
-  isSequentialMode,
   type ModeState,
 } from './modeHandling'
+import { isSequentialMode } from 'src/common/test-variants/helpers/mode'
 
 /** Iterator internal state; extends LimitState with additional iterator-specific fields */
 type IteratorState<Args extends Obj> = LimitState<Args> & {
@@ -58,7 +58,7 @@ function resetIteratorState<Args extends Obj>(
 ): void {
   state.index = -1
   state.testsCount = 0
-  resetIterationPositionToStart(state, templates, keys, keysCount)
+  resetVariantNavigationToStart(state, templates, keys, keysCount)
 }
 
 /** Default modes: single forward pass */
@@ -77,7 +77,7 @@ function saveModePosition<Args extends Obj>(
   const modeState = state.modesState[modeIndex]
   modeState.savedPosition = {
     indexes,
-    repeatIndex: state.repeatIndex,
+    repeatIndex: state.attemptIndex,
     cycle: modeState.cycle,
   }
 }
@@ -99,7 +99,7 @@ function tryRestoreSavedPosition<Args extends Obj>(
   // Reconstruct args from saved indexes, validating each step
   for (let i = 0; i < keysCount; i++) {
     const savedIndex = saved.indexes[i]
-    const values = calcTemplateValues(state, templates, state.args, i)
+    const values = calcArgValues(templates, state.args, i)
 
     // Validate: index must be within template and limits
     if (savedIndex < 0 || savedIndex >= values.length) {
@@ -115,7 +115,7 @@ function tryRestoreSavedPosition<Args extends Obj>(
     state.args[keys[i]] = values[savedIndex]
   }
 
-  state.repeatIndex = saved.repeatIndex
+  state.attemptIndex = saved.repeatIndex
   modeState.cycle = saved.cycle
   return true
 }
@@ -252,12 +252,10 @@ export function testVariantsIterator<Args extends Obj>(
   const indexes: number[] = []
   const argValues: any[][] = []
   const argLimits: (number | null)[] = []
-  const extraValues: (any[] | null)[] = []
   for (let i = 0; i < keysCount; i++) {
     indexes[i] = -1
     argValues[i] = []
     argLimits[i] = null
-    extraValues[i] = null
   }
 
   // Initialize modesState for all modes
@@ -272,10 +270,9 @@ export function testVariantsIterator<Args extends Obj>(
     indexes,
     argValues,
     argLimits,
-    extraValues,
     index: -1,
     cycleIndex: -1,
-    repeatIndex: 0,
+    attemptIndex: 0,
     testsCount: 0,
     count: null,
     countIsExplicit: false,
@@ -297,7 +294,7 @@ export function testVariantsIterator<Args extends Obj>(
     if (getSeed) {
       seedParams.tests = state.testsCount
       seedParams.cycles = state.cycleIndex
-      seedParams.repeats = state.repeatIndex
+      seedParams.repeats = state.attemptIndex
       const seed = getSeed(seedParams)
       return { ...state.args, seed }
     }
@@ -432,8 +429,8 @@ export function testVariantsIterator<Args extends Obj>(
         // Extend templates with missing values from saved args
         extendTemplatesForArgs(
           state,
-          optArgs,
           templates,
+          optArgs,
           keys,
           keysCount,
           equals,
@@ -477,8 +474,8 @@ export function testVariantsIterator<Args extends Obj>(
         // Extend templates with missing values from saved args
         extendTemplatesForArgs(
           state,
-          optArgs,
           templates,
+          optArgs,
           keys,
           keysCount,
           equals,
@@ -572,9 +569,9 @@ export function testVariantsIterator<Args extends Obj>(
       const attemptsPerVariant = getModeRepeatsPerVariant(modeConfig)
 
       // Try next repeat for current variant
-      if (state.index >= 0 && state.repeatIndex + 1 < attemptsPerVariant) {
+      if (state.index >= 0 && state.attemptIndex + 1 < attemptsPerVariant) {
         if (state.count == null || state.index < state.count) {
-          state.repeatIndex++
+          state.attemptIndex++
           modeState.pickCount++
           modeState.hadProgressInCycle = true
           state.currentArgs = buildCurrentArgs()
@@ -596,7 +593,7 @@ export function testVariantsIterator<Args extends Obj>(
       }
 
       // Move to next variant based on current mode
-      state.repeatIndex = 0
+      state.attemptIndex = 0
       const success = advanceByMode(
         modeConfig,
         state,

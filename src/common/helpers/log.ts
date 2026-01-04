@@ -1,7 +1,5 @@
 import { formatAny } from '@flemist/simple-utils'
 
-let traceIndent = 0
-
 const LOG_LAST_MAX = 1000
 const logLast: string[] = []
 
@@ -24,35 +22,11 @@ export function log(...args: unknown[]): void {
   console.log(message)
 }
 
-export function traceLog(...args: unknown[]): void {
-  const message = args
-    .map(a => (typeof a === 'string' ? a : formatValue(a)))
-    .join(' ')
-  log('  '.repeat(traceIndent) + message)
-}
-
-export function traceEnter(...args: unknown[]): void {
-  const message = args
-    .map(a => (typeof a === 'string' ? a : formatValue(a)))
-    .join(' ')
-  traceLog('> ' + message)
-  traceIndent++
-}
-
-export function traceExit(...args: unknown[]): void {
-  traceIndent--
-  const message = args
-    .map(a => (typeof a === 'string' ? a : formatValue(a)))
-    .join(' ')
-  traceLog('< ' + message)
-}
-
 export function getLogLast(): string {
   return logLast.join('\n')
 }
 
 export function resetLog(): void {
-  traceIndent = 0
   logLast.length = 0
 }
 

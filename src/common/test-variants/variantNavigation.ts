@@ -1,19 +1,12 @@
 import type { Obj } from '@flemist/simple-utils'
-import type { LimitArgOnError, TestVariantsTemplate } from './types'
+import type {
+  LimitArgOnError,
+  TestVariantsTemplate,
+  VariantNavigationState,
+} from './types'
 
-/** State required for variant navigation */
-export type NavigationState<Args extends Obj> = {
-  args: Args
-  indexes: number[]
-  argValues: (readonly any[])[]
-  argLimits: (number | null)[]
-  extraValues: (any[] | null)[]
-  repeatIndex: number
-}
-
-/** Calculate template values for given key index, including extra values from saved variants */
-export function calcTemplateValues<Args extends Obj>(
-  state: NavigationState<Args>,
+/** Calculate template values for given key index */
+export function calcArgValues<Args extends Obj>(
   templates: TestVariantsTemplate<Args, any>[],
   args: Args,
   keyIndex: number,
@@ -25,100 +18,115 @@ export function calcTemplateValues<Args extends Obj>(
   } else {
     values = template
   }
-  // Append extra values from saved variants
-  const extra = state.extraValues[keyIndex]
-  if (extra && extra.length > 0) {
-    values = [...values, ...extra]
-  }
   return values
 }
 
-/** Get effective max index for an arg (considering argLimit)
- * argLimit is INCLUSIVE upper bound; returns EXCLUSIVE upper bound for iteration
+/** Get exclusive upper bound for arg values index, considering limits
  */
-export function getMaxIndex(
-  state: NavigationState<any>,
-  keyIndex: number,
+export function getArgValuesMaxIndex(
+  state: VariantNavigationState<any>,
+  argValueIndex: number,
 ): number {
-  const valuesLen = state.argValues[keyIndex].length
-  const argLimit = state.argLimits[keyIndex]
+  const valuesLen = state.argValues[argValueIndex].length
+  const argLimit = state.argLimits[argValueIndex]
   if (argLimit == null) {
     return valuesLen
   }
   return Math.min(argLimit + 1, valuesLen)
 }
 
-/** Reset iteration position to beginning (for forward mode cycles) */
-export function resetIterationPositionToStart<Args extends Obj>(
-  state: NavigationState<Args>,
+/** Reset iteration position to beginning (for `forward` mode) */
+export function resetVariantNavigationToStart<Args extends Obj>(
+  state: VariantNavigationState<Args>,
   templates: TestVariantsTemplate<Args, any>[],
-  keys: (keyof Args)[],
-  keysCount: number,
+  argsKeys: (keyof Args)[],
 ): void {
-  state.repeatIndex = 0
-  for (let i = 0; i < keysCount; i++) {
+  const argsKeysLength = argsKeys.length
+  state.attemptIndex = 0
+  for (let i = 0; i < argsKeysLength; i++) {
     state.indexes[i] = -1
     state.argValues[i] = []
-    delete state.args[keys[i]]
+    // high performance way to delete property
+    state.args[argsKeys[i]] = void 0 as any
   }
-  if (keysCount > 0) {
-    state.argValues[0] = calcTemplateValues(state, templates, state.args, 0)
+  if (argsKeysLength > 0) {
+    state.argValues[0] = calcArgValues(templates, state.args, 0)
   }
 }
 
-/** Reset iteration position to end (for backward mode); returns true if valid position exists */
-export function resetIterationPositionToEnd<Args extends Obj>(
-  state: NavigationState<Args>,
+/** Reset iteration position to end (for `backward` mode); returns true if valid position exists */
+export function resetVariantNavigationToEnd<Args extends Obj>(
+  state: VariantNavigationState<Args>,
   templates: TestVariantsTemplate<Args, any>[],
-  keys: (keyof Args)[],
-  keysCount: number,
+  argsKeys: (keyof Args)[],
 ): boolean {
-  state.repeatIndex = 0
+  const keysCount = argsKeys.length
+  state.attemptIndex = 0
   for (let i = 0; i < keysCount; i++) {
-    delete state.args[keys[i]]
+    // high performance way to delete property
+    state.args[argsKeys[i]] = void 0 as any
   }
   // Set each arg to its max value within limits
   for (let i = 0; i < keysCount; i++) {
-    state.argValues[i] = calcTemplateValues(state, templates, state.args, i)
-    const maxIndex = getMaxIndex(state, i) - 1
+    state.argValues[i] = calcArgValues(templates, state.args, i)
+    const maxIndex = getArgValuesMaxIndex(state, i) - 1
     if (maxIndex < 0) {
       return false
     }
     state.indexes[i] = maxIndex
-    state.args[keys[i]] = state.argValues[i][maxIndex]
+    state.args[argsKeys[i]] = state.argValues[i][maxIndex]
   }
   return true
 }
 
-/** Advance to next variant in cartesian product; returns true if successful
- * Uses shared keyIndex between loops: when inner loop breaks on empty template,
- * outer loop retries from that position
- */
-export function advanceVariant<Args extends Obj>(
-  state: NavigationState<Args>,
+export function isVariantNavigationAtStart<Args extends Obj>(
+  state: VariantNavigationState<Args>,
+): boolean {
+  for (let i = 0, len = state.indexes.length; i < len; i++) {
+    if (state.indexes[i] > 0) {
+      return false
+    }
+  }
+  return true
+}
+
+export function isVariantNavigationAtEndOrBeyond<Args extends Obj>(
+  state: VariantNavigationState<Args>,
+): boolean {
+  for (let i = 0, len = state.indexes.length; i < len; i++) {
+    const maxIndex = getArgValuesMaxIndex(state, i) - 1
+    if (state.indexes[i] < maxIndex) {
+      return false
+    }
+  }
+  return true
+}
+
+/** Advance to next variant in cartesian product; returns true if successful */
+export function advanceVariantNavigation<Args extends Obj>(
+  state: VariantNavigationState<Args>,
   templates: TestVariantsTemplate<Args, any>[],
   keys: (keyof Args)[],
-  keysCount: number,
 ): boolean {
+  const keysCount = keys.length
   for (let keyIndex = keysCount - 1; keyIndex >= 0; keyIndex--) {
     const valueIndex = state.indexes[keyIndex] + 1
-    const maxIndex = getMaxIndex(state, keyIndex)
+    const maxIndex = getArgValuesMaxIndex(state, keyIndex)
     if (valueIndex < maxIndex) {
       state.indexes[keyIndex] = valueIndex
       state.args[keys[keyIndex]] = state.argValues[keyIndex][valueIndex]
-      // Reset subsequent keys; keyIndex is intentionally shared with outer loop
       // Clear subsequent keys from args before calculating their template values
       for (let i = keyIndex + 1; i < keysCount; i++) {
-        delete state.args[keys[i]]
+        // high performance way to delete property
+        state.args[keys[i]] = void 0 as any
       }
       for (keyIndex++; keyIndex < keysCount; keyIndex++) {
-        state.argValues[keyIndex] = calcTemplateValues(
-          state,
+        state.argValues[keyIndex] = calcArgValues(
           templates,
           state.args,
           keyIndex,
         )
-        const keyMaxIndex = getMaxIndex(state, keyIndex)
+        const keyMaxIndex = getArgValuesMaxIndex(state, keyIndex)
         if (keyMaxIndex <= 0) {
           break
         }
@@ -134,12 +142,12 @@ export function advanceVariant<Args extends Obj>(
 }
 
 /** Retreat to previous variant (decrement with borrow); returns true if successful */
-export function retreatVariant<Args extends Obj>(
-  state: NavigationState<Args>,
+export function retreatVariantNavigation<Args extends Obj>(
+  state: VariantNavigationState<Args>,
   templates: TestVariantsTemplate<Args, any>[],
   keys: (keyof Args)[],
-  keysCount: number,
 ): boolean {
+  const keysCount = keys.length
   for (let keyIndex = keysCount - 1; keyIndex >= 0; keyIndex--) {
     const valueIndex = state.indexes[keyIndex] - 1
     if (valueIndex >= 0) {
@@ -147,16 +155,16 @@ export function retreatVariant<Args extends Obj>(
       state.args[keys[keyIndex]] = state.argValues[keyIndex][valueIndex]
       // Set subsequent keys to their max values
       for (let i = keyIndex + 1; i < keysCount; i++) {
-        delete state.args[keys[i]]
+        // high performance way to delete property
+        state.args[keys[i]] = void 0 as any
       }
       for (keyIndex++; keyIndex < keysCount; keyIndex++) {
-        state.argValues[keyIndex] = calcTemplateValues(
-          state,
+        state.argValues[keyIndex] = calcArgValues(
           templates,
           state.args,
           keyIndex,
         )
-        const maxIndex = getMaxIndex(state, keyIndex) - 1
+        const maxIndex = getArgValuesMaxIndex(state, keyIndex) - 1
         if (maxIndex < 0) {
           break
         }
@@ -172,77 +180,40 @@ export function retreatVariant<Args extends Obj>(
 }
 
 /** Random pick within limits; returns true if successful */
-export function randomPickVariant<Args extends Obj>(
-  state: NavigationState<Args>,
+export function randomPickVariantNavigation<Args extends Obj>(
+  state: VariantNavigationState<Args>,
   templates: TestVariantsTemplate<Args, any>[],
   keys: (keyof Args)[],
-  keysCount: number,
   limitArgOnError?: null | boolean | LimitArgOnError,
 ): boolean {
-  // Handle empty template (keysCount=0): always yields the empty variant
-  if (keysCount === 0) {
-    return true
-  }
+  const keysCount = keys.length
 
-  // Clear args from previous iteration before calculating template values
-  for (let i = 0; i < keysCount; i++) {
-    delete state.args[keys[i]]
-  }
-
-  // Check if any limits exist
-  let hasLimits = false
-  for (let i = 0; i < keysCount; i++) {
-    if (state.argLimits[i] != null) {
-      hasLimits = true
-      break
-    }
+  if (keysCount <= 0) {
+    // Nothing to pick
+    return false
   }
 
   // Calculate argValues for first arg (subsequent args calculated during picking)
-  if (keysCount > 0) {
-    state.argValues[0] = calcTemplateValues(state, templates, state.args, 0)
-  }
-
-  if (!hasLimits) {
-    // No limits - pick random from full range
-    for (let i = 0; i < keysCount; i++) {
-      const len = state.argValues[i].length
-      if (len === 0) {
-        return false
-      }
-      state.indexes[i] = Math.floor(Math.random() * len)
-      state.args[keys[i]] = state.argValues[i][state.indexes[i]]
-      // Calculate only next argValues; subsequent ones calculated when their turn comes
-      if (i + 1 < keysCount) {
-        state.argValues[i + 1] = calcTemplateValues(
-          state,
-          templates,
-          state.args,
-          i + 1,
-        )
-      }
-    }
-    return true
-  }
+  state.argValues[0] = calcArgValues(templates, state.args, 0)
 
   if (limitArgOnError) {
-    // Per-arg constraint: each index must not exceed its limit
-    for (let i = 0; i < keysCount; i++) {
-      const len = state.argValues[i].length
+    for (let keyIndex = 0; keyIndex < keysCount; keyIndex++) {
+      const len = state.argValues[keyIndex].length
       if (len === 0) {
         return false
       }
-      const limit = state.argLimits[i]
-      const maxIndex = limit != null ? Math.min(limit, len - 1) : len - 1
-      state.indexes[i] = Math.floor(Math.random() * (maxIndex + 1))
-      state.args[keys[i]] = state.argValues[i][state.indexes[i]]
-      // Calculate only next argValues; subsequent ones calculated when their turn comes
-      if (i + 1 < keysCount) {
-        state.argValues[i + 1] = calcTemplateValues(
-          state,
+      const maxIndex = getArgValuesMaxIndex(state, keyIndex)
+      if (maxIndex <= 0) {
+        break
+      }
+      state.indexes[keyIndex] = Math.floor(Math.random() * maxIndex)
+      state.args[keys[keyIndex]] =
+        state.argValues[keyIndex][state.indexes[keyIndex]]
+      if (keyIndex + 1 < keysCount) {
+        state.argValues[keyIndex + 1] = calcArgValues(
           templates,
           state.args,
-          i + 1,
+          keyIndex + 1,
         )
       }
     }
@@ -250,42 +221,9 @@ export function randomPickVariant<Args extends Obj>(
   }
 
   // Combination constraint: must be below max combination lexicographically
-  let belowMax = false
-  for (let i = 0; i < keysCount; i++) {
-    const len = state.argValues[i].length
-    if (len === 0) {
-      return false
-    }
-    const limit = state.argLimits[i]
-    let maxIndex: number
-    if (belowMax) {
-      maxIndex = len - 1
-    } else {
-      maxIndex = limit != null ? Math.min(limit, len - 1) : len - 1
-    }
-    state.indexes[i] = Math.floor(Math.random() * (maxIndex + 1))
-    state.args[keys[i]] = state.argValues[i][state.indexes[i]]
-
-    if (!belowMax && limit != null && state.indexes[i] < limit) {
-      belowMax = true
-    }
-
-    // Calculate only next argValues; subsequent ones calculated when their turn comes
-    if (i + 1 < keysCount) {
-      state.argValues[i + 1] = calcTemplateValues(
-        state,
-        templates,
-        state.args,
-        i + 1,
-      )
-    }
-  }
-
-  // If landed exactly on max combination, retreat by 1
-  if (!belowMax) {
-    if (!retreatVariant(state, templates, keys, keysCount)) {
-      return false
-    }
+  const isAtEndOrBeyond = isVariantNavigationAtEndOrBeyond(state)
+  if (isAtEndOrBeyond) {
+    return retreatVariantNavigation(state, templates, keys)
   }
 
   return true
