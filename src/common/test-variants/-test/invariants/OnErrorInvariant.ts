@@ -1,3 +1,4 @@
+import { deepEqualJsonLike } from '@flemist/simple-utils'
 import { TestArgs } from 'src/common/test-variants/-test/types'
 import { TestError } from 'src/common/test-variants/-test/helpers/TestError'
 
@@ -33,7 +34,7 @@ export class OnErrorInvariant {
       throw new Error(`onError called multiple times`)
     }
     this.onErrorCount++
-    if (event.args !== expectedArgs) {
+    if (!deepEqualJsonLike(event.args, expectedArgs)) {
       throw new Error(`onError: args do not match errorVariantArgs`)
     }
     if (event.tests !== expectedCallCount) {

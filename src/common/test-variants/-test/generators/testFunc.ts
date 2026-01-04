@@ -16,6 +16,9 @@ export function generateErrorVariantIndex(
   if (options.errorVariantIndex === 0) {
     return 0
   }
+  if (options.errorVariantIndex === 1) {
+    return 1
+  }
   if (options.errorVariantIndex === 'last') {
     return variantsCount - 1
   }

@@ -14,8 +14,9 @@ export class ParallelInvariant {
   private maxConcurrentCalls = 0
   private readonly parallelLimit: number
 
-  constructor(parallelLimit: number) {
-    this.parallelLimit = parallelLimit
+  constructor(parallel: number | boolean | undefined | null) {
+    this.parallelLimit =
+      parallel === true ? Infinity : typeof parallel === 'number' ? parallel : 1
   }
 
   onCallStart(): void {

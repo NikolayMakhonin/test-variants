@@ -21,12 +21,13 @@ export class CallCountInvariant {
   }
 
   onCall(): number {
+    ++this.callCount
     if (this.callCount > this.callCountMax) {
       throw new Error(
         `testFunc: callCount ${this.callCount} exceeded max ${this.callCountMax}`,
       )
     }
-    return ++this.callCount
+    return this.callCount
   }
 
   getCallCount(): number {

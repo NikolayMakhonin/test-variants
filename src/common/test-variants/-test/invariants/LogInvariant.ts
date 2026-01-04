@@ -27,6 +27,11 @@ export class LogInvariant {
   private logErrors = 0
   private logDebugs = 0
 
+  private readonly logOptions:
+    | TestVariantsLogOptions
+    | boolean
+    | undefined
+    | null
   private readonly startEnabled: boolean
   private readonly completedEnabled: boolean
   private readonly progressEnabled: boolean
@@ -39,6 +44,7 @@ export class LogInvariant {
     logOptions: TestVariantsLogOptions | boolean | undefined | null,
     getCallCount: () => number,
   ) {
+    this.logOptions = logOptions
     this.getCallCount = getCallCount
     if (typeof logOptions === 'boolean') {
       this.startEnabled = logOptions
@@ -50,7 +56,7 @@ export class LogInvariant {
     } else {
       this.startEnabled = !!logOptions?.start
       this.completedEnabled = !!logOptions?.completed
-      this.progressEnabled = logOptions?.progress !== false
+      this.progressEnabled = !!logOptions?.progress
       this.modeChangeEnabled = !!logOptions?.modeChange
       this.errorEnabled = !!logOptions?.error
       this.debugEnabled = !!logOptions?.debug
@@ -134,17 +140,23 @@ export class LogInvariant {
    */
   validateFinal(
     callCount: number,
-    logProgressOption: number | boolean | undefined | null,
     elapsedTime: number,
     iterationModes: readonly ModeConfig[] | undefined | null,
     lastError: Error | null,
   ): void {
+    if (isLogEnabled()) {
+      return
+    }
     if (this.startEnabled && !this.logStart) {
       throw new Error(`Start log expected but not logged`)
     }
     if (this.completedEnabled && !this.logCompleted) {
       throw new Error(`Completed log expected but not logged`)
     }
+    const logProgressOption =
+      typeof this.logOptions === 'boolean'
+        ? this.logOptions
+        : this.logOptions?.progress
     if (
       this.progressEnabled &&
       typeof logProgressOption === 'number' &&

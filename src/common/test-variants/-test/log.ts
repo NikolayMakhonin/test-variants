@@ -24,8 +24,10 @@ export function runWithLogs<T>(func: () => T): T {
         },
       ) as any
     }
-    return result
-  } finally {
     logEnabled = false
+    return result
+  } catch (err) {
+    logEnabled = false
+    throw err
   }
 }

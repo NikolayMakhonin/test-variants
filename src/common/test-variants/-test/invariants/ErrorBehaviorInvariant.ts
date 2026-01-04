@@ -17,25 +17,38 @@ import { TestArgs } from 'src/common/test-variants/-test/types'
  */
 export class ErrorBehaviorInvariant {
   private readonly findBestError: FindBestErrorOptions | undefined | null
+  private readonly errorVariantIndex: number | null
+  private readonly retriesToError: number
 
-  constructor(findBestError: FindBestErrorOptions | undefined | null) {
+  constructor(
+    findBestError: FindBestErrorOptions | undefined | null,
+    errorVariantIndex: number | null,
+    retriesToError: number,
+  ) {
     this.findBestError = findBestError
+    this.errorVariantIndex = errorVariantIndex
+    this.retriesToError = retriesToError
   }
 
   /**
    * Validates error behavior after test execution
    *
-   * @param errorExpected - Whether an error was expected based on errorIndex and retriesToError
+   * @param callCount - Number of test function calls
    * @param thrownError - The error that was thrown (or null)
    * @param lastError - The last TestError that occurred (or null)
    * @param result - The test result (may be null if error thrown)
    */
   validate(
-    errorExpected: boolean,
+    callCount: number,
     thrownError: unknown,
     lastError: TestError | null,
     result: TestVariantsRunResult<TestArgs> | null,
   ): void {
+    const errorExpected =
+      (this.errorVariantIndex != null &&
+        this.retriesToError === 0 &&
+        callCount > this.errorVariantIndex) ||
+      !!lastError
     const dontThrowIfError = this.findBestError?.dontThrowIfError ?? false
 
     if (errorExpected) {
