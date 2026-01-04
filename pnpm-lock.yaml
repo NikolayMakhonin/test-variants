@@ -15,8 +15,8 @@ importers:
         specifier: ^1.2.8
         version: 1.2.8
       '@flemist/simple-utils':
-        specifier: ^1.0.0
-        version: 1.0.0
+        specifier: ^1.0.1
+        version: 1.0.1
       '@flemist/time-controller':
         specifier: ^1.0.4
         version: 1.0.4
@@ -245,8 +245,8 @@ packages:
     resolution: {integrity: sha512-5rc1BdJOBpLzXoyKGWjXQSSEr5S8NtPG5c4oH/mG1Dsm3/7H1QlyaHfznXbquy2B6lQ7j1sHMlFvsDO3+ULdSQ==}
     engines: {node: '>=12.9.0'}
 
-  '@flemist/simple-utils@1.0.0':
-    resolution: {integrity: sha512-zxUJtMfgBvVUFWvm6pmbzYTKweoLuiA4eIaVWZWIsPAmFCZqc05U+JIQ3IEPFTHVbd+7Fu63a1W9KOxiW4YSaA==}
+  '@flemist/simple-utils@1.0.1':
+    resolution: {integrity: sha512-N671rUUkjJ8bTkaGzW8rMtX2rprBWVtfeMCdrmUkst70Z0lyjGplBJF3fiyqT/vfcoPNZk4b60ai7Z6IsxjvBg==}
     engines: {node: '>=20'}
 
   '@flemist/test-utils@1.0.2':
@@ -2850,7 +2850,7 @@ snapshots:
       '@flemist/time-controller': 1.0.4
       tslib: 2.8.1
 
-  '@flemist/simple-utils@1.0.0':
+  '@flemist/simple-utils@1.0.1':
     dependencies:
       '@flemist/abort-controller-fast': 1.0.0
       '@flemist/async-utils': 1.2.8

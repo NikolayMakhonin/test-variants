@@ -20,8 +20,8 @@ const config = {
         },
         {
           rule: 'allow',
-          note: 'Run vitest tests (vitest --run --project dev --bail 3 src/dir/**/file.test.js)',
-          regexp: '^pnpm exec vitest --run --project dev --bail \\d+\\b',
+          note: 'Run vitest tests (vitest --run --bail 3 src/dir/**/file.test.js)',
+          regexp: '^pnpm exec vitest --run --bail \\d+\\b',
         },
         {
           rule: 'allow',
