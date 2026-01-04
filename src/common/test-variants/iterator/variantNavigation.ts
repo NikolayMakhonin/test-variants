@@ -1,9 +1,9 @@
 import type { Obj } from '@flemist/simple-utils'
+import type { LimitArgOnError } from 'src/common/test-variants/types'
 import type {
-  LimitArgOnError,
   TestVariantsTemplatesWithExtra,
   VariantNavigationState,
-} from 'src/common/test-variants/types'
+} from './types'
 import { findValueIndex } from 'src/common/test-variants/helpers/findValueIndex'
 
 /** Calculate template values for given key index */

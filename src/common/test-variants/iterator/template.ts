@@ -1,9 +1,9 @@
 import type { Obj } from '@flemist/simple-utils'
+import type { Equals } from 'src/common/test-variants/types'
 import type {
-  Equals,
   TestVariantsTemplates,
   TestVariantsTemplatesWithExtra,
-} from 'src/common/test-variants/types'
+} from './types'
 import { findValueIndex } from 'src/common/test-variants/helpers/findValueIndex'
 
 /** Extend template arg with extra value */

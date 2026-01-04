@@ -5,9 +5,11 @@ import { fileLock } from '@flemist/simple-utils/node'
 import type {
   ArgsWithSeed,
   SaveErrorVariantsOptions,
+} from 'src/common/test-variants/types'
+import type {
   SaveErrorVariantsStore,
   SaveErrorVariantsStoreReplayOptions,
-} from 'src/common/test-variants/types'
+} from 'src/common/test-variants/run/types'
 import {
   generateErrorVariantFilePath,
   parseErrorVariantFile,

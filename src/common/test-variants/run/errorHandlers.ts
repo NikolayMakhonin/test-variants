@@ -1,10 +1,8 @@
 import type { Obj } from '@flemist/simple-utils'
 import type { AbortControllerFast } from '@flemist/abort-controller-fast'
-import type {
-  ArgsWithSeed,
-  TestVariantsIterator,
-  SaveErrorVariantsStore,
-} from 'src/common/test-variants/types'
+import type { ArgsWithSeed } from 'src/common/test-variants/types'
+import type { TestVariantsIterator } from 'src/common/test-variants/iterator/types'
+import type { SaveErrorVariantsStore } from './types'
 import type { TestVariantsRunState } from './createRunState'
 
 export type ErrorHandlerDeps<Args extends Obj> = {

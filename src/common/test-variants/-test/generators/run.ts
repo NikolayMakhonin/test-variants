@@ -14,7 +14,8 @@ import { PARALLEL_MAX, TIME_MAX } from '../constants'
 import { StressTestArgs, Template, TestArgs } from '../types'
 import { isLogEnabled } from '../log'
 import { generateFindBestErrorOptions } from './findBestError'
-import { ModeType, TestVariantsLogType } from 'src/common/test-variants/types'
+import type { TestVariantsLogType } from 'src/common/test-variants/types'
+import type { ModeType } from 'src/common/test-variants/iterator/types'
 
 function generateModeType(rnd: Random, options: StressTestArgs): ModeType {
   if (options.modeType != null) {

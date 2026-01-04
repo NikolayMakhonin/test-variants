@@ -7,7 +7,7 @@ import { TimeControllerMock } from '@flemist/time-controller'
 import { delay, PromiseOrValue } from '@flemist/async-utils'
 import { isLogEnabled } from '../log'
 import { log } from 'src/common/helpers/log'
-import { TestFuncResult } from 'src/common/test-variants/types'
+import type { TestFuncResult } from 'src/common/test-variants/run/types'
 import { ITERATIONS_ASYNC, ITERATIONS_SYNC } from '../constants'
 import { TestError } from '../helpers/TestError'
 

@@ -27,8 +27,8 @@ import type {
   TestVariantsCall,
   TestVariantsSetArgs,
   TestVariantsTemplatesExt,
-  TestVariantsTest,
 } from '../common/test-variants/types'
+import type { TestVariantsTest } from '../common/test-variants/run/types'
 import { createSaveErrorVariantsStore } from './test-variants/createSaveErrorVariantsStore'
 
 export function createTestVariants<Args extends Obj>(

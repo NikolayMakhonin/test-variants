@@ -1,9 +1,7 @@
 import { createTestRun } from './createTestRun'
-import type {
-  TestVariantsSetArgs,
-  TestVariantsTemplates,
-  TestVariantsTest,
-} from './types'
+import type { TestVariantsSetArgs } from './types'
+import type { TestVariantsTemplates } from './iterator/types'
+import type { TestVariantsTest } from './run/types'
 import { testVariantsRun } from './testVariantsRun'
 import type { Obj } from '@flemist/simple-utils'
 import { testVariantsIterator } from './testVariantsIterator'

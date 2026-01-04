@@ -2,9 +2,9 @@ import type { RequiredNonNullable, Obj } from '@flemist/simple-utils'
 import type { ITimeController } from '@flemist/time-controller'
 import type {
   TestVariantsLogOptions,
-  TestVariantsIterator,
   ModeConfig,
 } from 'src/common/test-variants/types'
+import type { TestVariantsIterator } from 'src/common/test-variants/iterator/types'
 import type { TestVariantsRunState } from 'src/common/test-variants/run/createRunState'
 import { formatBytes, formatDuration, formatModeConfig } from './format'
 import { getMemoryUsage } from './getMemoryUsage'

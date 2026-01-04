@@ -3,13 +3,15 @@ import { formatAny, type Obj } from '@flemist/simple-utils'
 import type {
   ArgsWithSeed,
   ErrorEvent,
+  TestVariantsTestOptions,
+  TestVariantsTestResult,
+} from './types'
+import type {
   TestFuncResult,
   TestVariantsCreateTestRunOptions,
   TestVariantsTest,
-  TestVariantsTestOptions,
-  TestVariantsTestResult,
   TestVariantsTestRun,
-} from './types'
+} from './run/types'
 
 /** Normalize test result to standard format */
 function normalizeTestResult(

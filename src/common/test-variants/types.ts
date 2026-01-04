@@ -3,36 +3,14 @@ import type { PromiseOrValue } from '@flemist/async-utils'
 import type { Obj } from '@flemist/simple-utils'
 import type { ITimeController } from '@flemist/time-controller'
 
-// region Re-exports for internal types (preserves imports from types.ts)
+// region Re-exports for public types from submodules
+
+export type { TestVariantsTemplatesExt } from './iterator/types'
 
 export type {
-  AddLimitOptions,
-  ModeType,
-  TestVariantsIterator,
-  TestVariantsIteratorLimit,
-  TestVariantsIteratorOptions,
-  TestVariantsTemplate,
-  TestVariantsTemplateFunc,
-  TestVariantsTemplates,
-  TestVariantsTemplatesExt,
-  TestVariantsTemplatesExtra,
-  TestVariantsTemplateValues,
-  TestVariantsTemplatesWithExtra,
-  VariantNavigationState,
-} from './iterator/types'
-
-export type {
-  CreateSaveErrorVariantsStore,
-  SaveErrorVariantsStore,
-  SaveErrorVariantsStoreReplayOptions,
-  TestFuncResult,
   TestVariantsCall,
-  TestVariantsCreateTestRunOptions,
-  TestVariantsRunOptionsInternal,
   TestVariantsSetArgs,
-  TestVariantsTest,
   TestVariantsTestResult,
-  TestVariantsTestRun,
 } from './run/types'
 
 // endregion

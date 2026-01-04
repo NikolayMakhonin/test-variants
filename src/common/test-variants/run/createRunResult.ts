@@ -1,10 +1,10 @@
 import type { Obj } from '@flemist/simple-utils'
 import type {
-  TestVariantsIterator,
   TestVariantsResult,
   TestVariantsBestError,
   FindBestErrorOptions,
 } from 'src/common/test-variants/types'
+import type { TestVariantsIterator } from 'src/common/test-variants/iterator/types'
 import type { TestVariantsRunState } from './createRunState'
 
 /** Create test variants run result */

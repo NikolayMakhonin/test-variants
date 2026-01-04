@@ -3,11 +3,13 @@ import type { ITimeController } from '@flemist/time-controller'
 import type { RequiredNonNullable, Obj } from '@flemist/simple-utils'
 import type {
   TestVariantsLogOptions,
-  TestVariantsRunOptionsInternal,
   FindBestErrorOptions,
-  SaveErrorVariantsStore,
   OnModeChangeCallback,
 } from 'src/common/test-variants/types'
+import type {
+  TestVariantsRunOptionsInternal,
+  SaveErrorVariantsStore,
+} from './types'
 import { timeControllerDefault } from '@flemist/time-controller'
 import { resolveLogOptions } from 'src/common/test-variants/log/logOptions'
 
