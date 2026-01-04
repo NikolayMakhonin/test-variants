@@ -1,4 +1,5 @@
 import type { ModeConfig, TestVariantsRunOptions } from 'src/common'
+import type { NumberRange } from '@flemist/simple-utils'
 import { TestArgs } from '../types'
 import { LIMIT_MAX } from '../constants'
 
@@ -6,23 +7,24 @@ export const MODES_DEFAULT: readonly ModeConfig[] = Object.freeze([
   { mode: 'forward' },
 ])
 
-export function estimateCallCountMax(
+export function estimateCallCount(
   variantsCount: number,
   runOptions: TestVariantsRunOptions<TestArgs>,
-): number {
+): NumberRange {
   if (variantsCount === 0) {
-    return 0
+    return [0, 0]
   }
 
-  let total: number
+  let min = 0
+  let max: number
 
   if (runOptions.findBestError) {
-    total = LIMIT_MAX
+    max = LIMIT_MAX
   } else {
     const globalCycles = Math.max(1, runOptions.cycles ?? 1)
     const modes = runOptions.iterationModes ?? MODES_DEFAULT
 
-    // Calculate max calls per global cycle (all modes once)
+    let minPerGlobalCycle = 0
     let maxPerGlobalCycle = 0
     for (let i = 0, len = modes.length; i < len; i++) {
       const mode = modes[i]
@@ -32,19 +34,22 @@ export function estimateCallCountMax(
           const modeCycles = mode.cycles ?? 1
           const attempts = mode.attemptsPerVariant ?? 1
           let modeMax = variantsCount * modeCycles * attempts
-          // Apply mode limitTests
+          let modeMin = modeMax
           if (mode.limitTests != null) {
             modeMax = Math.min(modeMax, mode.limitTests)
+            modeMin = Math.min(modeMin, mode.limitTests)
           }
+          minPerGlobalCycle += modeMin
           maxPerGlobalCycle += modeMax
           break
         }
         case 'random': {
           let modeMax = variantsCount
-          // Apply mode limitTests
+          const modeMin = 0
           if (mode.limitTests != null) {
             modeMax = Math.min(modeMax, mode.limitTests)
           }
+          minPerGlobalCycle += modeMin
           maxPerGlobalCycle += modeMax
           break
         }
@@ -54,12 +59,14 @@ export function estimateCallCountMax(
       }
     }
 
-    total = maxPerGlobalCycle * globalCycles
+    min = minPerGlobalCycle * globalCycles
+    max = maxPerGlobalCycle * globalCycles
   }
 
   if (runOptions.limitTests != null) {
-    total = Math.min(total, runOptions.limitTests)
+    min = Math.min(min, runOptions.limitTests)
+    max = Math.min(max, runOptions.limitTests)
   }
 
-  return total
+  return [min, max]
 }

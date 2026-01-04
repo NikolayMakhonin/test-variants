@@ -39,7 +39,7 @@ export function getVariantArgsByIndex(
   let result: TestArgs | null = null
   forEachVariant(template, argKeys, (args, index) => {
     if (index === targetIndex) {
-      result = args
+      result = { ...args }
     }
   })
   return Object.freeze(result)
