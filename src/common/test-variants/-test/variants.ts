@@ -263,9 +263,13 @@ export const testVariants = createTestVariants(
     try {
       await executeStressTest(options)
     } catch (err) {
-      await runWithLogs(async () => {
-        await executeStressTest(options)
-      })
+      try {
+        await runWithLogs(async () => {
+          await executeStressTest(options)
+        })
+      } catch {
+        // ignore because real error is in err variable
+      }
       throw err
     }
   },

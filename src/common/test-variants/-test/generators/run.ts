@@ -63,6 +63,17 @@ function generateLogOptions(
   options: StressTestArgs,
   logFunc: (type: TestVariantsLogType, message: string) => void,
 ): TestVariantsLogOptions {
+  // Always consume the same random values to keep RNG sequence consistent
+  // between normal runs and logged runs (for reproducible error variants)
+  const enabled = generateBoolean(rnd, options.withLog)
+  const start = generateBoolean(rnd, enabled)
+  const progressEnabled = generateBoolean(rnd, enabled)
+  const progress = progressEnabled ? generateBoundaryInt(rnd, TIME_MAX) : false
+  const completed = generateBoolean(rnd, enabled)
+  const error = generateBoolean(rnd, enabled)
+  const modeChange = generateBoolean(rnd, enabled)
+  const debug = generateBoolean(rnd, enabled)
+
   if (isLogEnabled()) {
     return Object.freeze({
       start: true,
@@ -74,16 +85,13 @@ function generateLogOptions(
       func: logFunc,
     })
   }
-  const enabled = generateBoolean(rnd, options.withLog)
   return Object.freeze({
-    start: generateBoolean(rnd, enabled),
-    progress: generateBoolean(rnd, enabled)
-      ? generateBoundaryInt(rnd, TIME_MAX)
-      : false,
-    completed: generateBoolean(rnd, enabled),
-    error: generateBoolean(rnd, enabled),
-    modeChange: generateBoolean(rnd, enabled),
-    debug: generateBoolean(rnd, enabled),
+    start,
+    progress,
+    completed,
+    error,
+    modeChange,
+    debug,
     func: logFunc,
   })
 }

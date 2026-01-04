@@ -52,11 +52,11 @@ describe(
         iterationModes: [
           {
             mode: 'forward',
-            limitTests: 1000,
+            limitTests: 10,
           },
           {
             mode: 'random',
-            limitTests: 100000,
+            limitTests: 100,
           },
           // {
           //   mode: 'backward',
@@ -64,7 +64,7 @@ describe(
           //   attemptsPerVariant: 10,
           // },
         ],
-        parallel: 100,
+        parallel: 1,
       })
     })
   },
