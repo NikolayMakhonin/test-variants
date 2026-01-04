@@ -55,21 +55,21 @@ describe(
           // Never use it here. findBestError with limitArgOnError is completely enough here.
           useToFindBestError: false,
         },
-        // iterationModes: [
-        //   {
-        //     mode: 'forward',
-        //     limitTests: 10,
-        //   },
-        //   {
-        //     mode: 'random',
-        //     limitTests: 100,
-        //   },
-        //   {
-        //     mode: 'backward',
-        //     limitTests: 1,
-        //     attemptsPerVariant: 10,
-        //   },
-        // ],
+        iterationModes: [
+          {
+            mode: 'forward',
+            limitTests: 1000,
+          },
+          {
+            mode: 'random',
+            limitTests: 100000,
+          },
+          // {
+          //   mode: 'backward',
+          //   limitTests: 1,
+          //   attemptsPerVariant: 10,
+          // },
+        ],
         parallel: 1,
       })
 

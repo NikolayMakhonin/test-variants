@@ -173,6 +173,9 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   // )
 
   function logFunc(_type: TestVariantsLogType, _message: string): void {
+    if (isLogEnabled()) {
+      log(`[${_type}] ${_message}`)
+    }
     // logInvariant.onLog(type, message)
   }
 
