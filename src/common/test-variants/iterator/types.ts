@@ -81,12 +81,14 @@ export type TestVariantsTemplate<Args extends Obj, Value> =
   | TestVariantsTemplateValues<Value>
   | TestVariantsTemplateFunc<Args, Value>
 
+export type ArgName<Args extends Obj> = Extract<keyof Args, string>
+
 export type TestVariantsTemplates<Args extends Obj> = {
-  [key in keyof Args]: TestVariantsTemplate<Args, Args[key]>
+  [key in ArgName<Args>]: TestVariantsTemplate<Args, Args[key]>
 }
 
 export type TestVariantsTemplatesExtra<Args extends Obj> = {
-  [key in keyof Args]: Mutable<TestVariantsTemplateValues<Args[key]>>
+  [key in ArgName<Args>]: Mutable<TestVariantsTemplateValues<Args[key]>>
 }
 
 export type TestVariantsTemplatesWithExtra<
@@ -101,6 +103,8 @@ export type TestVariantsTemplatesWithExtra<
 export type VariantNavigationState<Args extends Obj> = {
   // Variant args
   args: Args
+  // Arg names
+  argsNames: ArgName<Args>[]
   // Value index by arg index
   indexes: number[]
   // Possible values by arg index
@@ -109,6 +113,9 @@ export type VariantNavigationState<Args extends Obj> = {
   argLimits: (number | null)[]
   // Repeat index for the same variant if attemptsPerVariant > 1
   attemptIndex: number
+  templates: TestVariantsTemplatesWithExtra<Args, any>
+  limitArgOnError: null | boolean | LimitArgOnError
+  equals?: null | Equals
 }
 
 /** Extended templates type that allows additional args beyond the base Args type */
@@ -116,9 +123,9 @@ export type TestVariantsTemplatesExt<
   Args extends Obj,
   ArgsExtra extends Obj,
 > = TestVariantsTemplates<{
-  [key in keyof ArgsExtra | keyof Args]: key extends keyof Args
+  [key in ArgName<Args | ArgsExtra>]: key extends ArgName<Args>
     ? Args[key]
-    : key extends keyof ArgsExtra
+    : key extends ArgName<ArgsExtra>
       ? ArgsExtra[key]
       : never
 }>

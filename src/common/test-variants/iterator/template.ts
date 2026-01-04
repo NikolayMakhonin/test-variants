@@ -1,6 +1,7 @@
 import type { Obj } from '@flemist/simple-utils'
 import type { Equals } from 'src/common/test-variants/types'
 import type {
+  ArgName,
   TestVariantsTemplates,
   TestVariantsTemplatesWithExtra,
 } from './types'
@@ -10,7 +11,7 @@ import { findValueIndex } from 'src/common/test-variants/helpers/findValueIndex'
 function extendTemplateWithValue<Args extends Obj>(
   templates: TestVariantsTemplatesWithExtra<Args, any>,
   addingArgs: Args,
-  keys: (keyof Args)[],
+  keys: ArgName<Args>[],
   keyIndex: number,
   equals?: null | Equals,
 ): void {
@@ -42,7 +43,7 @@ function extendTemplateWithValue<Args extends Obj>(
 export function extendTemplatesForArgs<Args extends Obj>(
   templates: TestVariantsTemplatesWithExtra<Args, any>,
   addingArgs: Args,
-  keys: (keyof Args)[],
+  keys: ArgName<Args>[],
   keysCount: number,
   equals?: null | Equals,
 ): void {
