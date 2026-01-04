@@ -7,7 +7,8 @@ import type {
   TestVariantsTemplate,
   VariantNavigationState,
 } from './types'
-import { calcArgValues } from './variantNavigation'
+import { calcArgValues } from './helpers/variantNavigation'
+import { findValueIndex } from 'src/common/test-variants/helpers/findValueIndex'
 
 /** Pending limit waiting for position match during iteration */
 export type PendingLimit<Args extends Obj> = {
@@ -21,51 +22,6 @@ export type LimitState<Args extends Obj> = VariantNavigationState<Args> & {
   limit: TestVariantsIteratorLimit<Args> | null
   count: number | null
   index: number
-}
-
-/** Find index of value in array; returns -1 if not found */
-export function findValueIndex<T>(
-  values: readonly T[],
-  value: T,
-  equals?: null | ((a: T, b: T) => boolean),
-): number {
-  for (let i = 0; i < values.length; i++) {
-    if (equals ? equals(values[i], value) : values[i] === value) {
-      return i
-    }
-  }
-  return -1
-}
-
-/** Extend template with missing value from saved args */
-function extendTemplateWithValue<Args extends Obj>(
-  state: VariantNavigationState<Args>,
-  templates: TestVariantsTemplate<Args, any>[],
-  addingArgs: Args,
-  keys: (keyof Args)[],
-  keyIndex: number,
-  equals?: null | Equals,
-): void {
-  const values = calcArgValues(templates, addingArgs, keyIndex)
-  const value = addingArgs[keys[keyIndex]]
-  if (findValueIndex(values, value, equals) >= 0) {
-    return // Already exists
-  }
-  values[keyIndex].push(value)
-}
-
-/** Extend templates with all missing values from saved args */
-export function extendTemplatesForArgs<Args extends Obj>(
-  state: VariantNavigationState<Args>,
-  templates: TestVariantsTemplate<Args, any>[],
-  addingArgs: Args,
-  keys: (keyof Args)[],
-  keysCount: number,
-  equals?: null | Equals,
-): void {
-  for (let i = 0; i < keysCount; i++) {
-    extendTemplateWithValue(state, templates, addingArgs, keys, i, equals)
-  }
 }
 
 /** Validate saved args keys match iterator's arg names (ignoring "seed" key) */

@@ -1,24 +1,44 @@
 import type { Obj } from '@flemist/simple-utils'
-import type {
+import {
   LimitArgOnError,
-  TestVariantsTemplate,
+  TestVariantsTemplatesWithExtra,
   VariantNavigationState,
-} from './types'
+} from '../types'
+import { findValueIndex } from 'src/common/test-variants/helpers/findValueIndex'
 
 /** Calculate template values for given key index */
 export function calcArgValues<Args extends Obj>(
-  templates: TestVariantsTemplate<Args, any>[],
+  templates: TestVariantsTemplatesWithExtra<Args, any>,
   args: Args,
   keyIndex: number,
 ): readonly any[] {
-  const template = templates[keyIndex]
+  const template = templates.templates[keyIndex]
+  const extra = templates.extra[keyIndex]
   let values: readonly any[]
   if (typeof template === 'function') {
     values = template(args)
   } else {
     values = template
   }
-  return values
+
+  // Это снижает производительность на горячем пути,
+  // но пока не приходит в голову как сделать лучше.
+  // Но эта ситуация возможна только если пользователь
+  // изменяет шаблон между запусками тестов,
+  // а сохраненная ошикбка выходит за рамки нового шаблона.
+  let valuesWithExtra: any[] | null = null
+  for (let i = 0, len = extra.length; i < len; i++) {
+    const extraValue = extra[i]
+    if (findValueIndex(values, extraValue) < 0) {
+      if (valuesWithExtra == null) {
+        valuesWithExtra = [...values, extraValue]
+      } else {
+        valuesWithExtra.push(extraValue)
+      }
+    }
+  }
+
+  return valuesWithExtra ?? values
 }
 
 /** Get exclusive upper bound for arg values index, considering limits
@@ -38,7 +58,7 @@ export function getArgValuesMaxIndex(
 /** Reset iteration position to beginning (for `forward` mode) */
 export function resetVariantNavigationToStart<Args extends Obj>(
   state: VariantNavigationState<Args>,
-  templates: TestVariantsTemplate<Args, any>[],
+  templates: TestVariantsTemplatesWithExtra<Args, any>,
   argsKeys: (keyof Args)[],
 ): void {
   const argsKeysLength = argsKeys.length
@@ -57,7 +77,7 @@ export function resetVariantNavigationToStart<Args extends Obj>(
 /** Reset iteration position to end (for `backward` mode); returns true if valid position exists */
 export function resetVariantNavigationToEnd<Args extends Obj>(
   state: VariantNavigationState<Args>,
-  templates: TestVariantsTemplate<Args, any>[],
+  templates: TestVariantsTemplatesWithExtra<Args, any>,
   argsKeys: (keyof Args)[],
 ): boolean {
   const keysCount = argsKeys.length
@@ -105,7 +125,7 @@ export function isVariantNavigationAtEndOrBeyond<Args extends Obj>(
 /** Advance to next variant in cartesian product; returns true if successful */
 export function advanceVariantNavigation<Args extends Obj>(
   state: VariantNavigationState<Args>,
-  templates: TestVariantsTemplate<Args, any>[],
+  templates: TestVariantsTemplatesWithExtra<Args, any>,
   keys: (keyof Args)[],
 ): boolean {
   const keysCount = keys.length
@@ -144,7 +164,7 @@ export function advanceVariantNavigation<Args extends Obj>(
 /** Retreat to previous variant (decrement with borrow); returns true if successful */
 export function retreatVariantNavigation<Args extends Obj>(
   state: VariantNavigationState<Args>,
-  templates: TestVariantsTemplate<Args, any>[],
+  templates: TestVariantsTemplatesWithExtra<Args, any>,
   keys: (keyof Args)[],
 ): boolean {
   const keysCount = keys.length
@@ -182,7 +202,7 @@ export function retreatVariantNavigation<Args extends Obj>(
 /** Random pick within limits; returns true if successful */
 export function randomPickVariantNavigation<Args extends Obj>(
   state: VariantNavigationState<Args>,
-  templates: TestVariantsTemplate<Args, any>[],
+  templates: TestVariantsTemplatesWithExtra<Args, any>,
   keys: (keyof Args)[],
   limitArgOnError?: null | boolean | LimitArgOnError,
 ): boolean {

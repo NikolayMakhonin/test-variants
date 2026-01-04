@@ -11,7 +11,7 @@ import {
   resetVariantNavigationToEnd,
   resetVariantNavigationToStart,
   retreatVariantNavigation,
-} from './variantNavigation'
+} from './helpers/variantNavigation'
 import { isSequentialMode } from 'src/common/test-variants/helpers/mode'
 
 /** State per mode */

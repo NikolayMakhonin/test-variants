@@ -1,0 +1,43 @@
+import type { Obj } from '@flemist/simple-utils'
+import type { Equals } from 'src/common/test-variants/types'
+import { findValueIndex } from 'src/common/test-variants/helpers/findValueIndex'
+import { TestVariantsTemplatesWithExtra } from '../types'
+
+/** Extend template arg with extra value */
+function extendTemplateWithValue<Args extends Obj>(
+  templates: TestVariantsTemplatesWithExtra<Args, any>,
+  addingArgs: Args,
+  keys: (keyof Args)[],
+  keyIndex: number,
+  equals?: null | Equals,
+): void {
+  const value = addingArgs[keys[keyIndex]]
+
+  const template = templates.templates[keyIndex]
+  if (
+    typeof template !== 'function' &&
+    findValueIndex(template, value, equals) >= 0
+  ) {
+    return
+  }
+
+  const extra = templates.extra[keyIndex]
+  if (findValueIndex(extra, value, equals) >= 0) {
+    return
+  }
+
+  extra[keyIndex].push(value)
+}
+
+/** Extend templates with all missing values from saved args */
+export function extendTemplatesForArgs<Args extends Obj>(
+  templates: TestVariantsTemplatesWithExtra<Args, any>,
+  addingArgs: Args,
+  keys: (keyof Args)[],
+  keysCount: number,
+  equals?: null | Equals,
+): void {
+  for (let i = 0; i < keysCount; i++) {
+    extendTemplateWithValue(templates, addingArgs, keys, i, equals)
+  }
+}

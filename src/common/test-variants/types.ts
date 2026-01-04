@@ -1,6 +1,6 @@
 import type { IAbortSignalFast } from '@flemist/abort-controller-fast'
 import type { PromiseOrValue } from '@flemist/async-utils'
-import type { Obj, RequiredNonNullable } from '@flemist/simple-utils'
+import type { Mutable, Obj, RequiredNonNullable } from '@flemist/simple-utils'
 import type { ITimeController } from '@flemist/time-controller'
 
 export type Equals = (a: any, b: any) => boolean
@@ -188,12 +188,30 @@ export type SaveErrorVariantsOptions<Args extends Obj, SavedArgs = Args> = {
   useToFindBestError?: null | boolean
 }
 
+export type TestVariantsTemplateValues<Value> = readonly Value[]
+
+export type TestVariantsTemplateFunc<Args extends Obj, Value> = (
+  args: Args,
+) => readonly Value[]
+
 export type TestVariantsTemplate<Args extends Obj, Value> =
-  | readonly Value[]
-  | ((args: Args) => readonly Value[])
+  | TestVariantsTemplateValues<Value>
+  | TestVariantsTemplateFunc<Args, Value>
 
 export type TestVariantsTemplates<Args extends Obj> = {
   [key in keyof Args]: TestVariantsTemplate<Args, Args[key]>
+}
+
+export type TestVariantsTemplatesExtra<Args extends Obj> = {
+  [key in keyof Args]: Mutable<TestVariantsTemplateValues<Args[key]>>
+}
+
+export type TestVariantsTemplatesWithExtra<
+  Args extends Obj,
+  Extra extends Obj,
+> = {
+  templates: TestVariantsTemplates<Args>
+  extra: TestVariantsTemplatesExtra<Extra>
 }
 
 // endregion

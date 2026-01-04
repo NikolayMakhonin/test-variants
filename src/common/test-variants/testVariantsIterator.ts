@@ -12,10 +12,9 @@ import type {
 import {
   calcArgValues,
   resetVariantNavigationToStart,
-} from './variantNavigation'
+} from './helpers/variantNavigation'
 import {
   createLimit,
-  extendTemplatesForArgs,
   type LimitState,
   processPendingLimits,
   updateArgLimits,
@@ -29,6 +28,7 @@ import {
   type ModeState,
 } from './modeHandling'
 import { isSequentialMode } from 'src/common/test-variants/helpers/mode'
+import { extendTemplatesForArgs } from 'src/common/test-variants/helpers/template'
 
 /** Iterator internal state; extends LimitState with additional iterator-specific fields */
 type IteratorState<Args extends Obj> = LimitState<Args> & {
