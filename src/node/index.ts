@@ -17,20 +17,18 @@ export {
   type TestVariantsTestOptions,
   type TestVariantsTestResult,
 } from '../common'
-export {
-  type TestVariantsCall,
-  type TestVariantsSetArgs,
-  type TestVariantsTemplatesExt,
-} from '../common/test-variants/createTestVariants'
+export { TestVariantsSetArgs } from 'src/common/test-variants/types'
+export { TestVariantsCall } from 'src/common/test-variants/types'
+export { TestVariantsTemplatesExt } from 'src/common/test-variants/types'
 
 import type { Obj } from '@flemist/simple-utils'
-import {
-  createTestVariants as createTestVariantsCommon,
-  type TestVariantsCall,
-  type TestVariantsSetArgs,
-  type TestVariantsTemplatesExt,
-} from '../common/test-variants/createTestVariants'
-import type { TestVariantsTest } from '../common/test-variants/types'
+import { createTestVariants as createTestVariantsCommon } from '../common/test-variants/createTestVariants'
+import type {
+  TestVariantsCall,
+  TestVariantsSetArgs,
+  TestVariantsTemplatesExt,
+  TestVariantsTest,
+} from '../common/test-variants/types'
 import { createSaveErrorVariantsStore } from './test-variants/createSaveErrorVariantsStore'
 
 export function createTestVariants<Args extends Obj>(

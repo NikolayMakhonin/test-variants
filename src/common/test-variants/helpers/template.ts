@@ -1,5 +1,5 @@
 import type { Obj } from '@flemist/simple-utils'
-import type { Equals } from 'src/common/test-variants/types'
+import { Equals, TestVariantsTemplates } from 'src/common/test-variants/types'
 import { findValueIndex } from 'src/common/test-variants/helpers/findValueIndex'
 import { TestVariantsTemplatesWithExtra } from '../types'
 
@@ -13,11 +13,16 @@ function extendTemplateWithValue<Args extends Obj>(
 ): void {
   const value = addingArgs[keys[keyIndex]]
 
-  const template = templates.templates[keyIndex]
-  if (
-    typeof template !== 'function' &&
-    findValueIndex(template, value, equals) >= 0
-  ) {
+  const template = templates.templates[keyIndex] as any[]
+  if (typeof template !== 'function') {
+    if (findValueIndex(template, value, equals) >= 0) {
+      return
+    }
+    // Это только для оптимизации, чтобы не создавать
+    // лишние массивы в calcArgValues.
+    // Но это может мутировать входящий шаблон,
+    // поэтому его нужно клонировать после получения от пользователя
+    template.push(value)
     return
   }
 
@@ -40,4 +45,22 @@ export function extendTemplatesForArgs<Args extends Obj>(
   for (let i = 0; i < keysCount; i++) {
     extendTemplateWithValue(templates, addingArgs, keys, i, equals)
   }
+}
+
+/** Check if all args keys exist in template */
+export function isArgsKeysInTemplate<Args extends Obj>(
+  template: TestVariantsTemplates<Args>,
+  args: Args,
+): boolean {
+  for (const key in args) {
+    if (Object.prototype.hasOwnProperty.call(args, key)) {
+      if (key === 'seed') {
+        continue
+      }
+      if (!template[key]) {
+        return false
+      }
+    }
+  }
+  return true
 }

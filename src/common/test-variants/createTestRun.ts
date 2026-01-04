@@ -27,7 +27,7 @@ function normalizeTestResult(
     : { iterationsAsync: 0, iterationsSync: 1 }
 }
 
-export function testVariantsCreateTestRun<Args extends Obj>(
+export function createTestRun<Args extends Obj>(
   test: TestVariantsTest<Args>,
   options: TestVariantsCreateTestRunOptions<Args>,
 ): TestVariantsTestRun<Args> {

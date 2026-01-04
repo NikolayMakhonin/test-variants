@@ -1,5 +1,5 @@
-import type { Obj } from '@flemist/simple-utils'
-import type {
+import type {Obj} from '@flemist/simple-utils'
+import {
   ArgsWithSeed,
   Equals,
   LimitArgOnError,
@@ -7,8 +7,11 @@ import type {
   TestVariantsTemplate,
   VariantNavigationState,
 } from './types'
-import { calcArgValues } from './helpers/variantNavigation'
-import { findValueIndex } from 'src/common/test-variants/helpers/findValueIndex'
+import {calcArgValues} from './helpers/variantNavigation'
+import {findValueIndex} from 'src/common/test-variants/helpers/findValueIndex'
+import {
+  compareLexicographic
+} from "src/common/test-variants/helpers/compareLexicographic";
 
 /** Pending limit waiting for position match during iteration */
 export type PendingLimit<Args extends Obj> = {
@@ -22,27 +25,6 @@ export type LimitState<Args extends Obj> = VariantNavigationState<Args> & {
   limit: TestVariantsIteratorLimit<Args> | null
   count: number | null
   index: number
-}
-
-/** Validate saved args keys match iterator's arg names (ignoring "seed" key) */
-export function validateArgsKeys<Args extends Obj>(
-  savedArgs: Args,
-  keySet: Set<string>,
-  keysCount: number,
-): boolean {
-  const savedKeys = Object.keys(savedArgs)
-  let count = 0
-  for (let i = 0, len = savedKeys.length; i < len; i++) {
-    const key = savedKeys[i]
-    if (key === 'seed') {
-      continue
-    }
-    if (!keySet.has(key)) {
-      return false
-    }
-    count++
-  }
-  return count === keysCount
 }
 
 /** Check if current position >= pending args position; returns false if current < pending or all args skipped */
@@ -99,24 +81,6 @@ export function calcArgIndexes<Args extends Obj>(
     indexes.push(valueIndex)
   }
   return indexes
-}
-
-/** Compare indexes lexicographically (like numbers: 1999 < 2000)
- * Returns: -1 if a < b, 0 if a == b, 1 if a > b
- */
-export function compareLexicographic(a: number[], b: number[]): number {
-  const len = Math.max(a.length, b.length)
-  for (let i = 0; i < len; i++) {
-    const ai = a[i] ?? 0
-    const bi = b[i] ?? 0
-    if (ai < bi) {
-      return -1
-    }
-    if (ai > bi) {
-      return 1
-    }
-  }
-  return 0
 }
 
 /** Remove pending limits that exceed current argLimits (in-place mutation) */

@@ -407,3 +407,23 @@ export type VariantNavigationState<Args extends Obj> = {
   // Repeat index for the same variant if attemptsPerVariant > 1
   attemptIndex: number
 }
+
+/** Extended templates type that allows additional args beyond the base Args type */
+export type TestVariantsTemplatesExt<
+  Args extends Obj,
+  ArgsExtra extends Obj,
+> = TestVariantsTemplates<{
+  [key in keyof ArgsExtra | keyof Args]: key extends keyof Args
+    ? Args[key]
+    : key extends keyof ArgsExtra
+      ? ArgsExtra[key]
+      : never
+}>
+
+export type TestVariantsCall<Args extends Obj> = <SavedArgs = Args>(
+  options?: null | TestVariantsRunOptionsInternal<Args, SavedArgs>,
+) => PromiseOrValue<TestVariantsResult<Args>>
+
+export type TestVariantsSetArgs<Args extends Obj> = <ArgsExtra extends Obj>(
+  args: TestVariantsTemplatesExt<Omit<Args, 'seed'>, Omit<ArgsExtra, 'seed'>>,
+) => TestVariantsCall<Args>
