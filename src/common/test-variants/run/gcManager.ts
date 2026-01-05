@@ -1,4 +1,3 @@
-import type { Obj } from '@flemist/simple-utils'
 import { garbageCollect } from 'src/common/garbage-collect/garbageCollect'
 import type { RunContext } from './RunContext'
 import type { RunState } from './createRunState'

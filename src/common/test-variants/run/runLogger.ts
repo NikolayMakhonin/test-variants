@@ -1,4 +1,4 @@
-import type { RequiredNonNullable, Obj } from '@flemist/simple-utils'
+import type { RequiredNonNullable } from '@flemist/simple-utils'
 import { formatBytes, formatDuration, formatModeConfig } from '../log/format'
 import { getMemoryUsage } from '../log/getMemoryUsage'
 import type { TestVariantsLogOptions, ModeConfig } from '../types'
