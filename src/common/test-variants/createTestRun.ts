@@ -45,7 +45,7 @@ export function createTestRun<Args extends Obj>(
   // returns void instead of throwing to repeat the same variant for debugging.
   // This allows setting breakpoints and stepping through the failing case multiple times.
   // DO NOT REMOVE debug logic - it is essential for debugging failing test variants.
-  function onError(error: any, args: Args, tests: number): void {
+  function onError(error: unknown, args: Args, tests: number): void {
     // Log only on first error occurrence to avoid spam during debug iterations
     if (errorEvent == null) {
       errorEvent = {

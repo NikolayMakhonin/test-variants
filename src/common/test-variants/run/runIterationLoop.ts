@@ -8,21 +8,10 @@ import { shouldTriggerGC, triggerGC } from './gcManager'
 import { logModeChange, logProgress } from './runLogger'
 import { handleSyncError, handleParallelError } from './errorHandlers'
 
-// region Mode change
-
-/** Handle initial mode at iteration start */
-function handleInitialMode<Args extends Obj>(
-  runContext: RunContext<Args>,
-): PromiseOrValue<void> {
+/** Call onModeChange callback if configured */
+function callOnModeChange(runContext: RunContext<Obj>): PromiseOrValue<void> {
   const { options, variantsIterator, state } = runContext
-  const { logOptions, onModeChange } = options
-
-  logModeChange(
-    logOptions,
-    variantsIterator.modeConfig,
-    variantsIterator.modeIndex,
-  )
-  state.prevModeIndex = variantsIterator.modeIndex
+  const { onModeChange } = options
 
   if (onModeChange && variantsIterator.modeConfig) {
     const result = onModeChange({
@@ -34,17 +23,30 @@ function handleInitialMode<Args extends Obj>(
   }
 }
 
+/** Handle initial mode at iteration start */
+function handleInitialMode(runContext: RunContext<Obj>): PromiseOrValue<void> {
+  const { options, variantsIterator, state } = runContext
+
+  logModeChange(
+    options.logOptions,
+    variantsIterator.modeConfig,
+    variantsIterator.modeIndex,
+  )
+  state.prevModeIndex = variantsIterator.modeIndex
+
+  return callOnModeChange(runContext)
+}
+
 /** Handle mode change if mode index changed */
-function handleModeChangeIfNeeded<Args extends Obj>(
-  runContext: RunContext<Args>,
+function handleModeChangeIfNeeded(
+  runContext: RunContext<Obj>,
 ): PromiseOrValue<void> {
   const { options, variantsIterator, state } = runContext
-  const { logOptions, onModeChange } = options
 
   if (variantsIterator.modeIndex === state.prevModeIndex) return
 
-  if (logOptions.debug) {
-    logOptions.func(
+  if (options.logOptions.debug) {
+    options.logOptions.func(
       'debug',
       `[debug] mode switch: modeIndex=${variantsIterator.modeIndex}, index=${variantsIterator.index}`,
     )
@@ -53,69 +55,63 @@ function handleModeChangeIfNeeded<Args extends Obj>(
   state.modeChanged = true
   state.prevModeIndex = variantsIterator.modeIndex
 
-  if (onModeChange && variantsIterator.modeConfig) {
-    const result = onModeChange({
-      mode: variantsIterator.modeConfig,
-      modeIndex: variantsIterator.modeIndex,
-      tests: state.tests,
-    })
-    if (isPromiseLike(result)) return result
-  }
+  return callOnModeChange(runContext)
 }
 
-// endregion
-
-// region Periodic tasks
-
-type PeriodicTasksResult = { timeLimitExceeded: boolean }
-
-/** Handle periodic tasks: time limit check, progress logging, GC */
-function handlePeriodicTasks<Args extends Obj>(
-  runContext: RunContext<Args>,
-): PromiseOrValue<PeriodicTasksResult> {
+/** Check if time limit exceeded; sets state.timeLimitExceeded if so */
+function checkTimeLimit(runContext: RunContext<Obj>): boolean {
   const { options, state } = runContext
-  const { logOptions, timeController, limitTime, GC_Interval } = options
+  const { limitTime, timeController } = options
 
-  if (!logOptions.progress && !GC_Interval && limitTime == null) {
-    return { timeLimitExceeded: false }
+  if (
+    limitTime != null &&
+    timeController.now() - state.startTime >= limitTime
+  ) {
+    state.timeLimitExceeded = true
+    return true
+  }
+  return false
+}
+
+/** Handle periodic tasks: time limit check, progress logging, GC; returns true if time limit exceeded */
+function handlePeriodicTasks(
+  runContext: RunContext<Obj>,
+): PromiseOrValue<boolean> {
+  const { options, state } = runContext
+  const { logOptions, timeController, GC_Interval } = options
+
+  if (!logOptions.progress && !GC_Interval) {
+    return checkTimeLimit(runContext)
   }
 
-  const now = timeController.now()
-
-  if (limitTime != null && now - state.startTime >= limitTime) {
-    state.timeLimitExceeded = true
-    return { timeLimitExceeded: true }
+  if (checkTimeLimit(runContext)) {
+    return true
   }
 
   logProgress(runContext)
 
+  const now = timeController.now()
   if (shouldTriggerGC(runContext, now)) {
-    return triggerGC(state, now).then(() => ({ timeLimitExceeded: false }))
+    return triggerGC(state, now).then(() => false)
   }
 
-  return { timeLimitExceeded: false }
+  return false
 }
-
-// endregion
-
-// region Test execution
 
 /** Update state from test result */
 function updateStateFromResult(
-  runContext: RunContext<any>,
+  runContext: RunContext<Obj>,
   result: Exclude<TestFuncResult, void>,
 ): void {
   runContext.state.iterationsAsync += result.iterationsAsync
   runContext.state.iterations += result.iterationsSync + result.iterationsAsync
 }
 
-type TestResult = { shouldContinue: boolean }
-
-/** Execute test sequentially; returns whether to continue to next iteration */
+/** Execute test sequentially; returns true if should continue to next iteration (debug mode) */
 function executeSequentialTest<Args extends Obj>(
   runContext: RunContext<Args>,
   args: ArgsWithSeed<Args>,
-): PromiseOrValue<TestResult> {
+): PromiseOrValue<boolean> {
   const { testRun, testOptions, abortControllerParallel, state } = runContext
   const tests = state.tests
   state.tests++
@@ -129,31 +125,26 @@ function executeSequentialTest<Args extends Obj>(
           if (!result) {
             state.debugMode = true
             abortControllerParallel.abort()
-            return { shouldContinue: true }
+            return true
           }
           state.debugMode = false
           updateStateFromResult(runContext, result)
-          return { shouldContinue: false }
+          return false
         },
-        err =>
-          handleSyncError(runContext, args, err, tests).then(() => ({
-            shouldContinue: false,
-          })),
+        err => handleSyncError(runContext, args, err, tests).then(() => false),
       )
     }
 
     if (!promiseOrResult) {
       state.debugMode = true
       abortControllerParallel.abort()
-      return { shouldContinue: true }
+      return true
     }
     state.debugMode = false
     updateStateFromResult(runContext, promiseOrResult)
-    return { shouldContinue: false }
+    return false
   } catch (err) {
-    return handleSyncError(runContext, args, err, tests).then(() => ({
-      shouldContinue: false,
-    }))
+    return handleSyncError(runContext, args, err, tests).then(() => false)
   }
 }
 
@@ -172,15 +163,14 @@ function scheduleParallelTest<Args extends Obj>(
   } = runContext
   if (!pool) return
 
-  const capturedArgs = args
   const capturedTests = state.tests
   state.tests++
 
   void (async () => {
     try {
-      if (abortSignal?.aborted) return
+      if (abortSignal.aborted) return
 
-      let promiseOrResult = testRun(capturedArgs, capturedTests, testOptions)
+      let promiseOrResult = testRun(args, capturedTests, testOptions)
       if (isPromiseLike(promiseOrResult)) {
         promiseOrResult = await promiseOrResult
       }
@@ -194,30 +184,20 @@ function scheduleParallelTest<Args extends Obj>(
       state.debugMode = false
       updateStateFromResult(runContext, promiseOrResult)
     } catch (err) {
-      handleParallelError(runContext, capturedArgs, err, capturedTests)
+      handleParallelError(runContext, args, err, capturedTests)
     } finally {
       void pool.release(1)
     }
   })()
 }
 
-// endregion
-
-// region Main loop
-
 /** Run the main iteration loop */
 export async function runIterationLoop<Args extends Obj>(
   runContext: RunContext<Args>,
 ): Promise<void> {
   const { options, variantsIterator, abortSignal, pool, state } = runContext
-  const {
-    logOptions,
-    abortSignalExternal,
-    cycles,
-    limitTime,
-    timeController,
-    parallel,
-  } = options
+  const { logOptions, abortSignalExternal, cycles, timeController, parallel } =
+    options
 
   variantsIterator.start()
   if (logOptions.debug) {
@@ -241,13 +221,7 @@ export async function runIterationLoop<Args extends Obj>(
       )
     }
 
-    if (
-      limitTime != null &&
-      timeController.now() - state.startTime >= limitTime
-    ) {
-      state.timeLimitExceeded = true
-      break
-    }
+    if (checkTimeLimit(runContext)) break
 
     let args: ArgsWithSeed<Args> = null!
 
@@ -261,20 +235,20 @@ export async function runIterationLoop<Args extends Obj>(
       const modeChangeResult = handleModeChangeIfNeeded(runContext)
       if (isPromiseLike(modeChangeResult)) await modeChangeResult
 
-      const periodicResult = handlePeriodicTasks(runContext)
-      if (isPromiseLike(periodicResult)) {
-        if ((await periodicResult).timeLimitExceeded) break
-      } else if (periodicResult.timeLimitExceeded) {
+      const timeLimitExceeded = handlePeriodicTasks(runContext)
+      if (isPromiseLike(timeLimitExceeded)) {
+        if (await timeLimitExceeded) break
+      } else if (timeLimitExceeded) {
         break
       }
 
       if (abortSignalExternal?.aborted) continue
 
       if (!pool || abortSignal.aborted) {
-        const testResult = executeSequentialTest(runContext, args)
-        if (isPromiseLike(testResult)) {
-          if ((await testResult).shouldContinue) continue
-        } else if (testResult.shouldContinue) {
+        const shouldContinue = executeSequentialTest(runContext, args)
+        if (isPromiseLike(shouldContinue)) {
+          if (await shouldContinue) continue
+        } else if (shouldContinue) {
           continue
         }
       } else {
@@ -296,13 +270,7 @@ export async function runIterationLoop<Args extends Obj>(
     state.prevCycleDuration = timeController.now() - state.cycleStartTime
     state.cycleStartTime = timeController.now()
 
-    if (
-      limitTime != null &&
-      timeController.now() - state.startTime >= limitTime
-    ) {
-      state.timeLimitExceeded = true
-      break
-    }
+    if (checkTimeLimit(runContext)) break
 
     if (logOptions.debug) {
       logOptions.func(
@@ -324,5 +292,3 @@ export async function runIterationLoop<Args extends Obj>(
     void pool.release(parallel)
   }
 }
-
-// endregion

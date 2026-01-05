@@ -23,9 +23,7 @@ export function logStart(
 }
 
 /** Log test run completion */
-export function logCompleted<Args extends Obj>(
-  runContext: RunContext<Args>,
-): void {
+export function logCompleted(runContext: RunContext<Obj>): void {
   const { options, state } = runContext
   const { logOptions, timeController } = options
 
@@ -60,9 +58,7 @@ export function logModeChange(
 }
 
 /** Log progress */
-export function logProgress<Args extends Obj>(
-  runContext: RunContext<Args>,
-): void {
+export function logProgress(runContext: RunContext<Obj>): void {
   const { options, variantsIterator, state } = runContext
   const { logOptions, timeController, findBestError } = options
   const now = timeController.now()

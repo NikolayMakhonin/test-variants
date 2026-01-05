@@ -22,7 +22,6 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   variantsIterator: VariantsIterator<Args>,
   options?: null | TestVariantsRunOptionsInternal<Args, SavedArgs>,
 ): Promise<TestVariantsResult<Args>> {
-  // Setup
   const optionsResolved = resolveRunOptions(options)
   const {
     store,
@@ -46,12 +45,10 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     timeController,
   }
 
-  // Apply initial limits
   if (limitTests != null) {
     variantsIterator.addLimit({ index: limitTests })
   }
 
-  // Replay saved error variants
   if (store) {
     await store.replay({
       testRun,
@@ -61,14 +58,12 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     })
   }
 
-  // Initialize state
   const startMemory = getMemoryUsage()
   const state = createRunState(timeController, startMemory)
   const pool = parallel <= 1 ? null : new Pool(parallel)
 
   logStart(logOptions, startMemory)
 
-  // Run iteration loop
   const runContext: RunContext<Args> = {
     options: optionsResolved,
     testRun,
@@ -81,8 +76,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   }
   await runIterationLoop(runContext)
 
-  // Cleanup
-  if (abortSignal?.aborted && abortSignal.reason != null) {
+  if (abortSignal.aborted && abortSignal.reason != null) {
     throw abortSignal.reason
   }
 

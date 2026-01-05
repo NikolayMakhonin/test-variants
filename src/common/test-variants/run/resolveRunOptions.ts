@@ -37,7 +37,7 @@ export function resolveRunOptions<Args extends Obj, SavedArgs = Args>(
 ): RunOptionsResolved<Args> {
   const saveErrorVariantsOptions = options?.saveErrorVariants
   const store: SaveErrorVariantsStore<Args> | null =
-    saveErrorVariantsOptions && options?.createSaveErrorVariantsStore
+    saveErrorVariantsOptions && options.createSaveErrorVariantsStore
       ? options.createSaveErrorVariantsStore(saveErrorVariantsOptions)
       : null
 

@@ -25,9 +25,9 @@ export type RunState = {
   prevLogMemory: number | null
 
   // GC tracking
-  prevGC_Time: number
-  prevGC_Iterations: number
-  prevGC_IterationsAsync: number
+  prevGcTime: number
+  prevGcIterations: number
+  prevGcIterationsAsync: number
 
   // Mode tracking
   prevModeIndex: number
@@ -56,9 +56,9 @@ export function createRunState(
     iterationsAsync: 0,
     prevLogTime: startTime,
     prevLogMemory: startMemory,
-    prevGC_Time: startTime,
-    prevGC_Iterations: 0,
-    prevGC_IterationsAsync: 0,
+    prevGcTime: startTime,
+    prevGcIterations: 0,
+    prevGcIterationsAsync: 0,
     prevModeIndex: -1,
     modeChanged: false,
     timeLimitExceeded: false,
