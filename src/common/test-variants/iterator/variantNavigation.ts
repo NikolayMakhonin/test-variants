@@ -145,111 +145,51 @@ export function isVariantNavigationBelowMax<Args extends Obj>(
 export function advanceVariantNavigation<Args extends Obj>(
   state: VariantNavigationState<Args>,
 ): boolean {
-  const argsCount = state.indexes.length
-  if (argsCount === 0) {
-    return false
-  }
+  // Calc belowMaxIndex
 
-  // Check if we're in initial state (any index is -1)
-  let isInitial = false
-  for (let i = 0; i < argsCount; i++) {
-    if (state.indexes[i] < 0) {
-      isInitial = true
+  const argsCount = state.indexes.length
+  let belowMaxIndex = argsCount
+  for (let argIndex = 0; argIndex < argsCount; argIndex++) {
+    const maxIndex = getArgValueMaxIndex(state, argIndex, false)
+    if (state.indexes[argIndex] < maxIndex) {
+      belowMaxIndex = argIndex
       break
     }
   }
 
-  if (isInitial) {
-    // Initialize all args from left to right
-    let belowMax = false
-    for (let i = 0; i < argsCount; i++) {
-      // Clear current arg before calculating template (for dependent templates)
-      state.args[state.argsNames[i]] = void 0 as any
-      state.argValues[i] = calcArgValues(state, state.argsNames[i])
-      const maxIndex = getArgValueMaxIndex(state, i, belowMax)
-      if (maxIndex < 0) {
-        return false
-      }
-      state.indexes[i] = 0
-      state.args[state.argsNames[i]] = state.argValues[i][0]
-      const limitedMaxIndex = getArgValueMaxIndex(state, i, false)
-      if (0 < limitedMaxIndex) {
-        belowMax = true
-      }
-    }
-    return true
-  }
-
-  // Normal advance: try to increment from right to left
-  let argIndex = argsCount - 1
-  while (argIndex >= 0) {
-    // Calculate current belowMax status for args 0..argIndex-1
-    let belowMax = false
-    for (let i = 0; i < argIndex; i++) {
-      const limitedMaxIndex = getArgValueMaxIndex(state, i, false)
-      if (state.indexes[i] < limitedMaxIndex) {
-        belowMax = true
-        break
-      }
-    }
-
-    // Ensure argValues is calculated for current arg
-    if (state.argValues[argIndex] == null) {
-      state.argValues[argIndex] = calcArgValues(
-        state,
-        state.argsNames[argIndex],
-      )
-    }
-
+  for (let argIndex = argsCount - 1; argIndex >= 0; argIndex--) {
+    const belowMax = argIndex >= belowMaxIndex
     const maxIndex = getArgValueMaxIndex(state, argIndex, belowMax)
+
     const valueIndex = state.indexes[argIndex] + 1
 
-    if (valueIndex > maxIndex) {
-      // Can't increment this arg, move left
-      argIndex--
-      continue
-    }
+    if (valueIndex <= maxIndex) {
+      state.indexes[argIndex] = valueIndex
+      state.args[state.argsNames[argIndex]] =
+        state.argValues[argIndex][valueIndex]
 
-    // Can increment this arg
-    state.indexes[argIndex] = valueIndex
-    state.args[state.argsNames[argIndex]] =
-      state.argValues[argIndex][valueIndex]
-
-    // Update belowMax based on new value
-    const limitedMaxIndex = getArgValueMaxIndex(state, argIndex, false)
-    if (valueIndex < limitedMaxIndex) {
-      belowMax = true
-    }
-
-    // Clear subsequent args before calculating their templates
-    for (let i = argIndex + 1; i < argsCount; i++) {
-      state.args[state.argsNames[i]] = void 0 as any
-    }
-
-    // Initialize subsequent args to 0
-    let success = true
-    for (let i = argIndex + 1; i < argsCount; i++) {
-      state.argValues[i] = calcArgValues(state, state.argsNames[i])
-      const iMaxIndex = getArgValueMaxIndex(state, i, belowMax)
-      if (iMaxIndex < 0) {
-        success = false
-        break
+      // Clear subsequent state.argsNames from args before calculating their template values
+      for (let i = argIndex + 1; i < argsCount; i++) {
+        // high performance alternative to delete property
+        state.args[state.argsNames[i]] = void 0 as any
       }
-      state.indexes[i] = 0
-      state.args[state.argsNames[i]] = state.argValues[i][0]
-      const iLimitedMaxIndex = getArgValueMaxIndex(state, i, false)
-      if (0 < iLimitedMaxIndex) {
-        belowMax = true
+      for (argIndex++; argIndex < argsCount; argIndex++) {
+        state.argValues[argIndex] = calcArgValues(
+          state,
+          state.argsNames[argIndex],
+        )
+        const maxIndex = getArgValueMaxIndex(state, argIndex, belowMax)
+        if (maxIndex < 0) {
+          break
+        }
+        state.indexes[argIndex] = 0
+        state.args[state.argsNames[argIndex]] = state.argValues[argIndex][0]
+      }
+      if (argIndex >= argsCount) {
+        return true
       }
     }
-
-    if (success) {
-      return true
-    }
-    // Failed to initialize subsequent arg; continue trying current arg
-    // (indexes[argIndex] was incremented, next iteration tries valueIndex + 1)
   }
-
   return false
 }
 
@@ -259,7 +199,12 @@ function fixVariantNavigation<Args extends Obj>(
 ): void {
   let belowMax = false
   for (let i = 0, len = state.indexes.length; i < len; i++) {
-    const maxIndex = getArgValueMaxIndex(state, i, belowMax)
+    let maxIndex: number
+    if (!belowMax || state.limitArgOnError) {
+      maxIndex = getArgValueMaxIndex(state, i) - 1
+    } else {
+      maxIndex = state.argValues[i].length - 1
+    }
     if (state.indexes[i] > maxIndex) {
       state.indexes[i] = maxIndex
     }
@@ -273,7 +218,7 @@ function fixVariantNavigation<Args extends Obj>(
 export function retreatVariantNavigation<Args extends Obj>(
   state: VariantNavigationState<Args>,
 ): boolean {
-  fixVariantNavigation(state)
+  fixVariantNavigation(state, state.limitArgOnError)
 
   const keysCount = state.argsNames.length
   for (let keyIndex = keysCount - 1; keyIndex >= 0; keyIndex--) {
@@ -284,12 +229,11 @@ export function retreatVariantNavigation<Args extends Obj>(
         state.argValues[keyIndex][valueIndex]
 
       // Check if we're now below max (for lexicographic constraint)
-      let belowMax = false
+      let belowMaxSoFar = false
       if (!state.limitArgOnError) {
         for (let i = 0; i <= keyIndex; i++) {
-          const maxIndex = getArgValueMaxIndex(state, i, belowMax)
-          if (state.indexes[i] < getArgValueMaxIndex(state, i)) {
-            belowMax = true
+          if (state.indexes[i] < getArgValueMaxIndex(state, i) - 1) {
+            belowMaxSoFar = true
             break
           }
         }
