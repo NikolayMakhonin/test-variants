@@ -45,12 +45,13 @@ export function resolveRunOptions<Args extends Obj, SavedArgs = Args>(
 
   const findBestError = options?.findBestError
 
-  let parallel = 1
-  if (options?.parallel === true) {
-    parallel = MAX_PARALLEL
-  } else if (options?.parallel && options.parallel > 0) {
-    parallel = options.parallel
-  }
+  const parallelOption = options?.parallel
+  const parallel =
+    parallelOption === true
+      ? MAX_PARALLEL
+      : parallelOption && parallelOption > 0
+        ? parallelOption
+        : 1
 
   return {
     store,

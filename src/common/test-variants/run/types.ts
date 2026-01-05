@@ -96,9 +96,3 @@ export type TestVariantsCall<Args extends Obj> = <SavedArgs = Args>(
 export type TestVariantsSetArgs<Args extends Obj> = <ArgsExtra extends Obj>(
   args: TestVariantsTemplatesExt<Omit<Args, 'seed'>, Omit<ArgsExtra, 'seed'>>,
 ) => TestVariantsCall<Args>
-
-export type GCOptions = {
-  GC_Iterations: number
-  GC_IterationsAsync: number
-  GC_Interval: number
-}

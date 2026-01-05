@@ -89,10 +89,10 @@ export function createTestRun<Args extends Obj>(
   return function testRun(
     args: ArgsWithSeed<Args>,
     tests: number,
-    options: TestOptions,
+    testOptions: TestOptions,
   ): PromiseOrValue<TestFuncResult> {
     try {
-      const promiseOrResult = test(args, options)
+      const promiseOrResult = test(args, testOptions)
 
       if (isPromiseLike(promiseOrResult)) {
         return promiseOrResult.then(

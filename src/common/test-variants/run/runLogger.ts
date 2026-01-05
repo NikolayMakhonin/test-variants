@@ -75,26 +75,58 @@ function calcEstimatedCycleTime(
     return 0
   }
 
-  const canUseAdjusted =
+  // Use previous cycle data if available and current progress is within previous bounds
+  if (
     prevCycleDuration != null &&
     prevCycleVariantsCount != null &&
     index < prevCycleVariantsCount &&
     cycleElapsed < prevCycleDuration
-
-  if (canUseAdjusted) {
-    const adjustedDuration = prevCycleDuration! - cycleElapsed
-    const adjustedCount = prevCycleVariantsCount! - index
-    const speedForRemaining = adjustedDuration / adjustedCount
-    const remainingTime = (max - index) * speedForRemaining
-    return cycleElapsed + remainingTime
+  ) {
+    const remainingCount = prevCycleVariantsCount - index
+    const remainingDuration = prevCycleDuration - cycleElapsed
+    const speedPerVariant = remainingDuration / remainingCount
+    return cycleElapsed + (max - index) * speedPerVariant
   }
 
   return (cycleElapsed * max) / index
 }
 
+function formatVariantProgress(runContext: RunContext<Obj>): string {
+  const { options, variantsIterator, state } = runContext
+  const { findBestError, timeController } = options
+  const cycleElapsed = timeController.now() - state.cycleStartTime
+
+  if (!findBestError) {
+    return `variant: ${variantsIterator.index} (${formatDuration(cycleElapsed)})`
+  }
+
+  const msg = `cycle: ${variantsIterator.cycleIndex}, variant: ${variantsIterator.index}`
+
+  let max = variantsIterator.count
+  if (max != null && state.prevCycleVariantsCount != null) {
+    max = Math.min(max, state.prevCycleVariantsCount)
+  }
+
+  if (max == null) {
+    return msg + ` (${formatDuration(cycleElapsed)})`
+  }
+
+  const estimated = calcEstimatedCycleTime(
+    cycleElapsed,
+    variantsIterator.index,
+    max,
+    state.prevCycleDuration,
+    state.prevCycleVariantsCount,
+  )
+  return (
+    msg +
+    `/${max} (${formatDuration(cycleElapsed)}/${formatDuration(estimated)})`
+  )
+}
+
 export function logProgress(runContext: RunContext<Obj>): void {
   const { options, variantsIterator, state } = runContext
-  const { logOptions, timeController, findBestError } = options
+  const { logOptions, timeController } = options
   const now = timeController.now()
 
   if (!logOptions.progress || now - state.prevLogTime < logOptions.progress) {
@@ -110,36 +142,8 @@ export function logProgress(runContext: RunContext<Obj>): void {
     state.modeChanged = false
   }
 
-  const cycleElapsed = now - state.cycleStartTime
   const totalElapsed = now - state.startTime
-  let msg = '[test-variants] '
-
-  if (findBestError) {
-    msg += `cycle: ${variantsIterator.cycleIndex}, variant: ${variantsIterator.index}`
-    let max = variantsIterator.count
-    if (
-      max != null &&
-      state.prevCycleVariantsCount != null &&
-      state.prevCycleVariantsCount < max
-    ) {
-      max = state.prevCycleVariantsCount
-    }
-    if (max != null) {
-      const estimated = calcEstimatedCycleTime(
-        cycleElapsed,
-        variantsIterator.index,
-        max,
-        state.prevCycleDuration,
-        state.prevCycleVariantsCount,
-      )
-      msg += `/${max} (${formatDuration(cycleElapsed)}/${formatDuration(estimated)})`
-    } else {
-      msg += ` (${formatDuration(cycleElapsed)})`
-    }
-  } else {
-    msg += `variant: ${variantsIterator.index} (${formatDuration(cycleElapsed)})`
-  }
-
+  let msg = `[test-variants] ${formatVariantProgress(runContext)}`
   msg += `, tests: ${state.tests} (${formatDuration(totalElapsed)}), async: ${state.iterationsAsync}`
 
   if (state.prevLogMemory != null) {
