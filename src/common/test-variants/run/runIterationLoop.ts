@@ -8,7 +8,7 @@ import type { RunContext } from './RunContext'
 import { logModeChange, logProgress } from './runLogger'
 import type { TestFuncResult } from './types'
 
-function isTimeLimitExceeded(runContext: RunContext<Obj>): boolean {
+function isTimeLimitExceeded(runContext: RunContext<any>): boolean {
   const { options, state } = runContext
   const { limitTime, timeController } = options
   return (
@@ -17,7 +17,7 @@ function isTimeLimitExceeded(runContext: RunContext<Obj>): boolean {
 }
 
 function updateIterationState(
-  state: RunContext<Obj>['state'],
+  state: RunContext<any>['state'],
   result: TestFuncResult,
 ): void {
   state.debugMode = false
@@ -27,7 +27,7 @@ function updateIterationState(
   }
 }
 
-function enterDebugMode(runContext: RunContext<Obj>): void {
+function enterDebugMode(runContext: RunContext<any>): void {
   runContext.state.debugMode = true
   runContext.abortControllerParallel.abort()
 }
@@ -102,7 +102,7 @@ function runParallelTest<Args extends Obj>(
   })()
 }
 
-function callOnModeChange(runContext: RunContext<Obj>): PromiseOrValue<void> {
+function callOnModeChange(runContext: RunContext<any>): PromiseOrValue<void> {
   const { options, variantsIterator, state } = runContext
   const { onModeChange } = options
   const { modeConfig } = variantsIterator
@@ -119,7 +119,7 @@ function callOnModeChange(runContext: RunContext<Obj>): PromiseOrValue<void> {
 }
 
 function handleModeChangeIfNeeded(
-  runContext: RunContext<Obj>,
+  runContext: RunContext<any>,
 ): PromiseOrValue<void> {
   const { options, variantsIterator, state } = runContext
   const { logOptions } = options
@@ -147,7 +147,7 @@ function handleModeChangeIfNeeded(
 }
 
 function handlePeriodicTasks(
-  runContext: RunContext<Obj>,
+  runContext: RunContext<any>,
 ): PromiseOrValue<void> {
   const { options, state } = runContext
   const { logOptions, timeController, GC_Interval } = options
@@ -164,7 +164,7 @@ function handlePeriodicTasks(
   }
 }
 
-function updateCycleState(runContext: RunContext<Obj>): void {
+function updateCycleState(runContext: RunContext<any>): void {
   const { options, variantsIterator, state } = runContext
   const now = options.timeController.now()
 
@@ -174,13 +174,13 @@ function updateCycleState(runContext: RunContext<Obj>): void {
 }
 
 /** Check if external abort was requested (user cancellation) */
-function isExternalAborted(runContext: RunContext<Obj>): boolean {
+function isExternalAborted(runContext: RunContext<any>): boolean {
   return !!runContext.options.abortSignalExternal?.aborted
 }
 
 /** Check if parallel execution was aborted (error in findBestError mode) */
-function isParallelAborted(runContext: RunContext<Obj>): boolean {
-  return !!runContext.abortSignal.aborted
+function isParallelAborted(runContext: RunContext<any>): boolean {
+  return runContext.abortSignal.aborted
 }
 
 /**

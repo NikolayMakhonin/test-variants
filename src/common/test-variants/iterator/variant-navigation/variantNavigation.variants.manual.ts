@@ -4,23 +4,20 @@ import {
   randomVariantNavigation,
   resetVariantNavigation,
   retreatVariantNavigation,
-} from 'src/common/test-variants/iterator/variant-navigation/variantNavigation'
+} from './variantNavigation'
 import type { LimitArgOnError } from 'src/common'
 import { createTestVariants } from '@flemist/test-variants'
-import { parseLimits } from 'src/common/test-variants/iterator/variant-navigation/-test/helpers/parse'
-import {
-  formatIndexes,
-  formatTemplatesValues,
-} from 'src/common/test-variants/iterator/variant-navigation/-test/helpers/format'
-import { _createVariantNavigationState } from 'src/common/test-variants/iterator/variant-navigation/-test/helpers/create'
-import { checkVariantNavigationState } from 'src/common/test-variants/iterator/variant-navigation/-test/helpers/check'
+import { parseLimits } from './-test/helpers/parse'
+import { formatIndexes, formatTemplatesValues } from './-test/helpers/format'
+import { _createVariantNavigationState } from './-test/helpers/create'
+import { checkVariantNavigationState } from './-test/helpers/check'
 import {
   collectAllVariants,
   ComplexArgs,
   createComplexState,
   funcFalse,
   funcTrue,
-} from 'src/common/test-variants/iterator/variant-navigation/-test/helpers/variants'
+} from './-test/helpers/variants'
 
 // region complex template test
 

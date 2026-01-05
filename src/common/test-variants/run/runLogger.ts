@@ -25,7 +25,7 @@ export function logStart(
   logOptions.func('start', msg)
 }
 
-export function logCompleted(runContext: RunContext<Obj>): void {
+export function logCompleted(runContext: RunContext<any>): void {
   const { options, state } = runContext
   const { logOptions, timeController } = options
 
@@ -94,7 +94,7 @@ function estimateCycleTime(
   return (elapsedTime * totalVariants) / completedVariants
 }
 
-function formatVariantProgress(runContext: RunContext<Obj>): string {
+function formatVariantProgress(runContext: RunContext<any>): string {
   const { options, variantsIterator, state } = runContext
   const { findBestError, timeController } = options
   const elapsedTime = timeController.now() - state.cycleStartTime
@@ -126,7 +126,7 @@ function formatVariantProgress(runContext: RunContext<Obj>): string {
 }
 
 /** Returns true if logging was performed */
-export function logProgress(runContext: RunContext<Obj>): boolean {
+export function logProgress(runContext: RunContext<any>): boolean {
   const { options, variantsIterator, state } = runContext
   const { logOptions, timeController } = options
   const now = timeController.now()

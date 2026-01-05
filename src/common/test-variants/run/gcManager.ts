@@ -5,7 +5,7 @@ import type { RunState } from './createRunState'
 
 /** Check if GC should be triggered */
 export function shouldTriggerGC(
-  runContext: RunContext<Obj>,
+  runContext: RunContext<any>,
   now: number,
 ): boolean {
   const { GC_Iterations, GC_IterationsAsync, GC_Interval } = runContext.options
