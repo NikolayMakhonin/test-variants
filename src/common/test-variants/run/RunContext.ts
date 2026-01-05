@@ -2,13 +2,13 @@ import type {
   IAbortSignalFast,
   IAbortControllerFast,
 } from '@flemist/abort-controller-fast'
-import type { IPool } from '@flemist/time-limits'
 import type { Obj } from '@flemist/simple-utils'
-import type { TestOptions } from 'src/common/test-variants/types'
-import type { VariantsIterator } from 'src/common/test-variants/iterator/types'
-import type { TestVariantsTestRun } from './types'
-import type { RunOptionsResolved } from './resolveRunOptions'
+import type { IPool } from '@flemist/time-limits'
+import type { VariantsIterator } from '../iterator/types'
+import type { TestOptions } from '../types'
 import type { RunState } from './createRunState'
+import type { RunOptionsResolved } from './resolveRunOptions'
+import type { TestVariantsTestRun } from './types'
 
 /** Context for test variants iteration loop */
 export type RunContext<Args extends Obj> = {

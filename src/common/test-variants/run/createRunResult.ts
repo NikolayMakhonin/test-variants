@@ -1,9 +1,6 @@
 import type { Obj } from '@flemist/simple-utils'
-import type {
-  TestVariantsResult,
-  TestVariantsBestError,
-} from 'src/common/test-variants/types'
-import type { VariantsIterator } from 'src/common/test-variants/iterator/types'
+import type { VariantsIterator } from '../iterator/types'
+import type { TestVariantsResult, TestVariantsBestError } from '../types'
 import type { RunState } from './createRunState'
 
 /** Create test variants run result */

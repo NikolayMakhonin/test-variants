@@ -1,19 +1,21 @@
 import type { IAbortSignalFast } from '@flemist/abort-controller-fast'
-import type { ITimeController } from '@flemist/time-controller'
 import type { RequiredNonNullable, Obj } from '@flemist/simple-utils'
+import {
+  timeControllerDefault,
+  type ITimeController,
+} from '@flemist/time-controller'
+import { resolveLogOptions } from '../log/logOptions'
 import type {
   TestVariantsLogOptions,
   FindBestErrorOptions,
   OnModeChangeCallback,
-} from 'src/common/test-variants/types'
+} from '../types'
 import type {
   TestVariantsRunOptionsInternal,
   SaveErrorVariantsStore,
 } from './types'
-import { timeControllerDefault } from '@flemist/time-controller'
-import { resolveLogOptions } from 'src/common/test-variants/log/logOptions'
 
-const MAX_PARALLEL = 2 ** 31
+const PARALLEL_UNLIMITED = 2 ** 31
 
 /** Resolved configuration for test variants run */
 export type RunOptionsResolved<Args extends Obj> = {
@@ -46,12 +48,12 @@ export function resolveRunOptions<Args extends Obj, SavedArgs = Args>(
   const findBestError = options?.findBestError
 
   const parallelOption = options?.parallel
-  const parallel =
-    parallelOption === true
-      ? MAX_PARALLEL
-      : parallelOption && parallelOption > 0
-        ? parallelOption
-        : 1
+  let parallel = 1
+  if (parallelOption === true) {
+    parallel = PARALLEL_UNLIMITED
+  } else if (typeof parallelOption === 'number' && parallelOption > 0) {
+    parallel = parallelOption
+  }
 
   return {
     store,

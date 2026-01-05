@@ -1,7 +1,7 @@
 import type { Obj } from '@flemist/simple-utils'
-import type { RunState } from './createRunState'
 import { garbageCollect } from 'src/common/garbage-collect/garbageCollect'
-import type { RunContext } from 'src/common/test-variants/run/RunContext'
+import type { RunContext } from './RunContext'
+import type { RunState } from './createRunState'
 
 /** Check if GC should be triggered */
 export function shouldTriggerGC(

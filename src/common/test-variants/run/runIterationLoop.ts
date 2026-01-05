@@ -1,22 +1,19 @@
 import { isPromiseLike, type PromiseOrValue } from '@flemist/async-utils'
-import { poolWait } from '@flemist/time-limits'
 import type { Obj } from '@flemist/simple-utils'
-import type { ArgsWithSeed } from 'src/common/test-variants/types'
-import type { TestFuncResult } from './types'
-import type { RunContext } from './RunContext'
-import { shouldTriggerGC, triggerGC } from './gcManager'
-import { logModeChange, logProgress } from './runLogger'
+import { poolWait } from '@flemist/time-limits'
+import type { ArgsWithSeed } from '../types'
 import { handleErrorParallel, handleErrorSequential } from './errorHandlers'
+import { shouldTriggerGC, triggerGC } from './gcManager'
+import type { RunContext } from './RunContext'
+import { logModeChange, logProgress } from './runLogger'
+import type { TestFuncResult } from './types'
 
-function checkTimeLimit(runContext: RunContext<Obj>): boolean {
+function isTimeLimitExceeded(runContext: RunContext<Obj>): boolean {
   const { options, state } = runContext
   const { limitTime, timeController } = options
-
-  if (limitTime == null) {
-    return false
-  }
-
-  return timeController.now() - state.startTime >= limitTime
+  return (
+    limitTime != null && timeController.now() - state.startTime >= limitTime
+  )
 }
 
 function updateIterationState(
@@ -74,14 +71,18 @@ function runParallelTest<Args extends Obj>(
   args: ArgsWithSeed<Args>,
 ): void {
   const { pool, abortSignal, testRun, testOptions, state } = runContext
-  if (!pool) return
+  if (!pool) {
+    return
+  }
 
   const tests = state.tests
   state.tests++
 
   void (async () => {
     try {
-      if (abortSignal.aborted) return
+      if (abortSignal.aborted) {
+        return
+      }
 
       let promiseOrResult = testRun(args, tests, testOptions)
       if (isPromiseLike(promiseOrResult)) {
@@ -102,17 +103,18 @@ function runParallelTest<Args extends Obj>(
 }
 
 async function callOnModeChange(runContext: RunContext<Obj>): Promise<void> {
-  const { options, variantsIterator } = runContext
+  const { options, variantsIterator, state } = runContext
   const { onModeChange } = options
+  const { modeConfig } = variantsIterator
 
-  if (!onModeChange || !variantsIterator.modeConfig) {
+  if (!onModeChange || !modeConfig) {
     return
   }
 
   const result = onModeChange({
-    mode: variantsIterator.modeConfig,
+    mode: modeConfig,
     modeIndex: variantsIterator.modeIndex,
-    tests: runContext.state.tests,
+    tests: state.tests,
   })
 
   if (isPromiseLike(result)) {
@@ -165,111 +167,78 @@ function updateCycleState(runContext: RunContext<Obj>): void {
   state.cycleStartTime = now
 }
 
-/**
- * Returns true if iteration should stop (time limit or external abort)
- */
-async function runSequentialCycle<Args extends Obj>(
-  runContext: RunContext<Args>,
-): Promise<boolean> {
-  const { variantsIterator, state, options } = runContext
-  const { abortSignalExternal } = options
-
-  // Current args for test execution; kept for debug mode replay
-  let currentArgs: ArgsWithSeed<Args> | null = null
-
-  while (!abortSignalExternal?.aborted) {
-    // In debug mode, replay same args; otherwise get next variant
-    if (!state.debugMode) {
-      currentArgs = variantsIterator.next()
-      if (currentArgs == null) {
-        return false
-      }
-    }
-
-    await handleModeChangeIfNeeded(runContext)
-
-    if (checkTimeLimit(runContext)) {
-      state.timeLimitExceeded = true
-      return true
-    }
-
-    await handlePeriodicTasks(runContext)
-
-    if (abortSignalExternal?.aborted) {
-      continue
-    }
-
-    // currentArgs is guaranteed non-null: debugMode is only true after test runs,
-    // and test only runs after currentArgs is assigned
-    const result = runSequentialTest(
-      runContext,
-      currentArgs as ArgsWithSeed<Args>,
-    )
-    if (isPromiseLike(result)) {
-      await result
-    }
-  }
-
-  return false
+function isAborted(runContext: RunContext<Obj>): boolean {
+  const { options, abortSignal, pool } = runContext
+  return !!(
+    options.abortSignalExternal?.aborted ||
+    (pool && abortSignal.aborted)
+  )
 }
 
 /**
- * Returns true if iteration should stop (time limit or external abort)
+ * Returns next args or null if cycle ended.
+ * In debug mode returns same args for replay.
  */
-async function runParallelCycle<Args extends Obj>(
+function getNextArgs<Args extends Obj>(
   runContext: RunContext<Args>,
-): Promise<boolean> {
-  const { variantsIterator, pool, abortSignal, state, options } = runContext
-  const { abortSignalExternal, parallel } = options
-
-  if (!pool) {
-    return runSequentialCycle(runContext)
+  currentArgs: ArgsWithSeed<Args> | null,
+): ArgsWithSeed<Args> | null {
+  if (runContext.state.debugMode) {
+    return currentArgs
   }
+  return runContext.variantsIterator.next()
+}
 
-  // Current args for test execution; kept for debug mode replay
+async function runCycle<Args extends Obj>(
+  runContext: RunContext<Args>,
+): Promise<void> {
+  const { pool, state, options } = runContext
+  const { parallel } = options
+
   let currentArgs: ArgsWithSeed<Args> | null = null
 
-  while (!abortSignalExternal?.aborted && !abortSignal.aborted) {
-    // In debug mode, replay same args; otherwise get next variant
-    if (!state.debugMode) {
-      currentArgs = variantsIterator.next()
-      if (currentArgs == null) {
-        break
-      }
+  while (!isAborted(runContext)) {
+    currentArgs = getNextArgs(runContext, currentArgs)
+    if (currentArgs == null) {
+      break
     }
 
     await handleModeChangeIfNeeded(runContext)
 
-    if (checkTimeLimit(runContext)) {
+    if (isTimeLimitExceeded(runContext)) {
       state.timeLimitExceeded = true
       break
     }
 
     await handlePeriodicTasks(runContext)
 
-    if (abortSignalExternal?.aborted || abortSignal.aborted) {
+    if (isAborted(runContext)) {
       continue
     }
 
-    if (!pool.hold(1)) {
-      await poolWait({ pool, count: 1, hold: true })
+    if (pool) {
+      if (!pool.hold(1)) {
+        await poolWait({ pool, count: 1, hold: true })
+      }
+      runParallelTest(runContext, currentArgs)
+    } else {
+      const result = runSequentialTest(runContext, currentArgs)
+      if (isPromiseLike(result)) {
+        await result
+      }
     }
-
-    // currentArgs is guaranteed non-null: debugMode is only true after test runs,
-    // and test only runs after currentArgs is assigned
-    runParallelTest(runContext, currentArgs as ArgsWithSeed<Args>)
   }
 
-  await poolWait({ pool, count: parallel, hold: true })
-  void pool.release(parallel)
-
-  return state.timeLimitExceeded
+  if (pool) {
+    await poolWait({ pool, count: parallel, hold: true })
+    void pool.release(parallel)
+  }
 }
 
 export async function runIterationLoop<Args extends Obj>(
   runContext: RunContext<Args>,
 ): Promise<void> {
-  const { options, variantsIterator, pool, state } = runContext
+  const { options, variantsIterator, state } = runContext
   const { logOptions, cycles } = options
 
   variantsIterator.start()
@@ -286,18 +255,15 @@ export async function runIterationLoop<Args extends Obj>(
     variantsIterator.minCompletedCount < cycles &&
     !state.timeLimitExceeded
   ) {
-    if (checkTimeLimit(runContext)) {
+    if (isTimeLimitExceeded(runContext)) {
       state.timeLimitExceeded = true
       break
     }
 
-    const shouldStop = pool
-      ? await runParallelCycle(runContext)
-      : await runSequentialCycle(runContext)
-
+    await runCycle(runContext)
     updateCycleState(runContext)
 
-    if (shouldStop || checkTimeLimit(runContext)) {
+    if (state.timeLimitExceeded || isTimeLimitExceeded(runContext)) {
       state.timeLimitExceeded = true
       break
     }

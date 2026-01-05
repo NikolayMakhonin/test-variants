@@ -1,11 +1,8 @@
 import type { RequiredNonNullable, Obj } from '@flemist/simple-utils'
-import type {
-  TestVariantsLogOptions,
-  ModeConfig,
-} from 'src/common/test-variants/types'
-import type { RunContext } from './RunContext'
 import { formatBytes, formatDuration, formatModeConfig } from '../log/format'
 import { getMemoryUsage } from '../log/getMemoryUsage'
+import type { TestVariantsLogOptions, ModeConfig } from '../types'
+import type { RunContext } from './RunContext'
 
 function formatMemoryDiff(current: number, previous: number): string {
   const diff = current - previous
@@ -64,63 +61,68 @@ export function logModeChange(
   )
 }
 
+/**
+ * Estimates total cycle time based on current progress.
+ * Uses previous cycle data when available for more accurate estimation.
+ */
 function estimateCycleTime(
-  elapsed: number,
-  current: number,
-  total: number,
-  prevDuration: number | null,
-  prevCount: number | null,
+  elapsedTime: number,
+  completedVariants: number,
+  totalVariants: number,
+  prevCycleDuration: number | null,
+  prevCycleVariants: number | null,
 ): number {
-  if (current <= 0) {
+  if (completedVariants <= 0) {
     return 0
   }
 
-  // Use previous cycle data when available and current progress is within bounds
-  if (
-    prevDuration != null &&
-    prevCount != null &&
-    current < prevCount &&
-    elapsed < prevDuration
-  ) {
-    const remainingCount = prevCount - current
-    const remainingTime = prevDuration - elapsed
-    const timePerVariant = remainingTime / remainingCount
-    return elapsed + (total - current) * timePerVariant
+  // Use previous cycle data when current progress is within previous cycle bounds
+  const hasPrevCycleData =
+    prevCycleDuration != null && prevCycleVariants != null
+  const isWithinPrevBounds =
+    hasPrevCycleData &&
+    completedVariants < prevCycleVariants &&
+    elapsedTime < prevCycleDuration
+  if (isWithinPrevBounds) {
+    const remainingVariants = prevCycleVariants - completedVariants
+    const remainingTime = prevCycleDuration - elapsedTime
+    const timePerVariant = remainingTime / remainingVariants
+    return elapsedTime + (totalVariants - completedVariants) * timePerVariant
   }
 
   // Linear extrapolation from current progress
-  return (elapsed * total) / current
+  return (elapsedTime * totalVariants) / completedVariants
 }
 
 function formatVariantProgress(runContext: RunContext<Obj>): string {
   const { options, variantsIterator, state } = runContext
   const { findBestError, timeController } = options
-  const elapsed = timeController.now() - state.cycleStartTime
+  const elapsedTime = timeController.now() - state.cycleStartTime
+  const elapsedStr = formatDuration(elapsedTime)
 
   if (!findBestError) {
-    return `variant: ${variantsIterator.index} (${formatDuration(elapsed)})`
+    return `variant: ${variantsIterator.index} (${elapsedStr})`
   }
 
   const prefix = `cycle: ${variantsIterator.cycleIndex}, variant: ${variantsIterator.index}`
+  const totalVariants =
+    variantsIterator.count != null && state.prevCycleVariantsCount != null
+      ? Math.min(variantsIterator.count, state.prevCycleVariantsCount)
+      : variantsIterator.count
 
-  let total = variantsIterator.count
-  if (total != null && state.prevCycleVariantsCount != null) {
-    total = Math.min(total, state.prevCycleVariantsCount)
+  if (totalVariants == null) {
+    return `${prefix} (${elapsedStr})`
   }
 
-  if (total == null) {
-    return `${prefix} (${formatDuration(elapsed)})`
-  }
-
-  const estimated = estimateCycleTime(
-    elapsed,
+  const estimatedTime = estimateCycleTime(
+    elapsedTime,
     variantsIterator.index,
-    total,
+    totalVariants,
     state.prevCycleDuration,
     state.prevCycleVariantsCount,
   )
 
-  return `${prefix}/${total} (${formatDuration(elapsed)}/${formatDuration(estimated)})`
+  return `${prefix}/${totalVariants} (${elapsedStr}/${formatDuration(estimatedTime)})`
 }
 
 /** Returns true if logging was performed */

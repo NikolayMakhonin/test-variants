@@ -1,6 +1,10 @@
 import type { PromiseOrValue } from '@flemist/async-utils'
 import type { Obj, RequiredNonNullable } from '@flemist/simple-utils'
 import type {
+  TestVariantsTemplatesExt,
+  VariantsIterator,
+} from '../iterator/types'
+import type {
   ArgsWithSeed,
   OnErrorCallback,
   SaveErrorVariantsOptions,
@@ -8,11 +12,7 @@ import type {
   TestVariantsLogOptions,
   TestVariantsResult,
   TestVariantsRunOptions,
-} from 'src/common/test-variants/types'
-import type {
-  TestVariantsTemplatesExt,
-  VariantsIterator,
-} from 'src/common/test-variants/iterator/types'
+} from '../types'
 
 /** Result of test run (internal format with separate sync/async counts) */
 export type TestFuncResult = void | {

@@ -1,83 +1,22 @@
 import type { PromiseOrValue } from '@flemist/async-utils'
 import type { Obj } from '@flemist/simple-utils'
-import type { ArgsWithSeed } from 'src/common/test-variants/types'
+import type { ArgsWithSeed } from '../types'
 import type { RunContext } from './RunContext'
 
-function handleFindBestErrorParallel<Args extends Obj>(
+function saveArgs<Args extends Obj>(
   runContext: RunContext<Args>,
   args: ArgsWithSeed<Args>,
-  error: unknown,
-  tests: number,
-): void {
-  const { variantsIterator, options, abortControllerParallel, state } =
-    runContext
-
-  variantsIterator.addLimit({ args, error, tests })
-
-  const argsToSave = variantsIterator.limit?.args
-  if (options.store && argsToSave) {
-    void options.store.save(argsToSave)
-  }
-
-  state.debugMode = false
-
-  if (!abortControllerParallel.signal.aborted) {
-    abortControllerParallel.abort(null)
-  }
-}
-
-function handleFindBestErrorSequential<Args extends Obj>(
-  runContext: RunContext<Args>,
-  args: ArgsWithSeed<Args>,
-  error: unknown,
-  tests: number,
+  waitForSave: boolean,
 ): PromiseOrValue<void> {
-  const { variantsIterator, options, state } = runContext
-
-  variantsIterator.addLimit({ args, error, tests })
-
-  const argsToSave = variantsIterator.limit?.args
-  if (options.store && argsToSave) {
-    return options.store.save(argsToSave).then(() => {
-      state.debugMode = false
-    })
-  }
-
-  state.debugMode = false
-}
-
-function handleFatalErrorParallel<Args extends Obj>(
-  runContext: RunContext<Args>,
-  args: ArgsWithSeed<Args>,
-  error: unknown,
-): void {
-  const { options, abortControllerParallel } = runContext
-
-  if (abortControllerParallel.signal.aborted) {
+  const { options, variantsIterator } = runContext
+  const argsToSave = variantsIterator.limit?.args ?? args
+  if (!options.store) {
     return
   }
-
-  if (options.store) {
-    void options.store.save(args)
+  const savePromise = options.store.save(argsToSave)
+  if (waitForSave) {
+    return savePromise
   }
-
-  abortControllerParallel.abort(error)
-}
-
-function handleFatalErrorSequential<Args extends Obj>(
-  runContext: RunContext<Args>,
-  args: ArgsWithSeed<Args>,
-  error: unknown,
-): PromiseOrValue<void> {
-  const { options } = runContext
-
-  if (options.store) {
-    return options.store.save(args).then(() => {
-      throw error
-    })
-  }
-
-  throw error
 }
 
 /**
@@ -92,10 +31,20 @@ export function handleErrorParallel<Args extends Obj>(
   error: unknown,
   tests: number,
 ): void {
+  const { abortControllerParallel, state } = runContext
+
+  if (abortControllerParallel.signal.aborted) {
+    return
+  }
+
   if (runContext.options.findBestError) {
-    handleFindBestErrorParallel(runContext, args, error, tests)
+    runContext.variantsIterator.addLimit({ args, error, tests })
+    state.debugMode = false
+    saveArgs(runContext, args, false)
+    abortControllerParallel.abort(null)
   } else {
-    handleFatalErrorParallel(runContext, args, error)
+    saveArgs(runContext, args, false)
+    abortControllerParallel.abort(error)
   }
 }
 
@@ -111,8 +60,25 @@ export function handleErrorSequential<Args extends Obj>(
   error: unknown,
   tests: number,
 ): PromiseOrValue<void> {
+  const { state } = runContext
+
   if (runContext.options.findBestError) {
-    return handleFindBestErrorSequential(runContext, args, error, tests)
+    runContext.variantsIterator.addLimit({ args, error, tests })
+    const saveResult = saveArgs(runContext, args, true)
+    if (saveResult) {
+      return saveResult.then(() => {
+        state.debugMode = false
+      })
+    }
+    state.debugMode = false
+    return
   }
-  return handleFatalErrorSequential(runContext, args, error)
+
+  const saveResult = saveArgs(runContext, args, true)
+  if (saveResult) {
+    return saveResult.then(() => {
+      throw error
+    })
+  }
+  throw error
 }

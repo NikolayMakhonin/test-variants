@@ -1,11 +1,11 @@
-import { createTestRun } from './createTestRun'
-import type { TestVariantsSetArgs } from './types'
-import type { TestVariantsTemplates } from './iterator/types'
-import type { TestVariantsTest } from './run/types'
-import { testVariantsRun } from './testVariantsRun'
 import type { Obj } from '@flemist/simple-utils'
-import { testVariantsIterator } from './testVariantsIterator'
+import type { TestVariantsTemplates } from './iterator/types'
 import { resolveLogOptions } from './log/logOptions'
+import type { TestVariantsTest } from './run/types'
+import { createTestRun } from './createTestRun'
+import { testVariantsIterator } from './testVariantsIterator'
+import { testVariantsRun } from './testVariantsRun'
+import type { TestVariantsSetArgs } from './types'
 
 export function createTestVariants<Args extends Obj>(
   test: TestVariantsTest<Args>,

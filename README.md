@@ -285,6 +285,10 @@ If you're running tests with a JS debugger attached:
 
 This enables debugging the exact parameter combination that caused the failure without manually recreating it.
 
+### Sync mode optimization
+
+The internal implementation operates in a faster synchronous mode (without await and Promise) when the test function is synchronous. The library detects whether each test invocation returns a Promise and switches to async handling only when necessary. This maximizes performance for sync tests while fully supporting async tests when needed.
+
 ### Logs format
 ```
 [test-variants] start, memory: 139MB

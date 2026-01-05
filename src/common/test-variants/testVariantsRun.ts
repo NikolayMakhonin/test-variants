@@ -1,21 +1,21 @@
-import type { TestOptions, TestVariantsResult } from './types'
+import { AbortControllerFast } from '@flemist/abort-controller-fast'
+import { combineAbortSignals } from '@flemist/async-utils'
+import type { Obj } from '@flemist/simple-utils'
+import { Pool } from '@flemist/time-limits'
+import { garbageCollect } from 'src/common/garbage-collect/garbageCollect'
 import type { VariantsIterator } from './iterator/types'
+import { getMemoryUsage } from './log/getMemoryUsage'
+import { createRunResult } from './run/createRunResult'
+import { createRunState } from './run/createRunState'
+import { resolveRunOptions } from './run/resolveRunOptions'
+import type { RunContext } from './run/RunContext'
+import { runIterationLoop } from './run/runIterationLoop'
+import { logStart, logCompleted } from './run/runLogger'
 import type {
   TestVariantsTestRun,
   TestVariantsRunOptionsInternal,
 } from './run/types'
-import { AbortControllerFast } from '@flemist/abort-controller-fast'
-import { combineAbortSignals } from '@flemist/async-utils'
-import { Pool } from '@flemist/time-limits'
-import { garbageCollect } from 'src/common/garbage-collect/garbageCollect'
-import type { Obj } from '@flemist/simple-utils'
-import { getMemoryUsage } from './log/getMemoryUsage'
-import { resolveRunOptions } from './run/resolveRunOptions'
-import { createRunState } from './run/createRunState'
-import { logStart, logCompleted } from './run/runLogger'
-import { runIterationLoop } from './run/runIterationLoop'
-import { createRunResult } from './run/createRunResult'
-import type { RunContext } from './run/RunContext'
+import type { TestOptions, TestVariantsResult } from './types'
 
 export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   testRun: TestVariantsTestRun<Args>,
