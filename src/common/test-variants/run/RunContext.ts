@@ -12,7 +12,7 @@ import type { RunState } from './createRunState'
 
 /** Context for test variants iteration loop */
 export type RunContext<Args extends Obj> = {
-  config: RunOptionsResolved<Args>
+  options: RunOptionsResolved<Args>
   testRun: TestVariantsTestRun<Args>
   variantsIterator: VariantsIterator<Args>
   testOptions: TestOptions

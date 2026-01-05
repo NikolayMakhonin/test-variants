@@ -4,14 +4,14 @@ import type {
   ArgsWithSeed,
   OnErrorCallback,
   SaveErrorVariantsOptions,
+  TestOptions,
   TestVariantsLogOptions,
   TestVariantsResult,
   TestVariantsRunOptions,
-  TestOptions,
 } from 'src/common/test-variants/types'
 import type {
-  VariantsIterator,
   TestVariantsTemplatesExt,
+  VariantsIterator,
 } from 'src/common/test-variants/iterator/types'
 
 /** Result of test run (internal format with separate sync/async counts) */
@@ -96,3 +96,9 @@ export type TestVariantsCall<Args extends Obj> = <SavedArgs = Args>(
 export type TestVariantsSetArgs<Args extends Obj> = <ArgsExtra extends Obj>(
   args: TestVariantsTemplatesExt<Omit<Args, 'seed'>, Omit<ArgsExtra, 'seed'>>,
 ) => TestVariantsCall<Args>
+
+export type GCOptions = {
+  GC_Iterations: number
+  GC_IterationsAsync: number
+  GC_Interval: number
+}

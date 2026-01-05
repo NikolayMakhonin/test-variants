@@ -11,8 +11,8 @@ export async function handleSyncError<Args extends Obj>(
   error: unknown,
   tests: number,
 ): Promise<void> {
-  const { variantsIterator, config } = runContext
-  const { store, findBestError } = config
+  const { variantsIterator, options } = runContext
+  const { store, findBestError } = options
 
   if (findBestError) {
     variantsIterator.addLimit({ args, error, tests })
@@ -36,8 +36,8 @@ export function handleParallelError<Args extends Obj>(
   error: unknown,
   tests: number,
 ): void {
-  const { variantsIterator, config, abortControllerParallel } = runContext
-  const { store, findBestError } = config
+  const { variantsIterator, options, abortControllerParallel } = runContext
+  const { store, findBestError } = options
 
   if (findBestError) {
     variantsIterator.addLimit({ args, error, tests })

@@ -26,8 +26,8 @@ export function logStart(
 export function logCompleted<Args extends Obj>(
   runContext: RunContext<Args>,
 ): void {
-  const { config, state } = runContext
-  const { logOptions, timeController } = config
+  const { options, state } = runContext
+  const { logOptions, timeController } = options
 
   if (!logOptions.completed) {
     return
@@ -63,8 +63,8 @@ export function logModeChange(
 export function logProgress<Args extends Obj>(
   runContext: RunContext<Args>,
 ): void {
-  const { config, variantsIterator, state } = runContext
-  const { logOptions, timeController, findBestError } = config
+  const { options, variantsIterator, state } = runContext
+  const { logOptions, timeController, findBestError } = options
   const now = timeController.now()
 
   if (!logOptions.progress || now - state.prevLogTime < logOptions.progress) {

@@ -14,8 +14,8 @@ import { handleSyncError, handleParallelError } from './errorHandlers'
 function handleInitialMode<Args extends Obj>(
   runContext: RunContext<Args>,
 ): PromiseOrValue<void> {
-  const { config, variantsIterator, state } = runContext
-  const { logOptions, onModeChange } = config
+  const { options, variantsIterator, state } = runContext
+  const { logOptions, onModeChange } = options
 
   logModeChange(
     logOptions,
@@ -38,8 +38,8 @@ function handleInitialMode<Args extends Obj>(
 function handleModeChangeIfNeeded<Args extends Obj>(
   runContext: RunContext<Args>,
 ): PromiseOrValue<void> {
-  const { config, variantsIterator, state } = runContext
-  const { logOptions, onModeChange } = config
+  const { options, variantsIterator, state } = runContext
+  const { logOptions, onModeChange } = options
 
   if (variantsIterator.modeIndex === state.prevModeIndex) return
 
@@ -73,15 +73,8 @@ type PeriodicTasksResult = { timeLimitExceeded: boolean }
 function handlePeriodicTasks<Args extends Obj>(
   runContext: RunContext<Args>,
 ): PromiseOrValue<PeriodicTasksResult> {
-  const { config, state } = runContext
-  const {
-    logOptions,
-    timeController,
-    limitTime,
-    GC_Iterations,
-    GC_IterationsAsync,
-    GC_Interval,
-  } = config
+  const { options, state } = runContext
+  const { logOptions, timeController, limitTime, GC_Interval } = options
 
   if (!logOptions.progress && !GC_Interval && limitTime == null) {
     return { timeLimitExceeded: false }
@@ -96,8 +89,7 @@ function handlePeriodicTasks<Args extends Obj>(
 
   logProgress(runContext)
 
-  const gcConfig = { GC_Iterations, GC_IterationsAsync, GC_Interval }
-  if (shouldTriggerGC(gcConfig, state, now)) {
+  if (shouldTriggerGC(runContext, now)) {
     return triggerGC(state, now).then(() => ({ timeLimitExceeded: false }))
   }
 
@@ -217,7 +209,7 @@ function scheduleParallelTest<Args extends Obj>(
 export async function runIterationLoop<Args extends Obj>(
   runContext: RunContext<Args>,
 ): Promise<void> {
-  const { config, variantsIterator, abortSignal, pool, state } = runContext
+  const { options, variantsIterator, abortSignal, pool, state } = runContext
   const {
     logOptions,
     abortSignalExternal,
@@ -225,7 +217,7 @@ export async function runIterationLoop<Args extends Obj>(
     limitTime,
     timeController,
     parallel,
-  } = config
+  } = options
 
   variantsIterator.start()
   if (logOptions.debug) {
