@@ -3,6 +3,7 @@ import { ArgName, TestVariantsTemplates, VariantNavigationState } from './types'
 import { findValueIndex } from 'src/common/test-variants/helpers/findValueIndex'
 import type { LimitArgOnError } from 'src/common'
 
+/** Create initial variant navigation state for given templates */
 export function createVariantNavigationState<Args extends Obj>(
   templates: TestVariantsTemplates<Args>,
   equals: VariantNavigationState<Args>['equals'],
@@ -14,8 +15,8 @@ export function createVariantNavigationState<Args extends Obj>(
   const argValues: (readonly any[])[] = []
   const argLimits: (number | null)[] = []
   const argsCount = argsNames.length
-  for (let i = 0; i < argsCount; i++) {
-    const argName = argsNames[i]
+  for (let argIndex = 0; argIndex < argsCount; argIndex++) {
+    const argName = argsNames[argIndex]
     args[argName] = void 0 as any
     indexes.push(-1)
     argValues.push(void 0 as any)
@@ -55,14 +56,14 @@ export function calcArgValues<Args extends Obj>(
     return values
   }
 
-  // Это снижает производительность на горячем пути,
-  // но пока не приходит в голову как сделать лучше.
-  // Но эта ситуация возможна только если пользователь
-  // изменяет шаблон между запусками тестов,
-  // а сохраненная ошикбка выходит за рамки нового шаблона.
+  // This reduces performance on the hot path,
+  // but no better solution comes to mind.
+  // This situation only occurs when user modifies template between test runs,
+  // and saved error falls outside the new template bounds.
   let valuesWithExtra: any[] | null = null
-  for (let i = 0, len = extra.length; i < len; i++) {
-    const extraValue = extra[i]
+  const extraCount = extra.length
+  for (let extraIndex = 0; extraIndex < extraCount; extraIndex++) {
+    const extraValue = extra[extraIndex]
     if (findValueIndex(values, extraValue, state.equals) < 0) {
       if (valuesWithExtra == null) {
         valuesWithExtra = [...values, extraValue]
@@ -81,10 +82,10 @@ export function getArgValueMaxIndex(
   argIndex: number,
   belowMax: boolean,
 ): number {
-  const valuesLen = state.argValues[argIndex].length
+  const valuesCount = state.argValues[argIndex].length
   const argLimit = state.argLimits[argIndex]
   if (argLimit == null) {
-    return valuesLen - 1
+    return valuesCount - 1
   }
   let limitArgOnError = state.limitArgOnError
   if (typeof limitArgOnError === 'function') {
@@ -98,9 +99,9 @@ export function getArgValueMaxIndex(
     })
   }
   if (!belowMax || limitArgOnError) {
-    return Math.min(argLimit, valuesLen - 1)
+    return Math.min(argLimit, valuesCount - 1)
   }
-  return valuesLen - 1
+  return valuesCount - 1
 }
 
 /** Check if variant navigation is at limit or beyond */
@@ -109,22 +110,18 @@ function isVariantNavigationAtLimit<Args extends Obj>(
 ): boolean {
   const argsCount = state.indexes.length
   for (let argIndex = 0; argIndex < argsCount; argIndex++) {
-    const limit = state.argLimits[argIndex]
-    if (limit == null) {
+    const argLimit = state.argLimits[argIndex]
+    if (argLimit == null) {
       return false
     }
-    if (state.indexes[argIndex] < limit) {
+    if (state.indexes[argIndex] < argLimit) {
       return false
     }
   }
   return true
 }
 
-/**
- * Reset variant navigation to initial state
- * Variant position will be undefined
- * @return true if valid position exists
- */
+/** Reset variant navigation to initial state; variant position will be undefined */
 export function resetVariantNavigation<Args extends Obj>(
   state: VariantNavigationState<Args>,
 ): void {
@@ -135,27 +132,6 @@ export function resetVariantNavigation<Args extends Obj>(
     // high performance alternative to delete property
     state.args[state.argsNames[argIndex]] = void 0 as any
   }
-}
-
-/**
- * Check if any position is strictly below its max
- * When state.limitArgOnError is true, also check that each argument not exceeds its max.
- */
-export function isVariantNavigationBelowMax<Args extends Obj>(
-  state: VariantNavigationState<Args>,
-): boolean {
-  let belowMax = false
-  const argsCount = state.indexes.length
-  for (let argIndex = 0; argIndex < argsCount; argIndex++) {
-    const maxIndex = getArgValueMaxIndex(state, argIndex, belowMax)
-    if (state.indexes[argIndex] > maxIndex) {
-      return false
-    }
-    if (state.indexes[argIndex] < maxIndex) {
-      belowMax = true
-    }
-  }
-  return belowMax
 }
 
 /** Advance to next variant in cartesian product; returns true if successful */
@@ -248,26 +224,17 @@ export function advanceVariantNavigation<Args extends Obj>(
   return false
 }
 
-/** Fix variant position to be <= max; returns true if valid position exists */
-function fixVariantNavigation<Args extends Obj>(
-  state: VariantNavigationState<Args>,
-): void {
-  let belowMax = false
-  for (let i = 0, len = state.indexes.length; i < len; i++) {
-    const maxIndex = getArgValueMaxIndex(state, i, belowMax)
-    if (state.indexes[i] > maxIndex) {
-      state.indexes[i] = maxIndex
-    }
-    if (state.indexes[i] < maxIndex) {
-      belowMax = true
-    }
-  }
-}
-
 /** Retreat to previous variant (decrement with borrow); returns true if successful */
 export function retreatVariantNavigation<Args extends Obj>(
   state: VariantNavigationState<Args>,
 ): boolean {
+  if (isVariantNavigationAtLimit(state)) {
+    // Если лимит стал меньше текущей позиции и мы двигаемся назад,
+    // то мы должны начать с последнего валидного варианта, вместо возврата false.
+    // А этого проще всего добиться сбросом состояния навигации и последующим продвижением назад.
+    resetVariantNavigation(state)
+  }
+
   let isInitial = false
   // First initialize argValues to last values if not yet done
   const argsCount = state.indexes.length

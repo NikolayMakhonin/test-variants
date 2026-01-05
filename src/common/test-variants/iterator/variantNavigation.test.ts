@@ -17,6 +17,8 @@ import { deepFreezeJsonLike } from 'src/common/test-variants/-tmp/-test/helpers/
 
 // region helpers
 
+// region naming
+
 const shuffledString = '9081726354'
 const argNamesMap = new Map<number, string>()
 function getArgName(argIndex: number): string {
@@ -27,6 +29,8 @@ function getArgName(argIndex: number): string {
   }
   return argName
 }
+
+// endregion
 
 // region parse
 
