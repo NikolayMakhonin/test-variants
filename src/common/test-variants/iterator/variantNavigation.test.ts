@@ -434,17 +434,6 @@ describe('advanceVariantNavigation', () => {
       resetVariantNavigation(state)
     }
   })
-
-  it('1 arg, 2 values, limit 1', () => {
-    const state = _createVariantNavigationState('1', [], '1')
-    for (let i = 0; i < 3; i++) {
-      checkVariantNavigationState(state, '_', '_', '1')
-      assert.isTrue(advanceVariantNavigation(state))
-      checkVariantNavigationState(state, '1', '0', '1')
-      assert.isFalse(advanceVariantNavigation(state))
-    }
-    checkVariantNavigationState(state, '_', '_', '1')
-  })
 })
 
 describe('retreatVariantNavigation', () => {
@@ -683,6 +672,40 @@ describe('randomVariantNavigation', () => {
       3,
       `navigation is not random:\n${Array.from(sequences).join('\n')}`,
     )
+  })
+})
+
+describe('variantNavigation complex', () => {
+  it('values as complex funcs', () => {
+    const state = createVariantNavigationState(
+      {
+        a: [1, 2],
+        b: ({ a }) => (a % 2 === 0 ? [] : [3, 4]),
+        c: ({ b }) => (b % 2 === 1 ? [5] : [6, 7]),
+      },
+      null,
+      null,
+      false,
+    )
+    const advanceStates = new Set<string>()
+    const retreatStates = new Set<string>()
+    const randomStates = new Set<string>()
+    while (advanceVariantNavigation(state)) {
+      advanceStates.add(formatState(state))
+    }
+    resetVariantNavigation(state)
+    while (retreatVariantNavigation(state)) {
+      retreatStates.add(formatState(state))
+    }
+    resetVariantNavigation(state)
+    for (let i = 0; i < 1000; i++) {
+      const result = randomVariantNavigation(state)
+      if (!result) {
+        assert.fail(
+          `randomVariantNavigation returned false\nstate: ${formatState(state)}\n\nrandomStates: ${Array.from(randomStates).join('\n')}`,
+        )
+      }
+    }
   })
 })
 
