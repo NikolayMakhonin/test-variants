@@ -3,58 +3,76 @@ import type { Obj } from '@flemist/simple-utils'
 import type { ArgsWithSeed } from 'src/common/test-variants/types'
 import type { RunContext } from './RunContext'
 
-function handleFindBestError<Args extends Obj>(
+function handleFindBestErrorParallel<Args extends Obj>(
   runContext: RunContext<Args>,
   args: ArgsWithSeed<Args>,
   error: unknown,
   tests: number,
-  isParallel: boolean,
-): PromiseOrValue<void> {
+): void {
   const { variantsIterator, options, abortControllerParallel, state } =
     runContext
-  const { store } = options
 
   variantsIterator.addLimit({ args, error, tests })
 
   const argsToSave = variantsIterator.limit?.args
-  if (store && argsToSave) {
-    if (isParallel) {
-      void store.save(argsToSave)
-    } else {
-      return store.save(argsToSave).then(() => {
-        state.debugMode = false
-      })
-    }
+  if (options.store && argsToSave) {
+    void options.store.save(argsToSave)
   }
 
   state.debugMode = false
 
-  if (isParallel && !abortControllerParallel.signal.aborted) {
+  if (!abortControllerParallel.signal.aborted) {
     abortControllerParallel.abort(null)
   }
 }
 
-function handleFatalError<Args extends Obj>(
+function handleFindBestErrorSequential<Args extends Obj>(
   runContext: RunContext<Args>,
   args: ArgsWithSeed<Args>,
   error: unknown,
-  isParallel: boolean,
+  tests: number,
 ): PromiseOrValue<void> {
-  const { options, abortControllerParallel } = runContext
-  const { store } = options
+  const { variantsIterator, options, state } = runContext
 
-  if (isParallel) {
-    if (!abortControllerParallel.signal.aborted) {
-      if (store) {
-        void store.save(args)
-      }
-      abortControllerParallel.abort(error)
-    }
+  variantsIterator.addLimit({ args, error, tests })
+
+  const argsToSave = variantsIterator.limit?.args
+  if (options.store && argsToSave) {
+    return options.store.save(argsToSave).then(() => {
+      state.debugMode = false
+    })
+  }
+
+  state.debugMode = false
+}
+
+function handleFatalErrorParallel<Args extends Obj>(
+  runContext: RunContext<Args>,
+  args: ArgsWithSeed<Args>,
+  error: unknown,
+): void {
+  const { options, abortControllerParallel } = runContext
+
+  if (abortControllerParallel.signal.aborted) {
     return
   }
 
-  if (store) {
-    return store.save(args).then(() => {
+  if (options.store) {
+    void options.store.save(args)
+  }
+
+  abortControllerParallel.abort(error)
+}
+
+function handleFatalErrorSequential<Args extends Obj>(
+  runContext: RunContext<Args>,
+  args: ArgsWithSeed<Args>,
+  error: unknown,
+): PromiseOrValue<void> {
+  const { options } = runContext
+
+  if (options.store) {
+    return options.store.save(args).then(() => {
       throw error
     })
   }
@@ -63,20 +81,38 @@ function handleFatalError<Args extends Obj>(
 }
 
 /**
- * Handle test error.
+ * Handle test error in parallel execution mode.
  *
  * In findBestError mode: adds limit to iterator, saves args, aborts parallel tests.
- * Without findBestError: saves args and throws error (or aborts with error in parallel).
+ * Without findBestError: saves args and aborts with error.
  */
-export function handleError<Args extends Obj>(
+export function handleErrorParallel<Args extends Obj>(
   runContext: RunContext<Args>,
   args: ArgsWithSeed<Args>,
   error: unknown,
   tests: number,
-  isParallel: boolean,
+): void {
+  if (runContext.options.findBestError) {
+    handleFindBestErrorParallel(runContext, args, error, tests)
+  } else {
+    handleFatalErrorParallel(runContext, args, error)
+  }
+}
+
+/**
+ * Handle test error in sequential execution mode.
+ *
+ * In findBestError mode: adds limit to iterator, saves args.
+ * Without findBestError: saves args and throws error.
+ */
+export function handleErrorSequential<Args extends Obj>(
+  runContext: RunContext<Args>,
+  args: ArgsWithSeed<Args>,
+  error: unknown,
+  tests: number,
 ): PromiseOrValue<void> {
   if (runContext.options.findBestError) {
-    return handleFindBestError(runContext, args, error, tests, isParallel)
+    return handleFindBestErrorSequential(runContext, args, error, tests)
   }
-  return handleFatalError(runContext, args, error, isParallel)
+  return handleFatalErrorSequential(runContext, args, error)
 }

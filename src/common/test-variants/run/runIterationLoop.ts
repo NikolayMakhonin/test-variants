@@ -6,9 +6,9 @@ import type { TestFuncResult } from './types'
 import type { RunContext } from './RunContext'
 import { shouldTriggerGC, triggerGC } from './gcManager'
 import { logModeChange, logProgress } from './runLogger'
-import { handleError } from './errorHandlers'
+import { handleErrorParallel, handleErrorSequential } from './errorHandlers'
 
-function isTimeLimitExceeded(runContext: RunContext<Obj>): boolean {
+function checkTimeLimit(runContext: RunContext<Obj>): boolean {
   const { options, state } = runContext
   const { limitTime, timeController } = options
 
@@ -16,12 +16,7 @@ function isTimeLimitExceeded(runContext: RunContext<Obj>): boolean {
     return false
   }
 
-  if (timeController.now() - state.startTime >= limitTime) {
-    state.timeLimitExceeded = true
-    return true
-  }
-
-  return false
+  return timeController.now() - state.startTime >= limitTime
 }
 
 function updateIterationState(
@@ -60,7 +55,7 @@ function runSequentialTest<Args extends Obj>(
           }
           updateIterationState(state, result)
         },
-        err => handleError(runContext, args, err, tests, false),
+        err => handleErrorSequential(runContext, args, err, tests),
       )
     }
 
@@ -70,7 +65,7 @@ function runSequentialTest<Args extends Obj>(
     }
     updateIterationState(state, promiseOrResult)
   } catch (err) {
-    return handleError(runContext, args, err, tests, false)
+    return handleErrorSequential(runContext, args, err, tests)
   }
 }
 
@@ -99,7 +94,7 @@ function runParallelTest<Args extends Obj>(
       }
       updateIterationState(state, promiseOrResult)
     } catch (err) {
-      handleError(runContext, args, err, tests, true)
+      handleErrorParallel(runContext, args, err, tests)
     } finally {
       void pool.release(1)
     }
@@ -107,7 +102,7 @@ function runParallelTest<Args extends Obj>(
 }
 
 async function callOnModeChange(runContext: RunContext<Obj>): Promise<void> {
-  const { options, variantsIterator, state } = runContext
+  const { options, variantsIterator } = runContext
   const { onModeChange } = options
 
   if (!onModeChange || !variantsIterator.modeConfig) {
@@ -117,7 +112,7 @@ async function callOnModeChange(runContext: RunContext<Obj>): Promise<void> {
   const result = onModeChange({
     mode: variantsIterator.modeConfig,
     modeIndex: variantsIterator.modeIndex,
-    tests: state.tests,
+    tests: runContext.state.tests,
   })
 
   if (isPromiseLike(result)) {
@@ -163,11 +158,11 @@ async function handlePeriodicTasks(runContext: RunContext<Obj>): Promise<void> {
 
 function updateCycleState(runContext: RunContext<Obj>): void {
   const { options, variantsIterator, state } = runContext
-  const { timeController } = options
+  const now = options.timeController.now()
 
   state.prevCycleVariantsCount = variantsIterator.count
-  state.prevCycleDuration = timeController.now() - state.cycleStartTime
-  state.cycleStartTime = timeController.now()
+  state.prevCycleDuration = now - state.cycleStartTime
+  state.cycleStartTime = now
 }
 
 /**
@@ -193,7 +188,8 @@ async function runSequentialCycle<Args extends Obj>(
 
     await handleModeChangeIfNeeded(runContext)
 
-    if (isTimeLimitExceeded(runContext)) {
+    if (checkTimeLimit(runContext)) {
+      state.timeLimitExceeded = true
       return true
     }
 
@@ -244,7 +240,8 @@ async function runParallelCycle<Args extends Obj>(
 
     await handleModeChangeIfNeeded(runContext)
 
-    if (isTimeLimitExceeded(runContext)) {
+    if (checkTimeLimit(runContext)) {
+      state.timeLimitExceeded = true
       break
     }
 
@@ -289,7 +286,8 @@ export async function runIterationLoop<Args extends Obj>(
     variantsIterator.minCompletedCount < cycles &&
     !state.timeLimitExceeded
   ) {
-    if (isTimeLimitExceeded(runContext)) {
+    if (checkTimeLimit(runContext)) {
+      state.timeLimitExceeded = true
       break
     }
 
@@ -299,7 +297,8 @@ export async function runIterationLoop<Args extends Obj>(
 
     updateCycleState(runContext)
 
-    if (shouldStop || isTimeLimitExceeded(runContext)) {
+    if (shouldStop || checkTimeLimit(runContext)) {
+      state.timeLimitExceeded = true
       break
     }
 

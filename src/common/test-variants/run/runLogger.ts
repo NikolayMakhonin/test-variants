@@ -123,13 +123,14 @@ function formatVariantProgress(runContext: RunContext<Obj>): string {
   return `${prefix}/${total} (${formatDuration(elapsed)}/${formatDuration(estimated)})`
 }
 
-export function logProgress(runContext: RunContext<Obj>): void {
+/** Returns true if logging was performed */
+export function logProgress(runContext: RunContext<Obj>): boolean {
   const { options, variantsIterator, state } = runContext
   const { logOptions, timeController } = options
   const now = timeController.now()
 
   if (!logOptions.progress || now - state.prevLogTime < logOptions.progress) {
-    return
+    return false
   }
 
   if (state.modeChanged) {
@@ -155,4 +156,6 @@ export function logProgress(runContext: RunContext<Obj>): void {
 
   logOptions.func('progress', msg)
   state.prevLogTime = now
+
+  return true
 }
