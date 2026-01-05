@@ -271,7 +271,7 @@ export function retreatVariantNavigation<Args extends Obj>(
   const argsCount = state.indexes.length
   // Arguments after belowMaxIndex can use full range since we're lexicographically below the limit.
   let belowMaxIndex = argsCount
-  const resetSubsequent = false
+  let resetSubsequent = false
   for (let argIndex = 0; argIndex < argsCount; argIndex++) {
     const argValuesIsNull = state.argValues[argIndex] == null
     if (argValuesIsNull) {
@@ -303,7 +303,7 @@ export function retreatVariantNavigation<Args extends Obj>(
 
     if (resetSubsequent || state.indexes[argIndex] > maxIndex) {
       state.indexes[argIndex] = maxIndex
-      // resetSubsequent = true // TODO: а если если это закомментить тесты не падают, значит тесты не покрывают этот кейс, нужно исправить
+      resetSubsequent = true // TODO: а если если это закомментить тесты не падают, значит тесты не покрывают этот кейс, нужно исправить
     }
     if (belowMaxIndex === argsCount && state.indexes[argIndex] < maxIndex) {
       belowMaxIndex = argIndex
