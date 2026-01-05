@@ -1,6 +1,6 @@
 import type { Obj } from '@flemist/simple-utils'
 import { ArgName, TestVariantsTemplates, VariantNavigationState } from './types'
-import { findValueIndex } from 'src/common/test-variants/helpers/findValueIndex'
+import { findValueIndex } from 'src/common/test-variants/iterator/findValueIndex'
 import type { LimitArgOnError } from 'src/common'
 
 /** Create initial variant navigation state for given templates */
@@ -163,6 +163,11 @@ export function advanceVariantNavigation<Args extends Obj>(
       if (belowMaxIndex === argsCount && state.indexes[argIndex] < maxIndex) {
         belowMaxIndex = argIndex
       }
+    } else if (belowMaxIndex === argsCount) {
+      const maxIndex = getArgValueMaxIndex(state, argIndex, false)
+      if (state.indexes[argIndex] < maxIndex) {
+        belowMaxIndex = argIndex
+      }
     }
   }
   if (isVariantNavigationAtLimit(state)) {
@@ -259,6 +264,11 @@ export function retreatVariantNavigation<Args extends Obj>(
       state.args[state.argsNames[argIndex]] =
         state.argValues[argIndex][maxIndex]
       if (belowMaxIndex === argsCount && state.indexes[argIndex] < maxIndex) {
+        belowMaxIndex = argIndex
+      }
+    } else if (belowMaxIndex === argsCount) {
+      const maxIndex = getArgValueMaxIndex(state, argIndex, false)
+      if (state.indexes[argIndex] < maxIndex) {
         belowMaxIndex = argIndex
       }
     }
