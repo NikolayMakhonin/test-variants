@@ -40,7 +40,7 @@ export type TestVariantsTest<Args extends Obj> = (
  * Store for saving and loading error-causing parameter combinations.
  * Node.js implementation uses file system. Browser returns null (not supported).
  */
-export type SaveErrorVariantsStore<Args extends Obj> = {
+export interface SaveErrorVariantsStore<Args extends Obj> {
   /**
    * Save error-causing args to storage.
    * Handles concurrency protection and deduplication internally.

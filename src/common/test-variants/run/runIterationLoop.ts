@@ -102,7 +102,7 @@ function runParallelTest<Args extends Obj>(
   })()
 }
 
-async function callOnModeChange(runContext: RunContext<Obj>): Promise<void> {
+function callOnModeChange(runContext: RunContext<Obj>): PromiseOrValue<void> {
   const { options, variantsIterator, state } = runContext
   const { onModeChange } = options
   const { modeConfig } = variantsIterator
@@ -111,20 +111,16 @@ async function callOnModeChange(runContext: RunContext<Obj>): Promise<void> {
     return
   }
 
-  const result = onModeChange({
+  return onModeChange({
     mode: modeConfig,
     modeIndex: variantsIterator.modeIndex,
     tests: state.tests,
   })
-
-  if (isPromiseLike(result)) {
-    await result
-  }
 }
 
-async function handleModeChangeIfNeeded(
+function handleModeChangeIfNeeded(
   runContext: RunContext<Obj>,
-): Promise<void> {
+): PromiseOrValue<void> {
   const { options, variantsIterator, state } = runContext
   const { logOptions } = options
 
@@ -147,10 +143,12 @@ async function handleModeChangeIfNeeded(
     variantsIterator.modeConfig,
     variantsIterator.modeIndex,
   )
-  await callOnModeChange(runContext)
+  return callOnModeChange(runContext)
 }
 
-async function handlePeriodicTasks(runContext: RunContext<Obj>): Promise<void> {
+function handlePeriodicTasks(
+  runContext: RunContext<Obj>,
+): PromiseOrValue<void> {
   const { options, state } = runContext
   const { logOptions, timeController, GC_Interval } = options
 
@@ -162,7 +160,7 @@ async function handlePeriodicTasks(runContext: RunContext<Obj>): Promise<void> {
 
   const now = timeController.now()
   if (shouldTriggerGC(runContext, now)) {
-    await triggerGC(state, now)
+    return triggerGC(state, now)
   }
 }
 
@@ -199,32 +197,47 @@ function getNextArgs<Args extends Obj>(
   return runContext.variantsIterator.next()
 }
 
-async function runCycle<Args extends Obj>(
+/**
+ * Async version of cycle runner.
+ * @param pendingArgs - args already fetched in sync mode before switching to async
+ */
+async function runCycleAsync<Args extends Obj>(
   runContext: RunContext<Args>,
+  pendingArgs?: ArgsWithSeed<Args> | null,
 ): Promise<void> {
   const { pool, state, options } = runContext
   const { parallel, logOptions } = options
 
-  let currentArgs: ArgsWithSeed<Args> | null = null
+  let currentArgs: ArgsWithSeed<Args> | null = pendingArgs ?? null
 
   // Only check external abort for cycle continuation
   // Parallel abort (from findBestError) causes fallback to sequential, not cycle exit
   while (!isExternalAborted(runContext)) {
-    currentArgs = getNextArgs(runContext, currentArgs)
+    // Use pending args for first iteration if provided, then fetch new ones
     if (currentArgs == null) {
-      break
+      currentArgs = getNextArgs(runContext, currentArgs)
+      if (currentArgs == null) {
+        break
+      }
     }
 
-    await handleModeChangeIfNeeded(runContext)
+    const modeChangeResult = handleModeChangeIfNeeded(runContext)
+    if (isPromiseLike(modeChangeResult)) {
+      await modeChangeResult
+    }
 
     if (isTimeLimitExceeded(runContext)) {
       state.timeLimitExceeded = true
       break
     }
 
-    await handlePeriodicTasks(runContext)
+    const periodicResult = handlePeriodicTasks(runContext)
+    if (isPromiseLike(periodicResult)) {
+      await periodicResult
+    }
 
     if (isExternalAborted(runContext)) {
+      currentArgs = null
       continue
     }
 
@@ -247,6 +260,9 @@ async function runCycle<Args extends Obj>(
         await result
       }
     }
+
+    // Clear for next iteration to fetch new args
+    currentArgs = null
   }
 
   if (pool) {
@@ -255,9 +271,132 @@ async function runCycle<Args extends Obj>(
   }
 }
 
-export async function runIterationLoop<Args extends Obj>(
+/**
+ * Runs cycle in sync mode when possible.
+ * Only uses async when: test returns Promise, mode change callback is async, or GC triggers.
+ */
+function runCycle<Args extends Obj>(
+  runContext: RunContext<Args>,
+): PromiseOrValue<void> {
+  const { pool, state, options } = runContext
+  const { logOptions } = options
+
+  // Parallel mode always requires async
+  if (pool) {
+    return runCycleAsync(runContext)
+  }
+
+  let currentArgs: ArgsWithSeed<Args> | null = null
+
+  // Only check external abort for cycle continuation
+  // Parallel abort (from findBestError) causes fallback to sequential, not cycle exit
+  while (!isExternalAborted(runContext)) {
+    currentArgs = getNextArgs(runContext, currentArgs)
+    if (currentArgs == null) {
+      break
+    }
+
+    const modeChangeResult = handleModeChangeIfNeeded(runContext)
+    if (isPromiseLike(modeChangeResult)) {
+      // Switch to async mode, pass current args to continue from this point
+      const args = currentArgs
+      return modeChangeResult.then(() => runCycleAsync(runContext, args))
+    }
+
+    if (isTimeLimitExceeded(runContext)) {
+      state.timeLimitExceeded = true
+      break
+    }
+
+    const periodicResult = handlePeriodicTasks(runContext)
+    if (isPromiseLike(periodicResult)) {
+      // Switch to async mode, pass current args to continue from this point
+      const args = currentArgs
+      return periodicResult.then(() => runCycleAsync(runContext, args))
+    }
+
+    if (isExternalAborted(runContext)) {
+      continue
+    }
+
+    if (logOptions.debug && isParallelAborted(runContext)) {
+      logOptions.func(
+        'debug',
+        `[test-variants] parallel aborted, running sequential: variant=${runContext.variantsIterator.index}`,
+      )
+    }
+
+    const result = runSequentialTest(runContext, currentArgs)
+    if (isPromiseLike(result)) {
+      // Test was already run, continue async without this args
+      return result.then(() => runCycleAsync(runContext))
+    }
+  }
+}
+
+async function runIterationLoopAsync<Args extends Obj>(
   runContext: RunContext<Args>,
 ): Promise<void> {
+  const { options, variantsIterator, state } = runContext
+  const { logOptions, cycles } = options
+
+  while (
+    variantsIterator.minCompletedCount < cycles &&
+    !state.timeLimitExceeded
+  ) {
+    if (logOptions.debug) {
+      logOptions.func(
+        'debug',
+        `[test-variants] outer loop: minCompletedCount=${variantsIterator.minCompletedCount} < cycles=${cycles}`,
+      )
+    }
+
+    if (isTimeLimitExceeded(runContext)) {
+      state.timeLimitExceeded = true
+      break
+    }
+
+    const cycleResult = runCycle(runContext)
+    if (isPromiseLike(cycleResult)) {
+      await cycleResult
+    }
+    updateCycleState(runContext)
+
+    if (logOptions.debug) {
+      logOptions.func(
+        'debug',
+        `[test-variants] cycle ended: modeIndex=${variantsIterator.modeIndex}, index=${variantsIterator.index}, count=${variantsIterator.count}, tests=${state.tests}`,
+      )
+    }
+
+    if (state.timeLimitExceeded || isTimeLimitExceeded(runContext)) {
+      state.timeLimitExceeded = true
+      break
+    }
+
+    if (logOptions.debug) {
+      logOptions.func(
+        'debug',
+        `[test-variants] calling start(): cycleIndex=${variantsIterator.cycleIndex}, minCompletedCount before start=${variantsIterator.minCompletedCount}`,
+      )
+    }
+    variantsIterator.start()
+    if (logOptions.debug) {
+      logOptions.func(
+        'debug',
+        `[test-variants] after start(): cycleIndex=${variantsIterator.cycleIndex}, modeIndex=${variantsIterator.modeIndex}, minCompletedCount=${variantsIterator.minCompletedCount}`,
+      )
+    }
+  }
+}
+
+/**
+ * Main iteration loop with sync mode optimization.
+ * Runs synchronously when all tests are sync and no async operations are triggered.
+ */
+export function runIterationLoop<Args extends Obj>(
+  runContext: RunContext<Args>,
+): PromiseOrValue<void> {
   const { options, variantsIterator, state } = runContext
   const { logOptions, cycles } = options
 
@@ -276,7 +415,11 @@ export async function runIterationLoop<Args extends Obj>(
     variantsIterator.modeIndex,
   )
   state.prevModeIndex = variantsIterator.modeIndex
-  await callOnModeChange(runContext)
+
+  const modeChangeResult = callOnModeChange(runContext)
+  if (isPromiseLike(modeChangeResult)) {
+    return modeChangeResult.then(() => runIterationLoopAsync(runContext))
+  }
 
   while (
     variantsIterator.minCompletedCount < cycles &&
@@ -294,7 +437,14 @@ export async function runIterationLoop<Args extends Obj>(
       break
     }
 
-    await runCycle(runContext)
+    const cycleResult = runCycle(runContext)
+    if (isPromiseLike(cycleResult)) {
+      // Switch to async mode for remainder
+      return cycleResult.then(() => {
+        updateCycleState(runContext)
+        return runIterationLoopAsync(runContext)
+      })
+    }
     updateCycleState(runContext)
 
     if (logOptions.debug) {

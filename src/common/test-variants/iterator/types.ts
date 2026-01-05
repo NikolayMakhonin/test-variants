@@ -9,8 +9,6 @@ import type {
   TestVariantsLogOptions,
 } from 'src/common/test-variants/types'
 
-export type ModeType = ModeConfig['mode']
-
 /** Limit information with args and optional error */
 export type VariantsIteratorLimit<Args extends Obj> = {
   args: ArgsWithSeed<Args>
@@ -22,7 +20,6 @@ export type VariantsIteratorLimit<Args extends Obj> = {
 /** Options for addLimit method */
 export type AddLimitOptions<Args extends Obj> = {
   args?: null | ArgsWithSeed<Args>
-  index?: null | number
   error?: unknown
   /** Number of tests run when this limit is applied */
   tests?: null | number

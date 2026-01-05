@@ -61,6 +61,8 @@ export type ModeConfig =
   | BackwardModeConfig
   | RandomModeConfig
 
+export type ModeType = ModeConfig['mode']
+
 // endregion
 
 // region GetSeedParams

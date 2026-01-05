@@ -45,10 +45,6 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     timeController,
   }
 
-  if (limitTests != null) {
-    variantsIterator.addLimit({ index: limitTests })
-  }
-
   if (store) {
     await store.replay({
       testRun,
