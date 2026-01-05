@@ -69,11 +69,15 @@ function parseValues(valuePattern: string): Ref<number>[] {
 }
 
 // args as digits string: '012' => arg1=[], arg2=[0,1], arg3=[0,1,2]
-function parseTemplates(argsPattern: string): TestVariantsTemplates<any> {
+function parseTemplates(
+  argsPattern: string,
+  valuesAsFuncs: boolean,
+): TestVariantsTemplates<any> {
   const templates: TestVariantsTemplates<any> = {}
   for (let i = 0; i < argsPattern.length; i++) {
     const argName = getArgName(i)
-    templates[argName] = parseValues(argsPattern[i])
+    const value = parseValues(argsPattern[i])
+    templates[argName] = valuesAsFuncs ? value.map(o => () => o) : value
   }
   return templates
 }
@@ -167,8 +171,9 @@ function _createVariantNavigationState(
   argsPattern: string,
   extraPatterns: string[],
   limitPattern: string,
+  valuesAsFuncs?: boolean,
 ): VariantNavigationState<any> {
-  const templates = parseTemplates(argsPattern)
+  const templates = parseTemplates(argsPattern, valuesAsFuncs ?? false)
   const templatesExtra = parseTemplatesExtra(extraPatterns)
   deepFreezeJsonLike(templates)
   deepFreezeJsonLike(templatesExtra)
@@ -686,6 +691,7 @@ const funcFalse = () => false
 
 const testVariants = createTestVariants(
   ({
+    valuesAsFuncs,
     valuesPattern,
     extraPatterns,
     limitPattern,
@@ -694,6 +700,7 @@ const testVariants = createTestVariants(
     includeErrorVariant,
     changeMethod,
   }: {
+    valuesAsFuncs: boolean
     valuesPattern: string
     extraPatterns: string[]
     limitPattern: string
@@ -710,6 +717,7 @@ const testVariants = createTestVariants(
       valuesPattern,
       extraPatterns,
       limitEmpty,
+      valuesAsFuncs,
     )
     state.limitArgOnError = limitArgOnError
     state.includeErrorVariant = includeErrorVariant
@@ -887,7 +895,7 @@ const testVariants = createTestVariants(
     if (
       changeMethod === 'random' &&
       countIterations > 50 &&
-      (countIncrements > 10 || countDecrements > 10)
+      (countIncrements > 5 || countDecrements > 5)
     ) {
       if (
         (countIncrements === 0 && countDecrements === 0) ||
@@ -914,6 +922,7 @@ describe(
       const patternsAll = [...patterns1, ...patterns2]
 
       await testVariants({
+        valuesAsFuncs: [false, true],
         valuesPattern: patternsAll,
         extraPatterns: ({ valuesPattern }) => {
           return [[], valuesPattern.length === 1 ? extra1 : extra2]
