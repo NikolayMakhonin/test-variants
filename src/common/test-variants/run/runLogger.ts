@@ -67,8 +67,12 @@ export function logProgress<Args extends Obj>(
   const { logOptions, timeController, findBestError } = config
   const now = timeController.now()
 
+  if (!logOptions.progress || now - state.prevLogTime < logOptions.progress) {
+    return
+  }
+
   // Log mode change together with progress when mode changed
-  if (logOptions.modeChange && state.modeChanged) {
+  if (state.modeChanged) {
     logModeChange(
       logOptions,
       variantsIterator.modeConfig,

@@ -20,3 +20,4 @@
 
 @ai/project/base/docs/Decision_Map.md
 @ai/project/test-variants/docs/Decision_Map.md
+@README.md

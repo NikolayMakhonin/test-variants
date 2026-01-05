@@ -2,12 +2,14 @@ import type { Obj } from '@flemist/simple-utils'
 import { ArgName, TestVariantsTemplates, VariantNavigationState } from './types'
 import { findValueIndex } from 'src/common/test-variants/iterator/findValueIndex'
 import type { LimitArgOnError } from 'src/common'
+import type { Equals } from 'src/common/test-variants/types'
 
 /** Create initial variant navigation state for given templates */
 export function createVariantNavigationState<Args extends Obj>(
   templates: TestVariantsTemplates<Args>,
-  equals: VariantNavigationState<Args>['equals'],
+  equals: null | Equals,
   limitArgOnError: null | boolean | LimitArgOnError,
+  includeErrorVariant: boolean,
 ): VariantNavigationState<Args> {
   const argsNames = Object.keys(templates) as ArgName<Args>[]
   const args: Args = {} as Args
@@ -35,6 +37,7 @@ export function createVariantNavigationState<Args extends Obj>(
     },
     limitArgOnError,
     equals,
+    includeErrorVariant,
   }
 }
 

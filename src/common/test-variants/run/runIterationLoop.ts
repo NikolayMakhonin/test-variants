@@ -17,13 +17,11 @@ function handleInitialMode<Args extends Obj>(
   const { config, variantsIterator, state } = runContext
   const { logOptions, onModeChange } = config
 
-  if (logOptions.modeChange) {
-    logModeChange(
-      logOptions,
-      variantsIterator.modeConfig,
-      variantsIterator.modeIndex,
-    )
-  }
+  logModeChange(
+    logOptions,
+    variantsIterator.modeConfig,
+    variantsIterator.modeIndex,
+  )
   state.prevModeIndex = variantsIterator.modeIndex
 
   if (onModeChange && variantsIterator.modeConfig) {
@@ -75,12 +73,11 @@ type PeriodicTasksResult = { timeLimitExceeded: boolean }
 function handlePeriodicTasks<Args extends Obj>(
   runContext: RunContext<Args>,
 ): PromiseOrValue<PeriodicTasksResult> {
-  const { config, variantsIterator, state } = runContext
+  const { config, state } = runContext
   const {
     logOptions,
     timeController,
     limitTime,
-    findBestError,
     GC_Iterations,
     GC_IterationsAsync,
     GC_Interval,
@@ -97,9 +94,7 @@ function handlePeriodicTasks<Args extends Obj>(
     return { timeLimitExceeded: true }
   }
 
-  if (logOptions.progress && now - state.prevLogTime >= logOptions.progress) {
-    logProgress(runContext)
-  }
+  logProgress(runContext)
 
   const gcConfig = { GC_Iterations, GC_IterationsAsync, GC_Interval }
   if (shouldTriggerGC(gcConfig, state, now)) {

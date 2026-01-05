@@ -116,6 +116,8 @@ export type VariantNavigationState<Args extends Obj> = {
   templates: TestVariantsTemplatesWithExtra<Args, any>
   limitArgOnError: null | boolean | LimitArgOnError
   equals: null | Equals
+  // When true, error variant (limit point) is included in iteration
+  includeErrorVariant: boolean
 }
 
 /** Extended templates type that allows additional args beyond the base Args type */

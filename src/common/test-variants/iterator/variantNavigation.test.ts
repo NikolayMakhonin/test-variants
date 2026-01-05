@@ -175,6 +175,7 @@ function _createVariantNavigationState(
     templates,
     deepEqualJsonLike,
     limitArgOnError,
+    false,
   )
   state.templates.extra = templatesExtra
   const argLimits = parseLimits(limitPattern)
