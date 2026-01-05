@@ -7,7 +7,12 @@ import type { RunContext } from './RunContext'
 import { formatBytes, formatDuration, formatModeConfig } from '../log/format'
 import { getMemoryUsage } from '../log/getMemoryUsage'
 
-/** Log test run start */
+function formatMemoryDiff(current: number, previous: number): string {
+  const diff = current - previous
+  const sign = diff >= 0 ? '+' : ''
+  return `${formatBytes(current)} (${sign}${formatBytes(diff)})`
+}
+
 export function logStart(
   logOptions: RequiredNonNullable<TestVariantsLogOptions>,
   startMemory: number | null,
@@ -15,6 +20,7 @@ export function logStart(
   if (!logOptions.start) {
     return
   }
+
   let msg = `[test-variants] start`
   if (startMemory != null) {
     msg += `, memory: ${formatBytes(startMemory)}`
@@ -22,7 +28,6 @@ export function logStart(
   logOptions.func('start', msg)
 }
 
-/** Log test run completion */
 export function logCompleted(runContext: RunContext<Obj>): void {
   const { options, state } = runContext
   const { logOptions, timeController } = options
@@ -30,19 +35,20 @@ export function logCompleted(runContext: RunContext<Obj>): void {
   if (!logOptions.completed) {
     return
   }
+
   const totalElapsed = timeController.now() - state.startTime
-  let logMsg = `[test-variants] end, tests: ${state.tests} (${formatDuration(totalElapsed)}), async: ${state.iterationsAsync}`
+  let msg = `[test-variants] end, tests: ${state.tests} (${formatDuration(totalElapsed)}), async: ${state.iterationsAsync}`
+
   if (state.startMemory != null) {
     const memory = getMemoryUsage()
     if (memory != null) {
-      const diff = memory - state.startMemory
-      logMsg += `, memory: ${formatBytes(memory)} (${diff >= 0 ? '+' : ''}${formatBytes(diff)})`
+      msg += `, memory: ${formatMemoryDiff(memory, state.startMemory)}`
     }
   }
-  logOptions.func('completed', logMsg)
+
+  logOptions.func('completed', msg)
 }
 
-/** Log mode change */
 export function logModeChange(
   logOptions: RequiredNonNullable<TestVariantsLogOptions>,
   modeConfig: ModeConfig | null,
@@ -51,13 +57,41 @@ export function logModeChange(
   if (!logOptions.modeChange) {
     return
   }
+
   logOptions.func(
     'modeChange',
     `[test-variants] ${formatModeConfig(modeConfig, modeIndex)}`,
   )
 }
 
-/** Log progress */
+function calcEstimatedCycleTime(
+  cycleElapsed: number,
+  index: number,
+  max: number,
+  prevCycleDuration: number | null,
+  prevCycleVariantsCount: number | null,
+): number {
+  if (index <= 0) {
+    return 0
+  }
+
+  const canUseAdjusted =
+    prevCycleDuration != null &&
+    prevCycleVariantsCount != null &&
+    index < prevCycleVariantsCount &&
+    cycleElapsed < prevCycleDuration
+
+  if (canUseAdjusted) {
+    const adjustedDuration = prevCycleDuration! - cycleElapsed
+    const adjustedCount = prevCycleVariantsCount! - index
+    const speedForRemaining = adjustedDuration / adjustedCount
+    const remainingTime = (max - index) * speedForRemaining
+    return cycleElapsed + remainingTime
+  }
+
+  return (cycleElapsed * max) / index
+}
+
 export function logProgress(runContext: RunContext<Obj>): void {
   const { options, variantsIterator, state } = runContext
   const { logOptions, timeController, findBestError } = options
@@ -67,7 +101,6 @@ export function logProgress(runContext: RunContext<Obj>): void {
     return
   }
 
-  // Log mode change together with progress when mode changed
   if (state.modeChanged) {
     logModeChange(
       logOptions,
@@ -77,59 +110,46 @@ export function logProgress(runContext: RunContext<Obj>): void {
     state.modeChanged = false
   }
 
-  let logMsg = '[test-variants] '
   const cycleElapsed = now - state.cycleStartTime
   const totalElapsed = now - state.startTime
+  let msg = '[test-variants] '
 
   if (findBestError) {
-    logMsg += `cycle: ${variantsIterator.cycleIndex}, variant: ${variantsIterator.index}`
+    msg += `cycle: ${variantsIterator.cycleIndex}, variant: ${variantsIterator.index}`
     let max = variantsIterator.count
-    if (max != null) {
-      if (
-        state.prevCycleVariantsCount != null &&
-        state.prevCycleVariantsCount < max
-      ) {
-        max = state.prevCycleVariantsCount
-      }
+    if (
+      max != null &&
+      state.prevCycleVariantsCount != null &&
+      state.prevCycleVariantsCount < max
+    ) {
+      max = state.prevCycleVariantsCount
     }
     if (max != null) {
-      let estimatedCycleTime: number
-      if (
-        state.prevCycleDuration != null &&
-        state.prevCycleVariantsCount != null &&
-        variantsIterator.index < state.prevCycleVariantsCount &&
-        cycleElapsed < state.prevCycleDuration
-      ) {
-        const adjustedDuration = state.prevCycleDuration - cycleElapsed
-        const adjustedCount =
-          state.prevCycleVariantsCount - variantsIterator.index
-        const speedForRemaining = adjustedDuration / adjustedCount
-        const remainingTime = (max - variantsIterator.index) * speedForRemaining
-        estimatedCycleTime = cycleElapsed + remainingTime
-      } else if (variantsIterator.index > 0) {
-        estimatedCycleTime = (cycleElapsed * max) / variantsIterator.index
-      } else {
-        estimatedCycleTime = 0
-      }
-      logMsg += `/${max} (${formatDuration(cycleElapsed)}/${formatDuration(estimatedCycleTime)})`
+      const estimated = calcEstimatedCycleTime(
+        cycleElapsed,
+        variantsIterator.index,
+        max,
+        state.prevCycleDuration,
+        state.prevCycleVariantsCount,
+      )
+      msg += `/${max} (${formatDuration(cycleElapsed)}/${formatDuration(estimated)})`
     } else {
-      logMsg += ` (${formatDuration(cycleElapsed)})`
+      msg += ` (${formatDuration(cycleElapsed)})`
     }
   } else {
-    logMsg += `variant: ${variantsIterator.index} (${formatDuration(cycleElapsed)})`
+    msg += `variant: ${variantsIterator.index} (${formatDuration(cycleElapsed)})`
   }
 
-  logMsg += `, tests: ${state.tests} (${formatDuration(totalElapsed)}), async: ${state.iterationsAsync}`
+  msg += `, tests: ${state.tests} (${formatDuration(totalElapsed)}), async: ${state.iterationsAsync}`
 
   if (state.prevLogMemory != null) {
     const memory = getMemoryUsage()
     if (memory != null) {
-      const diff = memory - state.prevLogMemory
-      logMsg += `, memory: ${formatBytes(memory)} (${diff >= 0 ? '+' : ''}${formatBytes(diff)})`
+      msg += `, memory: ${formatMemoryDiff(memory, state.prevLogMemory)}`
       state.prevLogMemory = memory
     }
   }
 
-  logOptions.func('progress', logMsg)
+  logOptions.func('progress', msg)
   state.prevLogTime = now
 }

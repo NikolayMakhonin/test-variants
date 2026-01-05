@@ -13,6 +13,8 @@ import type {
 import { timeControllerDefault } from '@flemist/time-controller'
 import { resolveLogOptions } from 'src/common/test-variants/log/logOptions'
 
+const MAX_PARALLEL = 2 ** 31
+
 /** Resolved configuration for test variants run */
 export type RunOptionsResolved<Args extends Obj> = {
   store: SaveErrorVariantsStore<Args> | null
@@ -43,12 +45,12 @@ export function resolveRunOptions<Args extends Obj, SavedArgs = Args>(
 
   const findBestError = options?.findBestError
 
-  const parallel =
-    options?.parallel === true
-      ? 2 ** 31
-      : !options?.parallel || options.parallel <= 0
-        ? 1
-        : options.parallel
+  let parallel = 1
+  if (options?.parallel === true) {
+    parallel = MAX_PARALLEL
+  } else if (options?.parallel && options.parallel > 0) {
+    parallel = options.parallel
+  }
 
   return {
     store,

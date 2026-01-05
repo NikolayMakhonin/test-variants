@@ -13,6 +13,11 @@ import type {
   TestVariantsTestRun,
 } from './run/types'
 
+/** Minimum pause time (ms) to detect JS debugger stepping */
+const DEBUG_PAUSE_THRESHOLD_MS = 50
+/** Maximum debug iterations before throwing error */
+const MAX_DEBUG_ITERATIONS = 5
+
 /** Normalize test result to standard format */
 function normalizeTestResult(
   value: TestVariantsTestResult,
@@ -36,17 +41,14 @@ export function createTestRun<Args extends Obj>(
   const logOptions = options.log
 
   let errorEvent: ErrorEvent<Args> | null = null
-  // Debug mode: counts iterations for step-by-step debugging of failing variant.
-  // DO NOT REMOVE - enables repeating same failing variant up to 5 times in JS debugger.
   let debugIteration = 0
 
-  // Error handler with debug mode support.
-  // When debugger statement pauses execution and developer resumes (>50ms elapsed),
-  // returns void instead of throwing to repeat the same variant for debugging.
-  // This allows setting breakpoints and stepping through the failing case multiple times.
-  // DO NOT REMOVE debug logic - it is essential for debugging failing test variants.
+  /**
+   * Error handler with debug mode support.
+   * When debugger pauses execution and developer resumes (elapsed > threshold),
+   * returns void instead of throwing to repeat the same variant for debugging.
+   */
   function onError(error: unknown, args: Args, tests: number): void {
-    // Log only on first error occurrence to avoid spam during debug iterations
     if (errorEvent == null) {
       errorEvent = {
         error,
@@ -61,25 +63,23 @@ export function createTestRun<Args extends Obj>(
       }
     }
 
-    // Debug mode: rerun failed variant up to 5 times for step-by-step debugging.
-    // The debugger statement pauses execution. If developer is in JS debugger
-    // and resumes (time elapsed > 50ms), we return without throwing,
-    // causing testVariantsRun to repeat the same variant.
-    const time0 = Date.now()
-
-    // Force pause if JS debugger is attached
+    const startTime = Date.now()
     // eslint-disable-next-line no-debugger
     debugger
-    if (Date.now() - time0 > 50 && debugIteration < 5) {
+    const elapsed = Date.now() - startTime
+    if (
+      elapsed > DEBUG_PAUSE_THRESHOLD_MS &&
+      debugIteration < MAX_DEBUG_ITERATIONS
+    ) {
       logOptions.func(
         'debug',
-        '[test-variants] DEBUG ITERATION: ' + debugIteration,
+        `[test-variants] debug iteration: ${debugIteration}`,
       )
       debugIteration++
       return
     }
 
-    if (options?.onError) {
+    if (options.onError) {
       options.onError(errorEvent)
     }
 

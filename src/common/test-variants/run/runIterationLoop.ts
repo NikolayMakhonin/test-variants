@@ -1,14 +1,25 @@
 import { isPromiseLike, type PromiseOrValue } from '@flemist/async-utils'
 import { poolWait } from '@flemist/time-limits'
-import type { Obj } from '@flemist/simple-utils'
-import type { ArgsWithSeed } from 'src/common/test-variants/types'
+import type { Obj, RequiredNonNullable } from '@flemist/simple-utils'
+import type {
+  ArgsWithSeed,
+  TestVariantsLogOptions,
+} from 'src/common/test-variants/types'
 import type { TestFuncResult } from './types'
 import type { RunContext } from './RunContext'
 import { shouldTriggerGC, triggerGC } from './gcManager'
 import { logModeChange, logProgress } from './runLogger'
 import { handleSyncError, handleParallelError } from './errorHandlers'
 
-/** Call onModeChange callback if configured */
+function logDebug(
+  logOptions: RequiredNonNullable<TestVariantsLogOptions>,
+  message: string,
+): void {
+  if (logOptions.debug) {
+    logOptions.func('debug', `[debug] ${message}`)
+  }
+}
+
 function callOnModeChange(runContext: RunContext<Obj>): PromiseOrValue<void> {
   const { options, variantsIterator, state } = runContext
   const { onModeChange } = options
@@ -19,11 +30,12 @@ function callOnModeChange(runContext: RunContext<Obj>): PromiseOrValue<void> {
       modeIndex: variantsIterator.modeIndex,
       tests: state.tests,
     })
-    if (isPromiseLike(result)) return result
+    if (isPromiseLike(result)) {
+      return result
+    }
   }
 }
 
-/** Handle initial mode at iteration start */
 function handleInitialMode(runContext: RunContext<Obj>): PromiseOrValue<void> {
   const { options, variantsIterator, state } = runContext
 
@@ -37,20 +49,19 @@ function handleInitialMode(runContext: RunContext<Obj>): PromiseOrValue<void> {
   return callOnModeChange(runContext)
 }
 
-/** Handle mode change if mode index changed */
 function handleModeChangeIfNeeded(
   runContext: RunContext<Obj>,
 ): PromiseOrValue<void> {
   const { options, variantsIterator, state } = runContext
 
-  if (variantsIterator.modeIndex === state.prevModeIndex) return
-
-  if (options.logOptions.debug) {
-    options.logOptions.func(
-      'debug',
-      `[debug] mode switch: modeIndex=${variantsIterator.modeIndex}, index=${variantsIterator.index}`,
-    )
+  if (variantsIterator.modeIndex === state.prevModeIndex) {
+    return
   }
+
+  logDebug(
+    options.logOptions,
+    `mode switch: modeIndex=${variantsIterator.modeIndex}, index=${variantsIterator.index}`,
+  )
 
   state.modeChanged = true
   state.prevModeIndex = variantsIterator.modeIndex
@@ -58,22 +69,21 @@ function handleModeChangeIfNeeded(
   return callOnModeChange(runContext)
 }
 
-/** Check if time limit exceeded; sets state.timeLimitExceeded if so */
 function checkTimeLimit(runContext: RunContext<Obj>): boolean {
   const { options, state } = runContext
   const { limitTime, timeController } = options
 
-  if (
-    limitTime != null &&
-    timeController.now() - state.startTime >= limitTime
-  ) {
-    state.timeLimitExceeded = true
-    return true
+  if (limitTime == null) {
+    return false
   }
-  return false
+  if (timeController.now() - state.startTime < limitTime) {
+    return false
+  }
+
+  state.timeLimitExceeded = true
+  return true
 }
 
-/** Handle periodic tasks: time limit check, progress logging, GC; returns true if time limit exceeded */
 function handlePeriodicTasks(
   runContext: RunContext<Obj>,
 ): PromiseOrValue<boolean> {
@@ -98,7 +108,6 @@ function handlePeriodicTasks(
   return false
 }
 
-/** Update state from test result */
 function updateStateFromResult(
   runContext: RunContext<Obj>,
   result: Exclude<TestFuncResult, void>,
@@ -107,7 +116,6 @@ function updateStateFromResult(
   runContext.state.iterations += result.iterationsSync + result.iterationsAsync
 }
 
-/** Execute test sequentially; returns true if should continue to next iteration (debug mode) */
 function executeSequentialTest<Args extends Obj>(
   runContext: RunContext<Args>,
   args: ArgsWithSeed<Args>,
@@ -148,7 +156,6 @@ function executeSequentialTest<Args extends Obj>(
   }
 }
 
-/** Schedule test for parallel execution */
 function scheduleParallelTest<Args extends Obj>(
   runContext: RunContext<Args>,
   args: ArgsWithSeed<Args>,
@@ -191,7 +198,6 @@ function scheduleParallelTest<Args extends Obj>(
   })()
 }
 
-/** Run the main iteration loop */
 export async function runIterationLoop<Args extends Obj>(
   runContext: RunContext<Args>,
 ): Promise<void> {
@@ -200,12 +206,10 @@ export async function runIterationLoop<Args extends Obj>(
     options
 
   variantsIterator.start()
-  if (logOptions.debug) {
-    logOptions.func(
-      'debug',
-      `[debug] start(): cycleIndex=${variantsIterator.cycleIndex}, modeIndex=${variantsIterator.modeIndex}, minCompletedCount=${variantsIterator.minCompletedCount}, cycles=${cycles}`,
-    )
-  }
+  logDebug(
+    logOptions,
+    `start(): cycleIndex=${variantsIterator.cycleIndex}, modeIndex=${variantsIterator.modeIndex}, minCompletedCount=${variantsIterator.minCompletedCount}, cycles=${cycles}`,
+  )
 
   const initialModeResult = handleInitialMode(runContext)
   if (isPromiseLike(initialModeResult)) await initialModeResult
@@ -214,22 +218,19 @@ export async function runIterationLoop<Args extends Obj>(
     variantsIterator.minCompletedCount < cycles &&
     !state.timeLimitExceeded
   ) {
-    if (logOptions.debug) {
-      logOptions.func(
-        'debug',
-        `[debug] outer loop: minCompletedCount=${variantsIterator.minCompletedCount} < cycles=${cycles}`,
-      )
-    }
+    logDebug(
+      logOptions,
+      `outer loop: minCompletedCount=${variantsIterator.minCompletedCount} < cycles=${cycles}`,
+    )
 
     if (checkTimeLimit(runContext)) break
 
-    let args: ArgsWithSeed<Args> = null!
+    let args: ArgsWithSeed<Args> | null = null
 
     while (!abortSignalExternal?.aborted) {
       if (!state.debugMode) {
-        const nextArgs = variantsIterator.next()
-        if (nextArgs == null) break
-        args = nextArgs
+        args = variantsIterator.next()
+        if (args == null) break
       }
 
       const modeChangeResult = handleModeChangeIfNeeded(runContext)
@@ -245,7 +246,7 @@ export async function runIterationLoop<Args extends Obj>(
       if (abortSignalExternal?.aborted) continue
 
       if (!pool || abortSignal.aborted) {
-        const shouldContinue = executeSequentialTest(runContext, args)
+        const shouldContinue = executeSequentialTest(runContext, args!)
         if (isPromiseLike(shouldContinue)) {
           if (await shouldContinue) continue
         } else if (shouldContinue) {
@@ -255,16 +256,14 @@ export async function runIterationLoop<Args extends Obj>(
         if (!pool.hold(1)) {
           await poolWait({ pool, count: 1, hold: true })
         }
-        scheduleParallelTest(runContext, args)
+        scheduleParallelTest(runContext, args!)
       }
     }
 
-    if (logOptions.debug) {
-      logOptions.func(
-        'debug',
-        `[debug] inner loop exited: modeIndex=${variantsIterator.modeIndex}, index=${variantsIterator.index}, count=${variantsIterator.count}, iterations=${state.iterations}`,
-      )
-    }
+    logDebug(
+      logOptions,
+      `inner loop exited: modeIndex=${variantsIterator.modeIndex}, index=${variantsIterator.index}, count=${variantsIterator.count}, iterations=${state.iterations}`,
+    )
 
     state.prevCycleVariantsCount = variantsIterator.count
     state.prevCycleDuration = timeController.now() - state.cycleStartTime
@@ -272,19 +271,15 @@ export async function runIterationLoop<Args extends Obj>(
 
     if (checkTimeLimit(runContext)) break
 
-    if (logOptions.debug) {
-      logOptions.func(
-        'debug',
-        `[debug] calling start() again: cycleIndex=${variantsIterator.cycleIndex}, minCompletedCount=${variantsIterator.minCompletedCount}`,
-      )
-    }
+    logDebug(
+      logOptions,
+      `calling start() again: cycleIndex=${variantsIterator.cycleIndex}, minCompletedCount=${variantsIterator.minCompletedCount}`,
+    )
     variantsIterator.start()
-    if (logOptions.debug) {
-      logOptions.func(
-        'debug',
-        `[debug] after start(): cycleIndex=${variantsIterator.cycleIndex}, modeIndex=${variantsIterator.modeIndex}, minCompletedCount=${variantsIterator.minCompletedCount}`,
-      )
-    }
+    logDebug(
+      logOptions,
+      `after start(): cycleIndex=${variantsIterator.cycleIndex}, modeIndex=${variantsIterator.modeIndex}, minCompletedCount=${variantsIterator.minCompletedCount}`,
+    )
   }
 
   if (pool) {
