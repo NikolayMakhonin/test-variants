@@ -91,18 +91,15 @@ function parseTemplatesValues(argsPattern: string): Ref<number>[][] {
 }
 
 function parseTemplatesExtra(
-  extraPatterns: string[],
+  extraPattern: string,
 ): TestVariantsTemplatesExtra<any> {
   const templatesExtra: TestVariantsTemplatesExtra<any> = {}
-  for (let i = 0; i < extraPatterns.length; i++) {
-    const extraPattern = extraPatterns[i]
-    for (let j = 0; j < extraPattern.length; j++) {
-      const argName = getArgName(j)
-      if (!templatesExtra[argName]) {
-        templatesExtra[argName] = []
-      }
-      const value = Number(extraPattern[j])
-      templatesExtra[argName].push({ value })
+  for (let i = 0; i < extraPattern.length; i++) {
+    const argName = getArgName(i)
+    const count = Number(extraPattern[i])
+    templatesExtra[argName] = []
+    for (let j = 0; j < count; j++) {
+      templatesExtra[argName].push({ value: 1000 + j })
     }
   }
   return templatesExtra
@@ -169,12 +166,12 @@ function createArgs(
 
 function _createVariantNavigationState(
   argsPattern: string,
-  extraPatterns: string[],
+  extraPattern: string,
   limitPattern: string,
   valuesAsFuncs?: boolean,
 ): VariantNavigationState<any> {
   const templates = parseTemplates(argsPattern, valuesAsFuncs ?? false)
-  const templatesExtra = parseTemplatesExtra(extraPatterns)
+  const templatesExtra = parseTemplatesExtra(extraPattern)
   deepFreezeJsonLike(templates)
   deepFreezeJsonLike(templatesExtra)
   const state = createVariantNavigationState(
@@ -283,14 +280,14 @@ function checkVariantNavigationState(
 
 describe('advanceVariantNavigation', () => {
   it('empty', () => {
-    const state = _createVariantNavigationState('', [], '')
+    const state = _createVariantNavigationState('', '', '')
     checkVariantNavigationState(state, '', '', '')
     assert.isFalse(advanceVariantNavigation(state))
     checkVariantNavigationState(state, '', '', '')
   })
 
   it('1 arg, 1 value', () => {
-    const state = _createVariantNavigationState('0', [], '_')
+    const state = _createVariantNavigationState('0', '', '_')
     for (let i = 0; i < 3; i++) {
       checkVariantNavigationState(state, '_', '_', '_')
       assert.isTrue(retreatVariantNavigation(state))
@@ -314,7 +311,7 @@ describe('advanceVariantNavigation', () => {
   })
 
   it('1 arg, 3 values', () => {
-    const state = _createVariantNavigationState('2', [], '_')
+    const state = _createVariantNavigationState('2', '', '_')
     for (let i = 0; i < 3; i++) {
       checkVariantNavigationState(state, '_', '_', '_')
       assert.isTrue(advanceVariantNavigation(state))
@@ -332,7 +329,7 @@ describe('advanceVariantNavigation', () => {
   })
 
   it('2 arg, 2 values', () => {
-    const state = _createVariantNavigationState('11', [], '__')
+    const state = _createVariantNavigationState('11', '', '__')
     for (let i = 0; i < 3; i++) {
       checkVariantNavigationState(state, '__', '__', '__')
       state.argLimits[1] = 0
@@ -412,7 +409,7 @@ describe('advanceVariantNavigation', () => {
   })
 
   it('1 arg, 1 value, limit 0', () => {
-    const state = _createVariantNavigationState('0', [], '0')
+    const state = _createVariantNavigationState('0', '', '0')
     for (let i = 0; i < 3; i++) {
       checkVariantNavigationState(state, '_', '_', '0')
       assert.isFalse(advanceVariantNavigation(state))
@@ -424,7 +421,7 @@ describe('advanceVariantNavigation', () => {
   })
 
   it('1 arg, 2 values, limit 0', () => {
-    const state = _createVariantNavigationState('1', [], '0')
+    const state = _createVariantNavigationState('1', '', '0')
     for (let i = 0; i < 3; i++) {
       checkVariantNavigationState(state, '_', '_', '0')
       assert.isFalse(advanceVariantNavigation(state))
@@ -445,7 +442,7 @@ describe('retreatVariantNavigation', () => {
   })
 
   it('1 arg, 1 value', () => {
-    const state = _createVariantNavigationState('0', [], '_')
+    const state = _createVariantNavigationState('0', '', '_')
     for (let i = 0; i < 3; i++) {
       checkVariantNavigationState(state, '_', '_', '_')
       assert.isTrue(retreatVariantNavigation(state))
@@ -469,7 +466,7 @@ describe('retreatVariantNavigation', () => {
   })
 
   it('1 arg, 3 values', () => {
-    const state = _createVariantNavigationState('2', [], '_')
+    const state = _createVariantNavigationState('2', '', '_')
     for (let i = 0; i < 3; i++) {
       checkVariantNavigationState(state, '_', '_', '_')
       assert.isTrue(retreatVariantNavigation(state))
@@ -487,7 +484,7 @@ describe('retreatVariantNavigation', () => {
   })
 
   it('2 arg, 2 values', () => {
-    const state = _createVariantNavigationState('11', [], '__')
+    const state = _createVariantNavigationState('11', '', '__')
     for (let i = 0; i < 3; i++) {
       checkVariantNavigationState(state, '__', '__', '__')
       state.argLimits[1] = 0
@@ -563,7 +560,7 @@ describe('retreatVariantNavigation', () => {
   })
 
   it('1 arg, 1 value, limit 0', () => {
-    const state = _createVariantNavigationState('0', [], '0')
+    const state = _createVariantNavigationState('0', '', '0')
     for (let i = 0; i < 3; i++) {
       checkVariantNavigationState(state, '_', '_', '0')
       assert.isFalse(retreatVariantNavigation(state))
@@ -575,7 +572,7 @@ describe('retreatVariantNavigation', () => {
   })
 
   it('1 arg, 2 values, limit 0', () => {
-    const state = _createVariantNavigationState('1', [], '0')
+    const state = _createVariantNavigationState('1', '', '0')
     for (let i = 0; i < 3; i++) {
       checkVariantNavigationState(state, '_', '_', '0')
       assert.isFalse(retreatVariantNavigation(state))
@@ -587,7 +584,7 @@ describe('retreatVariantNavigation', () => {
   })
 
   it('1 arg, 2 values, limit 1', () => {
-    const state = _createVariantNavigationState('1', [], '1')
+    const state = _createVariantNavigationState('1', '', '1')
     for (let i = 0; i < 3; i++) {
       checkVariantNavigationState(state, '_', '_', '1')
       assert.isTrue(retreatVariantNavigation(state))
@@ -607,7 +604,7 @@ describe('randomVariantNavigation', () => {
   })
 
   it('1 arg, 1 value', () => {
-    const state = _createVariantNavigationState('0', [], '_')
+    const state = _createVariantNavigationState('0', '', '_')
     for (let i = 0; i < 3; i++) {
       checkVariantNavigationState(state, '_', '_', '_')
       assert.isTrue(randomVariantNavigation(state))
@@ -621,7 +618,7 @@ describe('randomVariantNavigation', () => {
   })
 
   it('1 arg, 3 values', () => {
-    const state = _createVariantNavigationState('2', [], '_')
+    const state = _createVariantNavigationState('2', '', '_')
 
     const actualStates = new Set<string>()
     for (let i = 0; i < 10; i++) {
@@ -642,7 +639,7 @@ describe('randomVariantNavigation', () => {
   })
 
   it('2 arg, 2 values', () => {
-    const state = _createVariantNavigationState('11', [], '__')
+    const state = _createVariantNavigationState('11', '', '__')
     // For test random navigation
     const sequences = new Set<string>()
 
@@ -720,6 +717,305 @@ describe('variantNavigation complex', () => {
   })
 })
 
+// region complex template test
+
+type ComplexArgs = {
+  a: number
+  b: number
+  c: number
+  d: number
+}
+
+// Complex template with irregular tree structure (20 valid combinations)
+// a=0: b=[0,1]
+//   b=0: c=[0,1,2]
+//     c=0: d=[0,1,2] (3)
+//     c=1: d=[0] (1)
+//     c=2: d=[0,1] (2)
+//   b=1: c=[0]
+//     c=0: d=[0] (1)
+// a=1: b=[0,1,2]
+//   b=0: c=[0,1]
+//     c=0: d=[0,1,2] (3)
+//     c=1: d=[0] (1)
+//   b=1: c=[0,1]
+//     c=0: d=[0] (1)
+//     c=1: d=[0,1] (2)
+//   b=2: c=[] (dead end)
+// a=2: b=[0]
+//   b=0: c=[0,1,2,3]
+//     c=0: d=[0,1,2] (3)
+//     c=1: d=[0] (1)
+//     c=2: d=[0,1] (2)
+//     c=3: d=[] (dead end)
+// a=3: b=[] (dead end)
+// Total: 6 + 1 + 4 + 3 + 6 = 20 combinations
+function createComplexTemplates(
+  extraPattern: string,
+): TestVariantsTemplates<ComplexArgs> {
+  const extraA = parseExtraCounts(extraPattern, 0)
+  const extraB = parseExtraCounts(extraPattern, 1)
+  const extraC = parseExtraCounts(extraPattern, 2)
+  const extraD = parseExtraCounts(extraPattern, 3)
+
+  return {
+    a: [0, 1, 2, 3, ...extraA],
+    b: ({ a }) => {
+      let values: number[]
+      if (a === 0) values = [0, 1]
+      else if (a === 1) values = [0, 1, 2]
+      else if (a === 2) values = [0]
+      else values = []
+      return [...values, ...extraB]
+    },
+    c: ({ a, b }) => {
+      let values: number[]
+      if (a === 0) values = b === 0 ? [0, 1, 2] : [0]
+      else if (a === 1) values = b === 2 ? [] : [0, 1]
+      else if (a === 2) values = [0, 1, 2, 3]
+      else values = []
+      return [...values, ...extraC]
+    },
+    d: ({ b, c }) => {
+      const sum = (b ?? 0) + (c ?? 0)
+      let values: number[]
+      if (sum === 0) values = [0, 1, 2]
+      else if (sum === 1) values = [0]
+      else if (sum === 2) values = [0, 1]
+      else if (sum === 3) values = []
+      else values = [0]
+      return [...values, ...extraD]
+    },
+  }
+}
+
+function parseExtraCounts(extraPattern: string, argIndex: number): number[] {
+  const count = Number(extraPattern[argIndex] || 0)
+  const result: number[] = []
+  for (let i = 0; i < count; i++) {
+    result.push(1000 + i)
+  }
+  return result
+}
+
+function createComplexState(
+  extraPattern: string,
+  limitArgOnError: null | boolean | LimitArgOnError,
+  includeErrorVariant: boolean,
+): VariantNavigationState<ComplexArgs> {
+  const templates = createComplexTemplates(extraPattern)
+  const state = createVariantNavigationState<ComplexArgs>(
+    templates,
+    null,
+    limitArgOnError,
+    includeErrorVariant,
+  )
+  return state
+}
+
+// Collect all valid variants for given extraPattern
+function collectAllVariants(extraPattern: string): string[] {
+  const state = createComplexState(extraPattern, null, false)
+  const variants: string[] = []
+  while (advanceVariantNavigation(state)) {
+    variants.push(formatIndexes(state.indexes))
+  }
+  return variants
+}
+
+const testVariantsComplex = createTestVariants(
+  ({
+    extraPattern,
+    limitPattern,
+    setLimitAtIteration,
+    limitArgOnError,
+    includeErrorVariant,
+    changeMethod,
+  }: {
+    extraPattern: string
+    limitPattern: string
+    setLimitAtIteration: null | number
+    limitArgOnError: null | boolean | LimitArgOnError
+    includeErrorVariant: boolean
+    changeMethod: 'advance' | 'retreat' | 'random'
+  }) => {
+    const argsCount = 4
+    const indexesEmpty = '_'.repeat(argsCount)
+    const limitEmpty = '_'.repeat(argsCount)
+
+    const state = createComplexState(
+      extraPattern,
+      limitArgOnError,
+      includeErrorVariant,
+    )
+
+    // Collect all valid variants for this extraPattern
+    const allVariants = collectAllVariants(extraPattern)
+    const allVariantsSet = new Set(allVariants)
+
+    // Invariant: initial state is empty
+    assert.deepStrictEqual(formatIndexes(state.indexes), indexesEmpty)
+
+    let prevIndexes: string = indexesEmpty
+    let countIncrements = 0
+    let countDecrements = 0
+    let countEquals = 0
+    let limitHit = false
+    const hitVariants = new Set<string>()
+
+    const countIterations = 256
+    for (let iteration = 0; iteration < countIterations; iteration++) {
+      // Set limit at specified iteration
+      if (setLimitAtIteration != null && iteration === setLimitAtIteration) {
+        state.argLimits = parseLimits(limitPattern)
+      }
+
+      let result: boolean
+      if (changeMethod === 'advance') {
+        result = advanceVariantNavigation(state)
+      } else if (changeMethod === 'retreat') {
+        result = retreatVariantNavigation(state)
+      } else if (changeMethod === 'random') {
+        result = randomVariantNavigation(state)
+      } else {
+        throw new Error(`Unknown changeMethod: ${changeMethod}`)
+      }
+
+      const indexes = formatIndexes(state.indexes)
+
+      if (result) {
+        hitVariants.add(indexes)
+
+        // Invariant: result variant is not empty
+        if (indexes === indexesEmpty) {
+          assert.fail(`indexes(${indexes}) === indexesEmpty(${indexesEmpty})`)
+        }
+
+        // Invariant: result variant is in allVariants (valid combination)
+        if (!allVariantsSet.has(indexes)) {
+          assert.fail(`indexes(${indexes}) not in allVariants`)
+        }
+
+        // Invariant: args match indexes
+        for (let i = 0; i < argsCount; i++) {
+          const argName = state.argsNames[i]
+          const valueIndex = state.indexes[i]
+          const value = state.argValues[i][valueIndex]
+          assert.strictEqual(
+            state.args[argName],
+            value,
+            `args[${argName}] !== argValues[${i}][${valueIndex}]`,
+          )
+        }
+
+        // Invariant: order (advance/retreat/random)
+        if (prevIndexes !== indexesEmpty) {
+          if (changeMethod === 'advance') {
+            if (indexes <= prevIndexes) {
+              assert.fail(`indexes(${indexes}) <= prevIndexes(${prevIndexes})`)
+            }
+          } else if (changeMethod === 'retreat') {
+            if (indexes >= prevIndexes) {
+              assert.fail(`indexes(${indexes}) >= prevIndexes(${prevIndexes})`)
+            }
+          } else if (changeMethod === 'random') {
+            if (indexes > prevIndexes) {
+              countIncrements++
+            } else if (indexes < prevIndexes) {
+              countDecrements++
+            } else {
+              countEquals++
+            }
+          }
+        }
+
+        // Invariant: limit check
+        if (setLimitAtIteration != null && iteration >= setLimitAtIteration) {
+          if (limitPattern !== limitEmpty) {
+            // Lexicographic limit
+            if (includeErrorVariant) {
+              if (indexes > limitPattern) {
+                assert.fail(
+                  `indexes(${indexes}) > limitPattern(${limitPattern})`,
+                )
+              }
+              if (indexes === limitPattern) {
+                limitHit = true
+              }
+            } else {
+              if (indexes >= limitPattern) {
+                assert.fail(
+                  `indexes(${indexes}) >= limitPattern(${limitPattern})`,
+                )
+              }
+            }
+
+            // Per-arg limit (when limitArgOnError is true or funcTrue)
+            if (limitArgOnError === true || limitArgOnError === funcTrue) {
+              state.indexes.forEach((index, i) => {
+                const limit = state.argLimits[i]
+                if (limit != null && index > limit) {
+                  assert.fail(
+                    `index(${index}) > argLimit(${limit}) for arg${i}`,
+                  )
+                }
+              })
+            }
+          }
+        }
+      } else {
+        // Invariant: false result means empty state
+        if (indexes !== indexesEmpty) {
+          assert.fail(`indexes(${indexes}) !== indexesEmpty(${indexesEmpty})`)
+        }
+      }
+
+      prevIndexes = indexes
+    }
+
+    // Invariant: all variants hit when no limit (for advance/retreat, or statistically for random)
+    if (setLimitAtIteration == null && changeMethod !== 'random') {
+      for (const variant of allVariants) {
+        if (!hitVariants.has(variant)) {
+          assert.fail(`Variant ${variant} not hit`)
+        }
+      }
+    }
+
+    // Invariant: random produces variance
+    if (
+      changeMethod === 'random' &&
+      countIterations > 50 &&
+      (countIncrements > 5 || countDecrements > 5)
+    ) {
+      if (
+        (countIncrements === 0 && countDecrements === 0) ||
+        (countIncrements === 0 && countEquals === 0) ||
+        (countDecrements === 0 && countEquals === 0)
+      ) {
+        assert.fail(
+          `countIncrements(${countIncrements}), countDecrements(${countDecrements}), countEquals(${countEquals})`,
+        )
+      }
+    }
+
+    // Invariant: limit point reachable when includeErrorVariant
+    if (
+      setLimitAtIteration != null &&
+      setLimitAtIteration < countIterations &&
+      limitPattern !== limitEmpty &&
+      includeErrorVariant &&
+      allVariantsSet.has(limitPattern) &&
+      changeMethod !== 'random' &&
+      !limitHit
+    ) {
+      assert.fail(`limitPattern(${limitPattern}) not hit`)
+    }
+  },
+)
+
+// endregion
+
 const funcTrue = () => true
 const funcFalse = () => false
 
@@ -727,7 +1023,7 @@ const testVariants = createTestVariants(
   ({
     valuesAsFuncs,
     valuesPattern,
-    extraPatterns,
+    extraPattern,
     limitPattern,
     setLimitAtIteration,
     limitArgOnError,
@@ -736,7 +1032,7 @@ const testVariants = createTestVariants(
   }: {
     valuesAsFuncs: boolean
     valuesPattern: string
-    extraPatterns: string[]
+    extraPattern: string
     limitPattern: string
     setLimitAtIteration: null | number
     limitArgOnError: null | boolean | LimitArgOnError
@@ -749,7 +1045,7 @@ const testVariants = createTestVariants(
 
     const state = _createVariantNavigationState(
       valuesPattern,
-      extraPatterns,
+      extraPattern,
       limitEmpty,
       valuesAsFuncs,
     )
@@ -760,13 +1056,10 @@ const testVariants = createTestVariants(
     resetVariantNavigation(state)
     checkVariantNavigationState(state, valuesEmpty, indexesEmpty, limitEmpty)
 
-    const maxIndexes =
-      extraPatterns.length === 0
-        ? valuesPattern
-        : valuesPattern
-            .split('')
-            .map(o => String(Number(o) + extraPatterns.length))
-            .join('')
+    const maxIndexes = valuesPattern
+      .split('')
+      .map((o, i) => String(Number(o) + Number(extraPattern[i] || 0)))
+      .join('')
     const limitNeverHit =
       setLimitAtIteration == null ||
       limitPattern > maxIndexes ||
@@ -782,10 +1075,10 @@ const testVariants = createTestVariants(
     const notHitIndexes = valuesPattern
       .split('')
       .map(
-        o =>
+        (o, i) =>
           new Set(
             Array.from(
-              { length: Number(o) + 1 + extraPatterns.length },
+              { length: Number(o) + 1 + Number(extraPattern[i] || 0) },
               (_, i) => i,
             ),
           ),
@@ -951,15 +1244,16 @@ describe(
     it('variants', async () => {
       const patterns1 = ['', '0', '1', '2']
       const patterns2 = ['10', '02', '20', '12', '21', '22']
-      const extra1 = ['3', '4']
-      const extra2 = ['33', '44']
       const patternsAll = [...patterns1, ...patterns2]
 
       await testVariants({
         valuesAsFuncs: [false, true],
         valuesPattern: patternsAll,
-        extraPatterns: ({ valuesPattern }) => {
-          return [[], valuesPattern.length === 1 ? extra1 : extra2]
+        extraPattern: ({ valuesPattern }) => {
+          return [
+            '0'.repeat(valuesPattern.length),
+            '2'.repeat(valuesPattern.length),
+          ]
         },
         setLimitAtIteration: [null, 0, 1, 2],
         limitPattern: ({ setLimitAtIteration, valuesPattern }) => {
@@ -968,6 +1262,38 @@ describe(
             : valuesPattern.length === 1
               ? patterns1
               : patterns2
+        },
+        limitArgOnError: [null, true, false, funcTrue, funcFalse],
+        includeErrorVariant: [false, true],
+        changeMethod: ['advance', 'retreat', 'random'],
+      })()
+    })
+  },
+)
+
+describe(
+  'variantNavigation complex variants',
+  { timeout: 7 * 24 * 60 * 60 * 1000 },
+  () => {
+    it('complex variants', async () => {
+      // Sample limit patterns covering interesting cases:
+      // - first variant, middle variants, last variant
+      // - variants with dead-end branches
+      const limitPatterns = [
+        '0000', // first possible
+        '0010', // early variant
+        '0102', // middle area
+        '1000', // after first arg change
+        '1110', // near dead end (b=2 is dead)
+        '2030', // last arg area (a=2)
+        '2032', // near the end
+      ]
+
+      await testVariantsComplex({
+        extraPattern: ['0000', '1111', '0202'],
+        setLimitAtIteration: [null, 0, 1, 5, 10],
+        limitPattern: ({ setLimitAtIteration }) => {
+          return setLimitAtIteration == null ? ['____'] : limitPatterns
         },
         limitArgOnError: [null, true, false, funcTrue, funcFalse],
         includeErrorVariant: [false, true],
