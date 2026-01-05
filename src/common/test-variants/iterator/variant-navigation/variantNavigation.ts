@@ -1,5 +1,9 @@
 import type { Obj } from '@flemist/simple-utils'
-import { ArgName, TestVariantsTemplates, VariantNavigationState } from './types'
+import {
+  ArgName,
+  TestVariantsTemplates,
+  VariantNavigationState,
+} from '../types'
 import { findValueIndex } from 'src/common/test-variants/iterator/findValueIndex'
 import type { LimitArgOnError } from 'src/common'
 import type { Equals } from 'src/common/test-variants/types'
