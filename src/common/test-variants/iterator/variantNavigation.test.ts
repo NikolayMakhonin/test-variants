@@ -681,7 +681,7 @@ describe('variantNavigation complex', () => {
       {
         a: [1, 2],
         b: ({ a }) => (a % 2 === 0 ? [] : [3, 4]),
-        c: ({ b }) => (b % 2 === 1 ? [5] : [6, 7]),
+        c: ({ b }) => (b % 2 === 1 ? [5, 6] : [7, 8, 9]),
       },
       null,
       null,
@@ -700,12 +700,23 @@ describe('variantNavigation complex', () => {
     resetVariantNavigation(state)
     for (let i = 0; i < 1000; i++) {
       const result = randomVariantNavigation(state)
-      if (!result) {
-        assert.fail(
-          `randomVariantNavigation returned false\nstate: ${formatState(state)}\n\nrandomStates: ${Array.from(randomStates).join('\n')}`,
-        )
+      if (result) {
+        randomStates.add(formatState(state))
       }
     }
+
+    assert.deepStrictEqual(
+      Array.from(advanceStates),
+      Array.from(retreatStates).reverse(),
+    )
+    assert.deepStrictEqual(
+      Array.from(randomStates).sort(),
+      Array.from(advanceStates).sort(),
+    )
+
+    console.log('advanceStates:', Array.from(advanceStates))
+    console.log('retreatStates:', Array.from(retreatStates))
+    console.log('randomStates:', Array.from(randomStates))
   })
 })
 
