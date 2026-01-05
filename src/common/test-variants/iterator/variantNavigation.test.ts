@@ -826,6 +826,7 @@ const testVariants = createTestVariants(
       // check limit
       if (setLimitAtIteration != null && iteration >= setLimitAtIteration) {
         if (limitPattern !== limitEmpty && indexes !== indexesEmpty) {
+          // lexicographic limit
           if (includeErrorVariant) {
             if (indexes > limitPattern) {
               assert.fail(`indexes(${indexes}) > limitPattern(${limitPattern})`)
@@ -839,6 +840,16 @@ const testVariants = createTestVariants(
                 `indexes(${indexes}) >= limitPattern(${limitPattern})`,
               )
             }
+          }
+
+          // arg limits
+          if (limitArgOnError === true || limitArgOnError === funcTrue) {
+            state.indexes.forEach((index, i) => {
+              const limit = state.argLimits[i]
+              if (limit != null && index > limit) {
+                assert.fail(`index(${index}) > argLimit(${limit}) for arg${i}`)
+              }
+            })
           }
         }
       }

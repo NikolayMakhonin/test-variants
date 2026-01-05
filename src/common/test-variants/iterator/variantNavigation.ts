@@ -309,7 +309,11 @@ export function retreatVariantNavigation<Args extends Obj>(
     let belowMax = argIndex > belowMaxIndex
     const maxIndex = getArgValueMaxIndex(state, argIndex, belowMax)
 
-    const valueIndex = state.indexes[argIndex] - 1
+    let valueIndex = state.indexes[argIndex] - 1
+
+    if (valueIndex > maxIndex) {
+      valueIndex = maxIndex
+    }
 
     if (valueIndex >= 0) {
       state.indexes[argIndex] = valueIndex
