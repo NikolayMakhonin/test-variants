@@ -7,7 +7,7 @@ import type { Obj } from '@flemist/simple-utils'
 import type { TestOptions } from 'src/common/test-variants/types'
 import type { VariantsIterator } from 'src/common/test-variants/iterator/types'
 import type { TestVariantsTestRun } from './types'
-import type { RunOptionsResolved } from './resolveRunConfig'
+import type { RunOptionsResolved } from './resolveRunOptions'
 import type { RunState } from './createRunState'
 
 /** Context for test variants iteration loop */

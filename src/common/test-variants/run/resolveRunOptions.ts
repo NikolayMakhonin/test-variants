@@ -31,8 +31,8 @@ export type RunOptionsResolved<Args extends Obj> = {
   limitTests: number | null | undefined
 }
 
-/** Resolve run options into normalized config */
-export function resolveRunConfig<Args extends Obj, SavedArgs = Args>(
+/** Resolve run options into normalized structure */
+export function resolveRunOptions<Args extends Obj, SavedArgs = Args>(
   options: TestVariantsRunOptionsInternal<Args, SavedArgs> | null | undefined,
 ): RunOptionsResolved<Args> {
   const saveErrorVariantsOptions = options?.saveErrorVariants

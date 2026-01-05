@@ -136,7 +136,7 @@ function executeSequentialTest<Args extends Obj>(
           return { shouldContinue: false }
         },
         err =>
-          handleSyncError(runContext, state, args, err, tests).then(() => ({
+          handleSyncError(runContext, args, err, tests).then(() => ({
             shouldContinue: false,
           })),
       )
@@ -151,7 +151,7 @@ function executeSequentialTest<Args extends Obj>(
     updateStateFromResult(runContext, promiseOrResult)
     return { shouldContinue: false }
   } catch (err) {
-    return handleSyncError(runContext, state, args, err, tests).then(() => ({
+    return handleSyncError(runContext, args, err, tests).then(() => ({
       shouldContinue: false,
     }))
   }
@@ -194,7 +194,7 @@ function scheduleParallelTest<Args extends Obj>(
       state.debugMode = false
       updateStateFromResult(runContext, promiseOrResult)
     } catch (err) {
-      handleParallelError(runContext, state, capturedArgs, err, capturedTests)
+      handleParallelError(runContext, capturedArgs, err, capturedTests)
     } finally {
       void pool.release(1)
     }

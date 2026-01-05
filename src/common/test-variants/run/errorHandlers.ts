@@ -1,17 +1,15 @@
 import type { Obj } from '@flemist/simple-utils'
 import type { ArgsWithSeed } from 'src/common/test-variants/types'
 import type { RunContext } from './RunContext'
-import type { RunState } from './createRunState'
 
 /** Handle error in sync execution mode */
 export async function handleSyncError<Args extends Obj>(
   runContext: RunContext<Args>,
-  state: RunState,
   args: ArgsWithSeed<Args>,
   error: unknown,
   tests: number,
 ): Promise<void> {
-  const { variantsIterator, options } = runContext
+  const { variantsIterator, options, state } = runContext
   const { store, findBestError } = options
 
   if (findBestError) {
@@ -31,12 +29,12 @@ export async function handleSyncError<Args extends Obj>(
 /** Handle error in parallel execution mode */
 export function handleParallelError<Args extends Obj>(
   runContext: RunContext<Args>,
-  state: RunState,
   args: ArgsWithSeed<Args>,
   error: unknown,
   tests: number,
 ): void {
-  const { variantsIterator, options, abortControllerParallel } = runContext
+  const { variantsIterator, options, abortControllerParallel, state } =
+    runContext
   const { store, findBestError } = options
 
   if (findBestError) {

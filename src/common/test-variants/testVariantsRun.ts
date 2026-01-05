@@ -10,7 +10,7 @@ import { Pool } from '@flemist/time-limits'
 import { garbageCollect } from 'src/common/garbage-collect/garbageCollect'
 import type { Obj } from '@flemist/simple-utils'
 import { getMemoryUsage } from './log/getMemoryUsage'
-import { resolveRunConfig } from './run/resolveRunConfig'
+import { resolveRunOptions } from './run/resolveRunOptions'
 import { createRunState } from './run/createRunState'
 import { logStart, logCompleted } from './run/runLogger'
 import { runIterationLoop } from './run/runIterationLoop'
@@ -23,7 +23,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   options?: null | TestVariantsRunOptionsInternal<Args, SavedArgs>,
 ): Promise<TestVariantsResult<Args>> {
   // Setup
-  const config = resolveRunConfig(options)
+  const optionsResolved = resolveRunOptions(options)
   const {
     store,
     logOptions,
@@ -33,7 +33,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     timeController,
     parallel,
     limitTests,
-  } = config
+  } = optionsResolved
 
   const abortControllerParallel = new AbortControllerFast()
   const abortSignal = combineAbortSignals(
@@ -70,7 +70,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
 
   // Run iteration loop
   const runContext: RunContext<Args> = {
-    config,
+    options: optionsResolved,
     testRun,
     variantsIterator,
     testOptions,
