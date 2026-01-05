@@ -693,6 +693,7 @@ const testVariants = createTestVariants(
     setLimitAtIteration,
     limitOnError,
     includeErrorVariant,
+    changeMethod,
   }: {
     argsPattern: string
     extraPatterns: string[]
@@ -700,23 +701,90 @@ const testVariants = createTestVariants(
     setLimitAtIteration: null | number
     limitOnError: null | boolean | LimitArgOnError
     includeErrorVariant: boolean
+    changeMethod: 'advance' | 'retreat' | 'random'
   }) => {
+    const valuesEmpty = '_'.repeat(argsPattern.length)
+    const indexesEmpty = '_'.repeat(argsPattern.length)
+    const limitEmpty = '_'.repeat(limitPattern.length)
+
     const state = _createVariantNavigationState(
       argsPattern,
       extraPatterns,
-      limitPattern,
+      limitEmpty,
     )
     state.limitArgOnError = limitOnError
     state.includeErrorVariant = includeErrorVariant
 
-    const argsEmpty = '_'.repeat(argsPattern.length)
-    const indexesEmpty = '_'.repeat(argsPattern.length)
-    const limitEmpty = '_'.repeat(limitPattern.length)
-
-    const iteration = 0
-    checkVariantNavigationState(state, argsEmpty, indexesEmpty, limitPattern)
+    checkVariantNavigationState(state, valuesEmpty, indexesEmpty, limitEmpty)
     resetVariantNavigation(state)
-    checkVariantNavigationState(state, argsEmpty, indexesEmpty, limitPattern)
+    checkVariantNavigationState(state, valuesEmpty, indexesEmpty, limitEmpty)
+
+    let prevIndexes: string = formatIndexes(state.indexes)
+    let prevValues: string = formatTemplatesValues(state.argValues)
+    let countIncrements = 0
+    let countDecrements = 0
+    let countEquals = 0
+    let iteration = 0
+    const countIterations = 5
+    for (; iteration < countIterations; iteration++) {
+      let result: boolean
+      if (changeMethod === 'advance') {
+        result = advanceVariantNavigation(state)
+      } else if (changeMethod === 'retreat') {
+        result = retreatVariantNavigation(state)
+      } else if (changeMethod === 'random') {
+        result = randomVariantNavigation(state)
+      } else {
+        throw new Error(`Unknown changeMethod: ${changeMethod}`)
+      }
+
+      const indexes = formatIndexes(state.indexes)
+      const values = formatTemplatesValues(state.argValues)
+
+      if (result) {
+        // check order
+        if (prevValues === valuesEmpty || prevIndexes === indexesEmpty) {
+          if (prevIndexes !== indexesEmpty) {
+            assert.fail(
+              `prevIndexes(${prevIndexes}) !== indexesEmpty(${indexesEmpty})`,
+            )
+          }
+          if (prevValues !== valuesEmpty) {
+            assert.fail(
+              `prevValues(${prevValues}) !== valuesEmpty(${valuesEmpty})`,
+            )
+          }
+        } else {
+          assert.strictEqual(values, prevValues)
+          if (changeMethod === 'advance') {
+            if (indexes <= prevIndexes) {
+              assert.fail(`indexes(${indexes}) <= prevIndexes(${prevIndexes})`)
+            }
+          } else if (changeMethod === 'retreat') {
+            if (indexes >= prevIndexes) {
+              assert.fail(`indexes(${indexes}) >= prevIndexes(${prevIndexes})`)
+            }
+          } else if (changeMethod === 'random') {
+            if (indexes > prevIndexes) {
+              countIncrements++
+            } else if (indexes < prevIndexes) {
+              countDecrements++
+            } else {
+              countEquals++
+            }
+          }
+        }
+      }
+
+      prevIndexes = indexes
+      prevValues = values
+    }
+
+    if (countIterations > 50) {
+      assert.isAbove(countIncrements, 0)
+      assert.isAbove(countDecrements, 0)
+      assert.isAbove(countEquals, 0)
+    }
   },
 )
 
@@ -739,6 +807,7 @@ describe('variantNavigation variants', () => {
       setLimitAtIteration: [null, 0, 1, 2],
       limitOnError: [null, true, false, funcTrue, funcFalse],
       includeErrorVariant: [false, true],
+      changeMethod: ['advance', 'retreat', 'random'],
     })()
   })
 })
