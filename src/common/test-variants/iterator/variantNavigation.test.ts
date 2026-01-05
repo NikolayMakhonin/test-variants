@@ -14,6 +14,7 @@ import {
 } from 'src/common/test-variants/iterator/variantNavigation'
 import type { LimitArgOnError } from 'src/common'
 import { deepFreezeJsonLike } from 'src/common/test-variants/-tmp/-test/helpers/deepFreezeJsonLike'
+import { freezeProps } from 'src/common/-test/freezeProps'
 
 // region helpers
 
@@ -185,11 +186,19 @@ function _createVariantNavigationState(
     'state.argLimits',
   )
   state.argLimits = argLimits
-  Object.freeze(state)
+  freezeProps(
+    state,
+    'args',
+    'argsNames',
+    'indexes',
+    'argValues',
+    'argLimits',
+    'templates',
+    'equals',
+  )
   Object.freeze(state.templates)
   Object.freeze(state.templates.templates)
   Object.freeze(state.argsNames)
-  Object.freeze(state.argLimits)
   assert.deepStrictEqual(
     state.argsNames,
     Object.keys(templates),
@@ -284,12 +293,22 @@ describe('advanceVariantNavigation', () => {
     const state = _createVariantNavigationState('0', [], '_', null)
     for (let i = 0; i < 3; i++) {
       checkVariantNavigationState(state, '_', '_', '_')
-      assert.isTrue(advanceVariantNavigation(state))
+      assert.isTrue(retreatVariantNavigation(state))
       checkVariantNavigationState(state, '0', '0', '_')
-      assert.isFalse(advanceVariantNavigation(state))
+      assert.isFalse(retreatVariantNavigation(state))
       checkVariantNavigationState(state, '_', '_', '_')
-      assert.isTrue(advanceVariantNavigation(state))
+      state.argLimits[0] = 0
+      assert.isFalse(retreatVariantNavigation(state))
+      checkVariantNavigationState(state, '_', '_', '0')
+      assert.isFalse(retreatVariantNavigation(state))
+      checkVariantNavigationState(state, '_', '_', '0')
+      state.argLimits[0] = null
+      assert.isTrue(retreatVariantNavigation(state))
       checkVariantNavigationState(state, '0', '0', '_')
+      state.argLimits[0] = 0
+      assert.isFalse(retreatVariantNavigation(state))
+      checkVariantNavigationState(state, '_', '_', '0')
+      state.argLimits[0] = null
       resetVariantNavigation(state)
     }
   })
@@ -316,6 +335,66 @@ describe('advanceVariantNavigation', () => {
     const state = _createVariantNavigationState('11', [], '__', null)
     for (let i = 0; i < 3; i++) {
       checkVariantNavigationState(state, '__', '__', '__')
+      state.argLimits[1] = 0
+      state.limitArgOnError = true
+      assert.isTrue(advanceVariantNavigation(state))
+      checkVariantNavigationState(state, '11', '00', '_0')
+      assert.isTrue(advanceVariantNavigation(state))
+      checkVariantNavigationState(state, '11', '10', '_0')
+      assert.isFalse(advanceVariantNavigation(state))
+      checkVariantNavigationState(state, '__', '__', '_0')
+      assert.isTrue(advanceVariantNavigation(state))
+      checkVariantNavigationState(state, '11', '00', '_0')
+      state.argLimits[0] = 0
+      resetVariantNavigation(state)
+      assert.isFalse(advanceVariantNavigation(state))
+      checkVariantNavigationState(state, '__', '__', '00')
+      state.argLimits[0] = null
+      state.argLimits[1] = null
+      state.limitArgOnError = null
+      checkVariantNavigationState(state, '__', '__', '__')
+
+      state.argLimits[0] = 0
+      state.limitArgOnError = true
+      assert.isTrue(advanceVariantNavigation(state))
+      checkVariantNavigationState(state, '11', '00', '0_')
+      assert.isTrue(advanceVariantNavigation(state))
+      checkVariantNavigationState(state, '11', '01', '0_')
+      assert.isFalse(advanceVariantNavigation(state))
+      checkVariantNavigationState(state, '__', '__', '0_')
+      assert.isTrue(advanceVariantNavigation(state))
+      checkVariantNavigationState(state, '11', '00', '0_')
+      state.argLimits[1] = 0
+      resetVariantNavigation(state)
+      assert.isFalse(advanceVariantNavigation(state))
+      checkVariantNavigationState(state, '__', '__', '00')
+      state.argLimits[0] = null
+      state.argLimits[1] = null
+      state.limitArgOnError = null
+      checkVariantNavigationState(state, '__', '__', '__')
+
+      assert.isTrue(advanceVariantNavigation(state))
+      checkVariantNavigationState(state, '11', '00', '__')
+      assert.isTrue(advanceVariantNavigation(state))
+      checkVariantNavigationState(state, '11', '01', '__')
+      assert.isTrue(advanceVariantNavigation(state))
+      checkVariantNavigationState(state, '11', '10', '__')
+
+      state.argLimits[0] = 0
+      state.argLimits[1] = 1
+      assert.isFalse(advanceVariantNavigation(state))
+      checkVariantNavigationState(state, '__', '__', '01')
+      assert.isTrue(advanceVariantNavigation(state))
+      checkVariantNavigationState(state, '11', '00', '01')
+      assert.isFalse(advanceVariantNavigation(state))
+      checkVariantNavigationState(state, '__', '__', '01')
+      assert.isTrue(advanceVariantNavigation(state))
+      checkVariantNavigationState(state, '11', '00', '01')
+      state.argLimits[0] = null
+      state.argLimits[1] = null
+      resetVariantNavigation(state)
+      checkVariantNavigationState(state, '__', '__', '__')
+
       assert.isTrue(advanceVariantNavigation(state))
       checkVariantNavigationState(state, '11', '00', '__')
       assert.isTrue(advanceVariantNavigation(state))
@@ -384,8 +463,18 @@ describe('retreatVariantNavigation', () => {
       checkVariantNavigationState(state, '0', '0', '_')
       assert.isFalse(retreatVariantNavigation(state))
       checkVariantNavigationState(state, '_', '_', '_')
+      state.argLimits[0] = 0
+      assert.isFalse(retreatVariantNavigation(state))
+      checkVariantNavigationState(state, '_', '_', '0')
+      assert.isFalse(retreatVariantNavigation(state))
+      checkVariantNavigationState(state, '_', '_', '0')
+      state.argLimits[0] = null
       assert.isTrue(retreatVariantNavigation(state))
       checkVariantNavigationState(state, '0', '0', '_')
+      state.argLimits[0] = 0
+      assert.isFalse(retreatVariantNavigation(state))
+      checkVariantNavigationState(state, '_', '_', '0')
+      state.argLimits[0] = null
       resetVariantNavigation(state)
     }
   })
