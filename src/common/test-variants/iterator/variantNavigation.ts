@@ -145,9 +145,19 @@ export function isVariantNavigationBelowMax<Args extends Obj>(
 export function advanceVariantNavigation<Args extends Obj>(
   state: VariantNavigationState<Args>,
 ): boolean {
-  // Calc belowMaxIndex
-
+  // First initialize argValues to first values if not yet done
   const argsCount = state.indexes.length
+  for (let argIndex = 0; argIndex < argsCount; argIndex++) {
+    if (state.argValues[argIndex] == null) {
+      state.argValues[argIndex] = calcArgValues(
+        state,
+        state.argsNames[argIndex],
+      )
+    }
+  }
+
+  // Find first argument below its limited max (belowMaxIndex).
+  // Arguments after belowMaxIndex can use full range since we're lexicographically below the limit.
   let belowMaxIndex = argsCount
   for (let argIndex = 0; argIndex < argsCount; argIndex++) {
     const maxIndex = getArgValueMaxIndex(state, argIndex, false)
@@ -158,7 +168,7 @@ export function advanceVariantNavigation<Args extends Obj>(
   }
 
   for (let argIndex = argsCount - 1; argIndex >= 0; argIndex--) {
-    const belowMax = argIndex >= belowMaxIndex
+    let belowMax = argIndex > belowMaxIndex
     const maxIndex = getArgValueMaxIndex(state, argIndex, belowMax)
 
     const valueIndex = state.indexes[argIndex] + 1
@@ -168,11 +178,16 @@ export function advanceVariantNavigation<Args extends Obj>(
       state.args[state.argsNames[argIndex]] =
         state.argValues[argIndex][valueIndex]
 
+      if (valueIndex < maxIndex) {
+        belowMax = true
+      }
+
       // Clear subsequent state.argsNames from args before calculating their template values
       for (let i = argIndex + 1; i < argsCount; i++) {
         // high performance alternative to delete property
         state.args[state.argsNames[i]] = void 0 as any
       }
+
       for (argIndex++; argIndex < argsCount; argIndex++) {
         state.argValues[argIndex] = calcArgValues(
           state,
@@ -184,6 +199,9 @@ export function advanceVariantNavigation<Args extends Obj>(
         }
         state.indexes[argIndex] = 0
         state.args[state.argsNames[argIndex]] = state.argValues[argIndex][0]
+        if (maxIndex > 0) {
+          belowMax = true
+        }
       }
       if (argIndex >= argsCount) {
         return true
@@ -199,12 +217,7 @@ function fixVariantNavigation<Args extends Obj>(
 ): void {
   let belowMax = false
   for (let i = 0, len = state.indexes.length; i < len; i++) {
-    let maxIndex: number
-    if (!belowMax || state.limitArgOnError) {
-      maxIndex = getArgValueMaxIndex(state, i) - 1
-    } else {
-      maxIndex = state.argValues[i].length - 1
-    }
+    const maxIndex = getArgValueMaxIndex(state, i, belowMax)
     if (state.indexes[i] > maxIndex) {
       state.indexes[i] = maxIndex
     }
@@ -218,7 +231,7 @@ function fixVariantNavigation<Args extends Obj>(
 export function retreatVariantNavigation<Args extends Obj>(
   state: VariantNavigationState<Args>,
 ): boolean {
-  fixVariantNavigation(state, state.limitArgOnError)
+  fixVariantNavigation(state)
 
   const keysCount = state.argsNames.length
   for (let keyIndex = keysCount - 1; keyIndex >= 0; keyIndex--) {
@@ -229,11 +242,12 @@ export function retreatVariantNavigation<Args extends Obj>(
         state.argValues[keyIndex][valueIndex]
 
       // Check if we're now below max (for lexicographic constraint)
-      let belowMaxSoFar = false
+      let belowMax = false
       if (!state.limitArgOnError) {
         for (let i = 0; i <= keyIndex; i++) {
-          if (state.indexes[i] < getArgValueMaxIndex(state, i) - 1) {
-            belowMaxSoFar = true
+          const maxIndex = getArgValueMaxIndex(state, i, belowMax)
+          if (state.indexes[i] < getArgValueMaxIndex(state, i)) {
+            belowMax = true
             break
           }
         }
