@@ -908,6 +908,25 @@ const testVariantsComplex = createTestVariants(
           )
         }
 
+        // Invariant: indexes are within recalculated template bounds
+        // This catches stale argValues and missing resetSubsequent bugs
+        const recalcArgs: Partial<ComplexArgs> = {}
+        for (let i = 0; i < argsCount; i++) {
+          const argName = state.argsNames[i]
+          const template = state.templates.templates[argName]
+          const values =
+            typeof template === 'function'
+              ? template(recalcArgs as ComplexArgs)
+              : template
+          const valueIndex = state.indexes[i]
+          if (valueIndex >= values.length) {
+            assert.fail(
+              `index(${valueIndex}) >= recalculated values.length(${values.length}) for ${argName}`,
+            )
+          }
+          recalcArgs[argName] = values[valueIndex]
+        }
+
         // Invariant: order (advance/retreat/random)
         if (prevIndexes !== indexesEmpty) {
           if (changeMethod === 'advance') {
@@ -1279,6 +1298,7 @@ describe(
       // Sample limit patterns covering interesting cases:
       // - first variant, middle variants, last variant
       // - variants with dead-end branches
+      // - patterns with unlimited later args to trigger resetSubsequent bug
       const limitPatterns = [
         '0000', // first possible
         '0010', // early variant
@@ -1287,6 +1307,12 @@ describe(
         '1110', // near dead end (b=2 is dead)
         '2030', // last arg area (a=2)
         '2032', // near the end
+        // Patterns to trigger resetSubsequent bug:
+        // When prior arg clamped, stale argValues for later args may be longer
+        // than recalculated values, causing index to exceed bounds
+        '1033', // a<=1 but c,d have high limits
+        '0133', // b<=1 but c,d have high limits
+        '1133', // a,b limited, c,d have high limits
       ]
 
       await testVariantsComplex({
