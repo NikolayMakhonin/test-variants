@@ -505,7 +505,7 @@ describe('randomVariantNavigation', () => {
     const sequences = new Set<string>()
 
     const actualStates = new Set<string>()
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 20; i++) {
       checkVariantNavigationState(state, '__', '__', '__')
       for (let i = 0; i < 1000; i++) {
         assert.isTrue(randomVariantNavigation(state))
@@ -513,7 +513,7 @@ describe('randomVariantNavigation', () => {
       }
       resetVariantNavigation(state)
 
-      const sequence = Array.from(actualStates).sort().join(',')
+      const sequence = Array.from(actualStates).join(',')
       sequences.add(sequence)
 
       assert.deepStrictEqual(
@@ -521,11 +521,12 @@ describe('randomVariantNavigation', () => {
         ['11|00|__', '11|01|__', '11|10|__', '11|11|__'],
         'actualStates',
       )
+      actualStates.clear()
     }
 
     assert.isAbove(
       sequences.size,
-      10,
+      3,
       `navigation is not random:\n${Array.from(sequences).join('\n')}`,
     )
   })
