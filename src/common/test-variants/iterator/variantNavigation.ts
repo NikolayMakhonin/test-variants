@@ -373,7 +373,7 @@ export function randomVariantNavigation<Args extends Obj>(
     }
   }
 
-  if (!belowMax) {
+  if (isVariantNavigationAtLimit(state)) {
     return retreatVariantNavigation(state)
   }
 

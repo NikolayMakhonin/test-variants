@@ -130,14 +130,10 @@ function formatTemplatesValues(argValues: (readonly Ref<number>[])[]): string {
   return argValues.map(formatValues).join('')
 }
 
-function formatState(
-  state: VariantNavigationState<any>,
-): [string, string, string] {
-  return [
-    formatTemplatesValues(state.argValues as any),
-    formatIndexes(state.indexes),
-    formatLimits(state.argLimits),
-  ]
+function formatState(state: VariantNavigationState<any>): string {
+  return `${formatTemplatesValues(state.argValues as any)}|${formatIndexes(
+    state.indexes,
+  )}|${formatLimits(state.argLimits)}`
 }
 
 // endregion
@@ -475,9 +471,9 @@ describe('randomVariantNavigation', () => {
       checkVariantNavigationState(state, '_', '_', '_')
       assert.isTrue(randomVariantNavigation(state))
       checkVariantNavigationState(state, '0', '0', '_')
-      assert.isFalse(randomVariantNavigation(state))
+      assert.isTrue(randomVariantNavigation(state))
       checkVariantNavigationState(state, '0', '0', '_')
-      assert.isFalse(randomVariantNavigation(state))
+      assert.isTrue(randomVariantNavigation(state))
       checkVariantNavigationState(state, '0', '0', '_')
       resetVariantNavigation(state)
     }
@@ -485,39 +481,52 @@ describe('randomVariantNavigation', () => {
 
   it('1 arg, 3 values', () => {
     const state = _createVariantNavigationState('2', [], '_', null)
-    for (let i = 0; i < 3; i++) {
+
+    const actualStates = new Set<string>()
+    for (let i = 0; i < 10; i++) {
       checkVariantNavigationState(state, '_', '_', '_')
-      assert.isTrue(randomVariantNavigation(state))
-      checkVariantNavigationState(state, '2', '2', '_')
-      assert.isTrue(randomVariantNavigation(state))
-      checkVariantNavigationState(state, '2', '1', '_')
-      assert.isTrue(randomVariantNavigation(state))
-      checkVariantNavigationState(state, '2', '0', '_')
-      assert.isFalse(randomVariantNavigation(state))
-      checkVariantNavigationState(state, '2', '0', '_')
-      assert.isFalse(randomVariantNavigation(state))
-      checkVariantNavigationState(state, '2', '0', '_')
+      for (let i = 0; i < 1000; i++) {
+        assert.isTrue(randomVariantNavigation(state))
+        actualStates.add(formatState(state))
+      }
       resetVariantNavigation(state)
     }
+
+    assert.deepStrictEqual(
+      Array.from(actualStates).sort(),
+      ['2|0|_', '2|1|_', '2|2|_'],
+      'actualStates',
+    )
   })
 
   it('2 arg, 2 values', () => {
     const state = _createVariantNavigationState('11', [], '__', null)
-    for (let i = 0; i < 3; i++) {
+    // For test random navigation
+    const sequences = new Set<string>()
+
+    const actualStates = new Set<string>()
+    for (let i = 0; i < 10; i++) {
       checkVariantNavigationState(state, '__', '__', '__')
-      assert.isTrue(randomVariantNavigation(state))
-      checkVariantNavigationState(state, '11', '11', '__')
-      assert.isTrue(randomVariantNavigation(state))
-      checkVariantNavigationState(state, '11', '10', '__')
-      assert.isTrue(randomVariantNavigation(state))
-      checkVariantNavigationState(state, '11', '01', '__')
-      assert.isTrue(randomVariantNavigation(state))
-      checkVariantNavigationState(state, '11', '00', '__')
-      assert.isFalse(randomVariantNavigation(state))
-      checkVariantNavigationState(state, '11', '00', '__')
-      assert.isFalse(randomVariantNavigation(state))
-      checkVariantNavigationState(state, '11', '00', '__')
+      for (let i = 0; i < 1000; i++) {
+        assert.isTrue(randomVariantNavigation(state))
+        actualStates.add(formatState(state))
+      }
       resetVariantNavigation(state)
+
+      const sequence = Array.from(actualStates).sort().join(',')
+      sequences.add(sequence)
+
+      assert.deepStrictEqual(
+        Array.from(actualStates).sort(),
+        ['11|00|__', '11|01|__', '11|10|__', '11|11|__'],
+        'actualStates',
+      )
     }
+
+    assert.isAbove(
+      sequences.size,
+      10,
+      `navigation is not random:\n${Array.from(sequences).join('\n')}`,
+    )
   })
 })
