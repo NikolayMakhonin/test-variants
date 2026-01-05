@@ -4,8 +4,8 @@ import type {
   ArgName,
   TestVariantsTemplates,
   TestVariantsTemplatesWithExtra,
-} from './types'
-import { findValueIndex } from 'src/common/test-variants/iterator/findValueIndex'
+} from '../types'
+import { findValueIndex } from 'src/common/test-variants/iterator/helpers/findValueIndex'
 
 /** Extend template arg with extra value */
 function extendTemplateWithValue<Args extends Obj>(

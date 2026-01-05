@@ -31,7 +31,6 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     dontThrowIfError,
     timeController,
     parallel,
-    limitTests,
   } = optionsResolved
 
   const abortControllerParallel = new AbortControllerFast()

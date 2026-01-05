@@ -4,7 +4,7 @@ import {
   TestVariantsTemplates,
   VariantNavigationState,
 } from '../types'
-import { findValueIndex } from 'src/common/test-variants/iterator/findValueIndex'
+import { findValueIndex } from 'src/common/test-variants/iterator/helpers/findValueIndex'
 import type { LimitArgOnError } from 'src/common'
 import type { Equals } from 'src/common/test-variants/types'
 

@@ -432,6 +432,7 @@ export function runIterationLoop<Args extends Obj>(
       )
     }
 
+    // TODO: integrate limitTests also
     if (isTimeLimitExceeded(runContext)) {
       state.timeLimitExceeded = true
       break

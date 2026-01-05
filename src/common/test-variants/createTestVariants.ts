@@ -3,7 +3,7 @@ import type { TestVariantsTemplates } from './iterator/types'
 import { resolveLogOptions } from './log/logOptions'
 import type { TestVariantsTest } from './run/types'
 import { createTestRun } from './createTestRun'
-import { testVariantsIterator } from './testVariantsIterator'
+import { createVariantsIterator } from './iterator/createVariantsIterator'
 import { testVariantsRun } from './testVariantsRun'
 import type { TestVariantsSetArgs } from './types'
 
@@ -19,7 +19,7 @@ export function createTestVariants<Args extends Obj>(
       })
 
       // Extended templates include extra args beyond Args; iterator accepts base Args structure
-      const variantsIterator = testVariantsIterator<Args>({
+      const variantsIterator = createVariantsIterator<Args>({
         argsTemplates: args as TestVariantsTemplates<Args>,
         getSeed: options?.getSeed,
         iterationModes: options?.iterationModes,
