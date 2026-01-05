@@ -1,19 +1,11 @@
 import type { RequiredNonNullable, Obj } from '@flemist/simple-utils'
-import type { ITimeController } from '@flemist/time-controller'
 import type {
   TestVariantsLogOptions,
   ModeConfig,
 } from 'src/common/test-variants/types'
-import type { VariantsIterator } from 'src/common/test-variants/iterator/types'
-import type { RunState } from 'src/common/test-variants/run/createRunState'
-import { formatBytes, formatDuration, formatModeConfig } from './format'
-import { getMemoryUsage } from './getMemoryUsage'
-
-export type RunLoggerDeps = {
-  logOptions: RequiredNonNullable<TestVariantsLogOptions>
-  timeController: ITimeController
-  findBestError: boolean
-}
+import type { RunContext } from './RunContext'
+import { formatBytes, formatDuration, formatModeConfig } from '../log/format'
+import { getMemoryUsage } from '../log/getMemoryUsage'
 
 /** Log test run start */
 export function logStart(
@@ -31,11 +23,12 @@ export function logStart(
 }
 
 /** Log test run completion */
-export function logCompleted(
-  logOptions: RequiredNonNullable<TestVariantsLogOptions>,
-  timeController: ITimeController,
-  state: RunState,
+export function logCompleted<Args extends Obj>(
+  runContext: RunContext<Args>,
 ): void {
+  const { config, state } = runContext
+  const { logOptions, timeController } = config
+
   if (!logOptions.completed) {
     return
   }
@@ -68,11 +61,10 @@ export function logModeChange(
 
 /** Log progress */
 export function logProgress<Args extends Obj>(
-  deps: RunLoggerDeps,
-  state: RunState,
-  variantsIterator: VariantsIterator<Args>,
+  runContext: RunContext<Args>,
 ): void {
-  const { logOptions, timeController, findBestError } = deps
+  const { config, variantsIterator, state } = runContext
+  const { logOptions, timeController, findBestError } = config
   const now = timeController.now()
 
   // Log mode change together with progress when mode changed

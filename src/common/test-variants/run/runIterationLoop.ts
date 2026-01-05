@@ -5,10 +5,7 @@ import type { ArgsWithSeed } from 'src/common/test-variants/types'
 import type { TestFuncResult } from './types'
 import type { RunContext } from './RunContext'
 import { shouldTriggerGC, triggerGC } from './gcManager'
-import {
-  logModeChange,
-  logProgress,
-} from 'src/common/test-variants/log/runLogger'
+import { logModeChange, logProgress } from './runLogger'
 import { handleSyncError, handleParallelError } from './errorHandlers'
 
 // region Mode change
@@ -101,11 +98,7 @@ function handlePeriodicTasks<Args extends Obj>(
   }
 
   if (logOptions.progress && now - state.prevLogTime >= logOptions.progress) {
-    logProgress(
-      { logOptions, timeController, findBestError: !!findBestError },
-      state,
-      variantsIterator,
-    )
+    logProgress(runContext)
   }
 
   const gcConfig = { GC_Iterations, GC_IterationsAsync, GC_Interval }

@@ -12,7 +12,7 @@ import type { Obj } from '@flemist/simple-utils'
 import { getMemoryUsage } from './log/getMemoryUsage'
 import { resolveRunConfig } from './run/resolveRunConfig'
 import { createRunState } from './run/createRunState'
-import { logStart, logCompleted } from './log/runLogger'
+import { logStart, logCompleted } from './run/runLogger'
 import { runIterationLoop } from './run/runIterationLoop'
 import { createRunResult } from './run/createRunResult'
 import type { RunContext } from './run/RunContext'
@@ -86,7 +86,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     throw abortSignal.reason
   }
 
-  logCompleted(logOptions, timeController, state)
+  logCompleted(runContext)
   await garbageCollect(1)
 
   return createRunResult(state, variantsIterator, dontThrowIfError)
