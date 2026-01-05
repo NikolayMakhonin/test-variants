@@ -10,33 +10,33 @@ import { formatBytes, formatDuration, formatModeConfig } from './format'
 import { getMemoryUsage } from './getMemoryUsage'
 
 export type RunLoggerDeps = {
-  logOpts: RequiredNonNullable<TestVariantsLogOptions>
+  logOptions: RequiredNonNullable<TestVariantsLogOptions>
   timeController: ITimeController
   findBestError: boolean
 }
 
 /** Log test run start */
 export function logStart(
-  logOpts: RequiredNonNullable<TestVariantsLogOptions>,
+  logOptions: RequiredNonNullable<TestVariantsLogOptions>,
   startMemory: number | null,
 ): void {
-  if (!logOpts.start) {
+  if (!logOptions.start) {
     return
   }
   let msg = `[test-variants] start`
   if (startMemory != null) {
     msg += `, memory: ${formatBytes(startMemory)}`
   }
-  logOpts.func('start', msg)
+  logOptions.func('start', msg)
 }
 
 /** Log test run completion */
 export function logCompleted(
-  logOpts: RequiredNonNullable<TestVariantsLogOptions>,
+  logOptions: RequiredNonNullable<TestVariantsLogOptions>,
   timeController: ITimeController,
   state: RunState,
 ): void {
-  if (!logOpts.completed) {
+  if (!logOptions.completed) {
     return
   }
   const totalElapsed = timeController.now() - state.startTime
@@ -48,19 +48,19 @@ export function logCompleted(
       logMsg += `, memory: ${formatBytes(memory)} (${diff >= 0 ? '+' : ''}${formatBytes(diff)})`
     }
   }
-  logOpts.func('completed', logMsg)
+  logOptions.func('completed', logMsg)
 }
 
 /** Log mode change */
 export function logModeChange(
-  logOpts: RequiredNonNullable<TestVariantsLogOptions>,
+  logOptions: RequiredNonNullable<TestVariantsLogOptions>,
   modeConfig: ModeConfig | null,
   modeIndex: number,
 ): void {
-  if (!logOpts.modeChange) {
+  if (!logOptions.modeChange) {
     return
   }
-  logOpts.func(
+  logOptions.func(
     'modeChange',
     `[test-variants] ${formatModeConfig(modeConfig, modeIndex)}`,
   )
@@ -72,13 +72,13 @@ export function logProgress<Args extends Obj>(
   state: RunState,
   variantsIterator: VariantsIterator<Args>,
 ): void {
-  const { logOpts, timeController, findBestError } = deps
+  const { logOptions, timeController, findBestError } = deps
   const now = timeController.now()
 
   // Log mode change together with progress when mode changed
-  if (logOpts.modeChange && state.modeChanged) {
+  if (logOptions.modeChange && state.modeChanged) {
     logModeChange(
-      logOpts,
+      logOptions,
       variantsIterator.modeConfig,
       variantsIterator.modeIndex,
     )
@@ -138,6 +138,6 @@ export function logProgress<Args extends Obj>(
     }
   }
 
-  logOpts.func('progress', logMsg)
+  logOptions.func('progress', logMsg)
   state.prevLogTime = now
 }

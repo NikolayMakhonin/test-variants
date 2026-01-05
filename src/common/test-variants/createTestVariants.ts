@@ -12,10 +12,10 @@ export function createTestVariants<Args extends Obj>(
 ): TestVariantsSetArgs<Args> {
   return function testVariantsArgs(args) {
     return async function testVariantsCall(options) {
-      const logOpts = resolveLogOptions(options?.log)
+      const logOptions = resolveLogOptions(options?.log)
       const testRun = createTestRun<Args>(test, {
         onError: options?.onError,
-        log: logOpts,
+        log: logOptions,
       })
 
       // Extended templates include extra args beyond Args; iterator accepts base Args structure
@@ -27,7 +27,7 @@ export function createTestVariants<Args extends Obj>(
         limitArgOnError: options?.findBestError?.limitArgOnError,
         includeErrorVariant: options?.findBestError?.includeErrorVariant,
         timeController: options?.timeController,
-        log: logOpts,
+        log: logOptions,
       })
 
       return testVariantsRun(testRun, variantsIterator, options)

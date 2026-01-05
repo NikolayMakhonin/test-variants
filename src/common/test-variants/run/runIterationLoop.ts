@@ -18,11 +18,11 @@ function handleInitialMode<Args extends Obj>(
   runContext: RunContext<Args>,
 ): PromiseOrValue<void> {
   const { config, variantsIterator, state } = runContext
-  const { logOpts, onModeChange } = config
+  const { logOptions, onModeChange } = config
 
-  if (logOpts.modeChange) {
+  if (logOptions.modeChange) {
     logModeChange(
-      logOpts,
+      logOptions,
       variantsIterator.modeConfig,
       variantsIterator.modeIndex,
     )
@@ -44,12 +44,12 @@ function handleModeChangeIfNeeded<Args extends Obj>(
   runContext: RunContext<Args>,
 ): PromiseOrValue<void> {
   const { config, variantsIterator, state } = runContext
-  const { logOpts, onModeChange } = config
+  const { logOptions, onModeChange } = config
 
   if (variantsIterator.modeIndex === state.prevModeIndex) return
 
-  if (logOpts.debug) {
-    logOpts.func(
+  if (logOptions.debug) {
+    logOptions.func(
       'debug',
       `[debug] mode switch: modeIndex=${variantsIterator.modeIndex}, index=${variantsIterator.index}`,
     )
@@ -80,7 +80,7 @@ function handlePeriodicTasks<Args extends Obj>(
 ): PromiseOrValue<PeriodicTasksResult> {
   const { config, variantsIterator, state } = runContext
   const {
-    logOpts,
+    logOptions,
     timeController,
     limitTime,
     findBestError,
@@ -89,7 +89,7 @@ function handlePeriodicTasks<Args extends Obj>(
     GC_Interval,
   } = config
 
-  if (!logOpts.progress && !GC_Interval && limitTime == null) {
+  if (!logOptions.progress && !GC_Interval && limitTime == null) {
     return { timeLimitExceeded: false }
   }
 
@@ -100,9 +100,9 @@ function handlePeriodicTasks<Args extends Obj>(
     return { timeLimitExceeded: true }
   }
 
-  if (logOpts.progress && now - state.prevLogTime >= logOpts.progress) {
+  if (logOptions.progress && now - state.prevLogTime >= logOptions.progress) {
     logProgress(
-      { logOpts, timeController, findBestError: !!findBestError },
+      { logOptions, timeController, findBestError: !!findBestError },
       state,
       variantsIterator,
     )
@@ -231,7 +231,7 @@ export async function runIterationLoop<Args extends Obj>(
 ): Promise<void> {
   const { config, variantsIterator, abortSignal, pool, state } = runContext
   const {
-    logOpts,
+    logOptions,
     abortSignalExternal,
     cycles,
     limitTime,
@@ -240,8 +240,8 @@ export async function runIterationLoop<Args extends Obj>(
   } = config
 
   variantsIterator.start()
-  if (logOpts.debug) {
-    logOpts.func(
+  if (logOptions.debug) {
+    logOptions.func(
       'debug',
       `[debug] start(): cycleIndex=${variantsIterator.cycleIndex}, modeIndex=${variantsIterator.modeIndex}, minCompletedCount=${variantsIterator.minCompletedCount}, cycles=${cycles}`,
     )
@@ -254,8 +254,8 @@ export async function runIterationLoop<Args extends Obj>(
     variantsIterator.minCompletedCount < cycles &&
     !state.timeLimitExceeded
   ) {
-    if (logOpts.debug) {
-      logOpts.func(
+    if (logOptions.debug) {
+      logOptions.func(
         'debug',
         `[debug] outer loop: minCompletedCount=${variantsIterator.minCompletedCount} < cycles=${cycles}`,
       )
@@ -305,8 +305,8 @@ export async function runIterationLoop<Args extends Obj>(
       }
     }
 
-    if (logOpts.debug) {
-      logOpts.func(
+    if (logOptions.debug) {
+      logOptions.func(
         'debug',
         `[debug] inner loop exited: modeIndex=${variantsIterator.modeIndex}, index=${variantsIterator.index}, count=${variantsIterator.count}, iterations=${state.iterations}`,
       )
@@ -324,15 +324,15 @@ export async function runIterationLoop<Args extends Obj>(
       break
     }
 
-    if (logOpts.debug) {
-      logOpts.func(
+    if (logOptions.debug) {
+      logOptions.func(
         'debug',
         `[debug] calling start() again: cycleIndex=${variantsIterator.cycleIndex}, minCompletedCount=${variantsIterator.minCompletedCount}`,
       )
     }
     variantsIterator.start()
-    if (logOpts.debug) {
-      logOpts.func(
+    if (logOptions.debug) {
+      logOptions.func(
         'debug',
         `[debug] after start(): cycleIndex=${variantsIterator.cycleIndex}, modeIndex=${variantsIterator.modeIndex}, minCompletedCount=${variantsIterator.minCompletedCount}`,
       )

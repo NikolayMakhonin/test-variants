@@ -19,7 +19,7 @@ export type RunOptionsResolved<Args extends Obj> = {
   GC_Iterations: number
   GC_IterationsAsync: number
   GC_Interval: number
-  logOpts: RequiredNonNullable<TestVariantsLogOptions>
+  logOptions: RequiredNonNullable<TestVariantsLogOptions>
   abortSignalExternal: IAbortSignalFast | null | undefined
   findBestError: FindBestErrorOptions | null | undefined
   cycles: number
@@ -55,7 +55,7 @@ export function resolveRunConfig<Args extends Obj, SavedArgs = Args>(
     GC_Iterations: options?.GC_Iterations ?? 1000000,
     GC_IterationsAsync: options?.GC_IterationsAsync ?? 10000,
     GC_Interval: options?.GC_Interval ?? 1000,
-    logOpts: resolveLogOptions(options?.log),
+    logOptions: resolveLogOptions(options?.log),
     abortSignalExternal: options?.abortSignal,
     findBestError,
     cycles: options?.cycles ?? 1,

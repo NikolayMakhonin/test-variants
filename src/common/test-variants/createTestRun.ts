@@ -33,7 +33,7 @@ export function createTestRun<Args extends Obj>(
   test: TestVariantsTest<Args>,
   options: TestVariantsCreateTestRunOptions<Args>,
 ): TestVariantsTestRun<Args> {
-  const logOpts = options.log
+  const logOptions = options.log
 
   let errorEvent: ErrorEvent<Args> | null = null
   // Debug mode: counts iterations for step-by-step debugging of failing variant.
@@ -53,8 +53,8 @@ export function createTestRun<Args extends Obj>(
         args,
         tests,
       }
-      if (logOpts.error) {
-        logOpts.func(
+      if (logOptions.error) {
+        logOptions.func(
           'error',
           `[test-variants] error variant: ${tests}\n${formatAny(args, { pretty: true })}\n${formatAny(error)}`,
         )
@@ -71,7 +71,7 @@ export function createTestRun<Args extends Obj>(
     // eslint-disable-next-line no-debugger
     debugger
     if (Date.now() - time0 > 50 && debugIteration < 5) {
-      logOpts.func(
+      logOptions.func(
         'debug',
         '[test-variants] DEBUG ITERATION: ' + debugIteration,
       )

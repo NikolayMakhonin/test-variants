@@ -26,7 +26,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   const config = resolveRunConfig(options)
   const {
     store,
-    logOpts,
+    logOptions,
     abortSignalExternal,
     findBestError,
     dontThrowIfError,
@@ -66,7 +66,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   const state = createRunState(timeController, startMemory)
   const pool = parallel <= 1 ? null : new Pool(parallel)
 
-  logStart(logOpts, startMemory)
+  logStart(logOptions, startMemory)
 
   // Run iteration loop
   const runContext: RunContext<Args> = {
@@ -86,7 +86,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     throw abortSignal.reason
   }
 
-  logCompleted(logOpts, timeController, state)
+  logCompleted(logOptions, timeController, state)
   await garbageCollect(1)
 
   return createRunResult(state, variantsIterator, dontThrowIfError)
