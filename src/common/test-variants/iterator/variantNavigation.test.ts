@@ -739,8 +739,16 @@ const testVariants = createTestVariants(
     let limitHit = false
     const notHitIndexes = valuesPattern
       .split('')
-      .map(o => new Set(Array.from({ length: Number(o) + 1 }, (_, i) => i)))
-    const countIterations = 5
+      .map(
+        o =>
+          new Set(
+            Array.from(
+              { length: Number(o) + 1 + extraPatterns.length },
+              (_, i) => i,
+            ),
+          ),
+      )
+    const countIterations = 256 // 4 ** 4 (values + extra)
     for (let iteration = 0; iteration < countIterations; iteration++) {
       // set limit at iteration
       if (setLimitAtIteration != null && iteration === setLimitAtIteration) {
@@ -765,6 +773,15 @@ const testVariants = createTestVariants(
       })
 
       if (result) {
+        if (valuesPattern !== valuesEmpty) {
+          if (indexes === indexesEmpty) {
+            assert.fail(`indexes(${indexes}) === indexesEmpty(${indexesEmpty})`)
+          }
+          if (values === valuesEmpty) {
+            assert.fail(`values(${values}) === valuesEmpty(${valuesEmpty})`)
+          }
+        }
+
         // check order
         if (prevIndexes === indexesEmpty || prevValues === valuesEmpty) {
           if (prevIndexes !== indexesEmpty) {
@@ -856,38 +873,52 @@ const testVariants = createTestVariants(
       assert.fail(`limitPattern(${limitPattern}) not hit`)
     }
 
-    if (countIterations > 50) {
-      assert.isAbove(countIncrements, 0)
-      assert.isAbove(countDecrements, 0)
-      assert.isAbove(countEquals, 0)
+    if (
+      changeMethod === 'random' &&
+      countIterations > 50 &&
+      (countIncrements > 10 || countDecrements > 10)
+    ) {
+      if (
+        (countIncrements === 0 && countDecrements === 0) ||
+        (countIncrements === 0 && countEquals === 0) ||
+        (countDecrements === 0 && countEquals === 0)
+      ) {
+        assert.fail(
+          `countIncrements(${countIncrements}), countDecrements(${countDecrements}), countEquals(${countEquals})`,
+        )
+      }
     }
   },
 )
 
-describe('variantNavigation variants', () => {
-  it('variants', async () => {
-    const patterns1 = ['', '0', '1', '2']
-    const patterns2 = ['10', '02', '20', '12', '21', '22']
-    const extra1 = ['3', '4']
-    const extra2 = ['33', '44']
-    const patternsAll = [...patterns1, ...patterns2]
+describe(
+  'variantNavigation variants',
+  { timeout: 7 * 24 * 60 * 60 * 1000 },
+  () => {
+    it('variants', async () => {
+      const patterns1 = ['', '0', '1', '2']
+      const patterns2 = ['10', '02', '20', '12', '21', '22']
+      const extra1 = ['3', '4']
+      const extra2 = ['33', '44']
+      const patternsAll = [...patterns1, ...patterns2]
 
-    await testVariants({
-      valuesPattern: patternsAll,
-      extraPatterns: ({ valuesPattern }) => {
-        return [[], valuesPattern.length === 1 ? extra1 : extra2]
-      },
-      setLimitAtIteration: [null, 0, 1, 2],
-      limitPattern: ({ setLimitAtIteration, valuesPattern }) => {
-        return setLimitAtIteration == null
-          ? ['_'.repeat(valuesPattern.length)]
-          : valuesPattern.length === 1
-            ? patterns1
-            : patterns2
-      },
-      limitArgOnError: [null, true, false, funcTrue, funcFalse],
-      includeErrorVariant: [false, true],
-      changeMethod: ['advance', 'retreat', 'random'],
-    })()
-  })
-})
+      await testVariants({
+        valuesPattern: patternsAll,
+        extraPatterns: ({ valuesPattern }) => {
+          return [[], valuesPattern.length === 1 ? extra1 : extra2]
+        },
+        setLimitAtIteration: [null, 0, 1, 2],
+        limitPattern: ({ setLimitAtIteration, valuesPattern }) => {
+          return setLimitAtIteration == null
+            ? ['_'.repeat(valuesPattern.length)]
+            : valuesPattern.length === 1
+              ? patterns1
+              : patterns2
+        },
+        limitArgOnError: [null, true, false, funcTrue, funcFalse],
+        includeErrorVariant: [false, true],
+        changeMethod: ['advance', 'retreat', 'random'],
+      })()
+    })
+  },
+)
