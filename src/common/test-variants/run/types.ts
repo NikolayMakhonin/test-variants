@@ -7,10 +7,10 @@ import type {
   TestVariantsLogOptions,
   TestVariantsResult,
   TestVariantsRunOptions,
-  TestVariantsTestOptions,
+  TestOptions,
 } from 'src/common/test-variants/types'
 import type {
-  TestVariantsIterator,
+  VariantsIterator,
   TestVariantsTemplatesExt,
 } from 'src/common/test-variants/iterator/types'
 
@@ -24,7 +24,7 @@ export type TestFuncResult = void | {
 export type TestVariantsTestRun<Args extends Obj> = (
   args: ArgsWithSeed<Args>,
   tests: number,
-  options: TestVariantsTestOptions,
+  options: TestOptions,
 ) => PromiseOrValue<TestFuncResult>
 
 /** Result of user's test function (number treated as iterationsSync) */
@@ -33,7 +33,7 @@ export type TestVariantsTestResult = number | void | TestFuncResult
 /** User's test function */
 export type TestVariantsTest<Args extends Obj> = (
   args: ArgsWithSeed<Args>,
-  options: TestVariantsTestOptions,
+  options: TestOptions,
 ) => PromiseOrValue<TestVariantsTestResult>
 
 /**
@@ -60,9 +60,9 @@ export type SaveErrorVariantsStoreReplayOptions<Args extends Obj> = {
   /** Test run function */
   testRun: TestVariantsTestRun<Args>
   /** Iterator to add limits to */
-  variants: TestVariantsIterator<Args>
+  variantsIterator: VariantsIterator<Args>
   /** Options passed to test function */
-  testOptions: TestVariantsTestOptions
+  testOptions: TestOptions
   /** Whether findBestError is enabled */
   findBestErrorEnabled?: null | boolean
 }

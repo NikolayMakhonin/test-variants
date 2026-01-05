@@ -14,7 +14,7 @@ export {
   type TestVariantsLogOptions,
   type TestVariantsRunOptions,
   type TestVariantsResult,
-  type TestVariantsTestOptions,
+  type TestOptions,
   type TestVariantsTestResult,
 } from './test-variants/types'
 export { createTestVariants } from './test-variants/createTestVariants'

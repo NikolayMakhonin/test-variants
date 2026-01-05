@@ -14,7 +14,7 @@ export {
   type TestVariantsLogOptions,
   type TestVariantsRunOptions,
   type TestVariantsResult,
-  type TestVariantsTestOptions,
+  type TestOptions,
   type TestVariantsTestResult,
 } from '../common'
 export type { TestVariantsSetArgs } from 'src/common/test-variants/types'

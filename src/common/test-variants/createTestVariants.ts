@@ -19,7 +19,7 @@ export function createTestVariants<Args extends Obj>(
       })
 
       // Extended templates include extra args beyond Args; iterator accepts base Args structure
-      const variants = testVariantsIterator<Args>({
+      const variantsIterator = testVariantsIterator<Args>({
         argsTemplates: args as TestVariantsTemplates<Args>,
         getSeed: options?.getSeed,
         iterationModes: options?.iterationModes,
@@ -30,7 +30,7 @@ export function createTestVariants<Args extends Obj>(
         log: logOpts,
       })
 
-      return testVariantsRun(testRun, variants, options)
+      return testVariantsRun(testRun, variantsIterator, options)
     }
   }
 }

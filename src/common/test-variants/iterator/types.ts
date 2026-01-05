@@ -12,7 +12,7 @@ import type {
 export type ModeType = ModeConfig['mode']
 
 /** Limit information with args and optional error */
-export type TestVariantsIteratorLimit<Args extends Obj> = {
+export type VariantsIteratorLimit<Args extends Obj> = {
   args: ArgsWithSeed<Args>
   error?: unknown
   /** Number of tests run when this limit was applied */
@@ -29,7 +29,7 @@ export type AddLimitOptions<Args extends Obj> = {
 }
 
 /** Options for creating test variants iterator */
-export type TestVariantsIteratorOptions<Args extends Obj> = {
+export type VariantsIteratorOptions<Args extends Obj> = {
   argsTemplates: TestVariantsTemplates<Args>
   /** Custom equality for comparing arg values */
   equals?: null | Equals
@@ -48,7 +48,7 @@ export type TestVariantsIteratorOptions<Args extends Obj> = {
 }
 
 /** Test variants iterator with limiting capabilities */
-export type TestVariantsIterator<Args extends Obj> = {
+export type VariantsIterator<Args extends Obj> = {
   /** Current variant index; -1 before first next() */
   readonly index: number
   /** Current cycle index; starts at 0 after first start() */
@@ -56,7 +56,7 @@ export type TestVariantsIterator<Args extends Obj> = {
   /** Maximum variant count; variants with index >= count are not yielded */
   readonly count: number | null
   /** Last applied limit's args and error; null if no args-based limit applied */
-  readonly limit: TestVariantsIteratorLimit<Args> | null
+  readonly limit: VariantsIteratorLimit<Args> | null
   /** Current mode index in modes array */
   readonly modeIndex: number
   /** Current mode configuration; null if no modes */

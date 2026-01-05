@@ -50,7 +50,8 @@ class SaveErrorVariantsStoreNode<Args extends Obj, SavedArgs = Args>
   async replay(
     options: SaveErrorVariantsStoreReplayOptions<Args>,
   ): Promise<void> {
-    const { testRun, variants, testOptions, findBestErrorEnabled } = options
+    const { testRun, variantsIterator, testOptions, findBestErrorEnabled } =
+      options
     const useToFindBestError = this.options.useToFindBestError
     const attemptsPerVariant = this.options.attemptsPerVariant ?? 1
 
@@ -73,7 +74,7 @@ class SaveErrorVariantsStoreNode<Args extends Obj, SavedArgs = Args>
           }
         } catch (error) {
           if (useToFindBestError && findBestErrorEnabled) {
-            variants.addLimit({ args, error })
+            variantsIterator.addLimit({ args, error })
             break
           } else {
             throw error

@@ -1,5 +1,5 @@
-import type { TestVariantsTestOptions, TestVariantsResult } from './types'
-import type { TestVariantsIterator } from './iterator/types'
+import type { TestOptions, TestVariantsResult } from './types'
+import type { VariantsIterator } from './iterator/types'
 import type {
   TestVariantsTestRun,
   TestVariantsRunOptionsInternal,
@@ -19,7 +19,7 @@ import type { RunContext } from './run/RunContext'
 
 export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   testRun: TestVariantsTestRun<Args>,
-  variants: TestVariantsIterator<Args>,
+  variantsIterator: VariantsIterator<Args>,
   options?: null | TestVariantsRunOptionsInternal<Args, SavedArgs>,
 ): Promise<TestVariantsResult<Args>> {
   // Setup
@@ -41,14 +41,14 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     abortControllerParallel.signal,
   )
 
-  const testOptions: TestVariantsTestOptions = {
+  const testOptions: TestOptions = {
     abortSignal,
     timeController,
   }
 
   // Apply initial limits
   if (limitTests != null) {
-    variants.addLimit({ index: limitTests })
+    variantsIterator.addLimit({ index: limitTests })
   }
 
   // Replay saved error variants
@@ -69,7 +69,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   logStart(logOpts, startMemory)
 
   // Run iteration loop
-  const ctx: RunContext<Args> = {
+  const runContext: RunContext<Args> = {
     config,
     testRun,
     variants,
@@ -79,7 +79,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     pool,
     state,
   }
-  await runIterationLoop(ctx)
+  await runIterationLoop(runContext)
 
   // Cleanup
   if (abortSignal?.aborted && abortSignal.reason != null) {
@@ -89,5 +89,5 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   logCompleted(logOpts, timeController, state)
   await garbageCollect(1)
 
-  return createRunResult(state, variants, dontThrowIfError)
+  return createRunResult(state, variantsIterator, dontThrowIfError)
 }

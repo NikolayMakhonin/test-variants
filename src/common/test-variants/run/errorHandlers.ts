@@ -1,23 +1,23 @@
 import type { Obj } from '@flemist/simple-utils'
 import type { ArgsWithSeed } from 'src/common/test-variants/types'
 import type { RunContext } from './RunContext'
-import type { TestVariantsRunState } from './createRunState'
+import type { RunState } from './createRunState'
 
 /** Handle error in sync execution mode */
 export async function handleSyncError<Args extends Obj>(
-  ctx: RunContext<Args>,
-  state: TestVariantsRunState,
+  runContext: RunContext<Args>,
+  state: RunState,
   args: ArgsWithSeed<Args>,
   error: unknown,
   tests: number,
 ): Promise<void> {
-  const { variants, config } = ctx
+  const { variantsIterator, config } = runContext
   const { store, findBestError } = config
 
   if (findBestError) {
-    variants.addLimit({ args, error, tests })
-    if (store && variants.limit) {
-      await store.save(variants.limit.args)
+    variantsIterator.addLimit({ args, error, tests })
+    if (store && variantsIterator.limit) {
+      await store.save(variantsIterator.limit.args)
     }
     state.debugMode = false
   } else {
@@ -30,19 +30,19 @@ export async function handleSyncError<Args extends Obj>(
 
 /** Handle error in parallel execution mode */
 export function handleParallelError<Args extends Obj>(
-  ctx: RunContext<Args>,
-  state: TestVariantsRunState,
+  runContext: RunContext<Args>,
+  state: RunState,
   args: ArgsWithSeed<Args>,
   error: unknown,
   tests: number,
 ): void {
-  const { variants, config, abortControllerParallel } = ctx
+  const { variantsIterator, config, abortControllerParallel } = runContext
   const { store, findBestError } = config
 
   if (findBestError) {
-    variants.addLimit({ args, error, tests })
-    if (store && variants.limit) {
-      void store.save(variants.limit.args)
+    variantsIterator.addLimit({ args, error, tests })
+    if (store && variantsIterator.limit) {
+      void store.save(variantsIterator.limit.args)
     }
     state.debugMode = false
     if (!abortControllerParallel.signal.aborted) {

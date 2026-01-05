@@ -4,8 +4,8 @@ import type {
   TestVariantsLogOptions,
   ModeConfig,
 } from 'src/common/test-variants/types'
-import type { TestVariantsIterator } from 'src/common/test-variants/iterator/types'
-import type { TestVariantsRunState } from 'src/common/test-variants/run/createRunState'
+import type { VariantsIterator } from 'src/common/test-variants/iterator/types'
+import type { RunState } from 'src/common/test-variants/run/createRunState'
 import { formatBytes, formatDuration, formatModeConfig } from './format'
 import { getMemoryUsage } from './getMemoryUsage'
 
@@ -34,7 +34,7 @@ export function logStart(
 export function logCompleted(
   logOpts: RequiredNonNullable<TestVariantsLogOptions>,
   timeController: ITimeController,
-  state: TestVariantsRunState,
+  state: RunState,
 ): void {
   if (!logOpts.completed) {
     return
@@ -69,15 +69,19 @@ export function logModeChange(
 /** Log progress */
 export function logProgress<Args extends Obj>(
   deps: RunLoggerDeps,
-  state: TestVariantsRunState,
-  variants: TestVariantsIterator<Args>,
+  state: RunState,
+  variantsIterator: VariantsIterator<Args>,
 ): void {
   const { logOpts, timeController, findBestError } = deps
   const now = timeController.now()
 
   // Log mode change together with progress when mode changed
   if (logOpts.modeChange && state.modeChanged) {
-    logModeChange(logOpts, variants.modeConfig, variants.modeIndex)
+    logModeChange(
+      logOpts,
+      variantsIterator.modeConfig,
+      variantsIterator.modeIndex,
+    )
     state.modeChanged = false
   }
 
@@ -86,8 +90,8 @@ export function logProgress<Args extends Obj>(
   const totalElapsed = now - state.startTime
 
   if (findBestError) {
-    logMsg += `cycle: ${variants.cycleIndex}, variant: ${variants.index}`
-    let max = variants.count
+    logMsg += `cycle: ${variantsIterator.cycleIndex}, variant: ${variantsIterator.index}`
+    let max = variantsIterator.count
     if (max != null) {
       if (
         state.prevCycleVariantsCount != null &&
@@ -101,16 +105,17 @@ export function logProgress<Args extends Obj>(
       if (
         state.prevCycleDuration != null &&
         state.prevCycleVariantsCount != null &&
-        variants.index < state.prevCycleVariantsCount &&
+        variantsIterator.index < state.prevCycleVariantsCount &&
         cycleElapsed < state.prevCycleDuration
       ) {
         const adjustedDuration = state.prevCycleDuration - cycleElapsed
-        const adjustedCount = state.prevCycleVariantsCount - variants.index
+        const adjustedCount =
+          state.prevCycleVariantsCount - variantsIterator.index
         const speedForRemaining = adjustedDuration / adjustedCount
-        const remainingTime = (max - variants.index) * speedForRemaining
+        const remainingTime = (max - variantsIterator.index) * speedForRemaining
         estimatedCycleTime = cycleElapsed + remainingTime
-      } else if (variants.index > 0) {
-        estimatedCycleTime = (cycleElapsed * max) / variants.index
+      } else if (variantsIterator.index > 0) {
+        estimatedCycleTime = (cycleElapsed * max) / variantsIterator.index
       } else {
         estimatedCycleTime = 0
       }
@@ -119,7 +124,7 @@ export function logProgress<Args extends Obj>(
       logMsg += ` (${formatDuration(cycleElapsed)})`
     }
   } else {
-    logMsg += `variant: ${variants.index} (${formatDuration(cycleElapsed)})`
+    logMsg += `variant: ${variantsIterator.index} (${formatDuration(cycleElapsed)})`
   }
 
   logMsg += `, tests: ${state.tests} (${formatDuration(totalElapsed)}), async: ${state.iterationsAsync}`

@@ -1,4 +1,4 @@
-import type { TestVariantsRunState } from './createRunState'
+import type { RunState } from './createRunState'
 import { garbageCollect } from 'src/common/garbage-collect/garbageCollect'
 
 export type GCConfig = {
@@ -10,7 +10,7 @@ export type GCConfig = {
 /** Check if GC should be triggered */
 export function shouldTriggerGC(
   config: GCConfig,
-  state: TestVariantsRunState,
+  state: RunState,
   now: number,
 ): boolean {
   const { GC_Iterations, GC_IterationsAsync, GC_Interval } = config
@@ -26,10 +26,7 @@ export function shouldTriggerGC(
 }
 
 /** Trigger GC and update state */
-export async function triggerGC(
-  state: TestVariantsRunState,
-  now: number,
-): Promise<void> {
+export async function triggerGC(state: RunState, now: number): Promise<void> {
   state.prevGC_Iterations = state.iterations
   state.prevGC_IterationsAsync = state.iterationsAsync
   state.prevGC_Time = now

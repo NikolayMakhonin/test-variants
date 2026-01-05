@@ -3,20 +3,20 @@ import type {
   TestVariantsResult,
   TestVariantsBestError,
 } from 'src/common/test-variants/types'
-import type { TestVariantsIterator } from 'src/common/test-variants/iterator/types'
-import type { TestVariantsRunState } from './createRunState'
+import type { VariantsIterator } from 'src/common/test-variants/iterator/types'
+import type { RunState } from './createRunState'
 
 /** Create test variants run result */
 export function createRunResult<Args extends Obj>(
-  state: TestVariantsRunState,
-  variants: TestVariantsIterator<Args>,
+  state: RunState,
+  variantsIterator: VariantsIterator<Args>,
   dontThrowIfError: boolean | null | undefined,
 ): TestVariantsResult<Args> {
-  const bestError: TestVariantsBestError<Args> | null = variants.limit
+  const bestError: TestVariantsBestError<Args> | null = variantsIterator.limit
     ? {
-        error: variants.limit.error,
-        args: variants.limit.args,
-        tests: variants.limit.tests,
+        error: variantsIterator.limit.error,
+        args: variantsIterator.limit.args,
+        tests: variantsIterator.limit.tests,
       }
     : null
 

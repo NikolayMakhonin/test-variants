@@ -14,7 +14,7 @@ import { timeControllerDefault } from '@flemist/time-controller'
 import { resolveLogOptions } from 'src/common/test-variants/log/logOptions'
 
 /** Resolved configuration for test variants run */
-export type TestVariantsRunConfig<Args extends Obj> = {
+export type RunOptionsResolved<Args extends Obj> = {
   store: SaveErrorVariantsStore<Args> | null
   GC_Iterations: number
   GC_IterationsAsync: number
@@ -34,7 +34,7 @@ export type TestVariantsRunConfig<Args extends Obj> = {
 /** Resolve run options into normalized config */
 export function resolveRunConfig<Args extends Obj, SavedArgs = Args>(
   options: TestVariantsRunOptionsInternal<Args, SavedArgs> | null | undefined,
-): TestVariantsRunConfig<Args> {
+): RunOptionsResolved<Args> {
   const saveErrorVariantsOptions = options?.saveErrorVariants
   const store: SaveErrorVariantsStore<Args> | null =
     saveErrorVariantsOptions && options?.createSaveErrorVariantsStore
