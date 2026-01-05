@@ -115,7 +115,7 @@ export type VariantNavigationState<Args extends Obj> = {
   attemptIndex: number
   templates: TestVariantsTemplatesWithExtra<Args, any>
   limitArgOnError: null | boolean | LimitArgOnError
-  equals?: null | Equals
+  equals: null | Equals
 }
 
 /** Extended templates type that allows additional args beyond the base Args type */
