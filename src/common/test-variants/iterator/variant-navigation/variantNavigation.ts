@@ -160,7 +160,8 @@ export function advanceVariantNavigation<Args extends Obj>(
   // Arguments after belowMaxIndex can use full range since we're lexicographically below the limit.
   let belowMaxIndex = argsCount
   let resetSubsequent = false
-  for (let argIndex = 0; argIndex < argsCount; argIndex++) {
+  let argIndex = 0
+  for (; argIndex < argsCount; argIndex++) {
     // Recalculate argValues if null or if previous args changed (resetSubsequent)
     const argValuesIsNull = state.argValues[argIndex] == null
     if (argValuesIsNull || resetSubsequent) {
@@ -209,7 +210,8 @@ export function advanceVariantNavigation<Args extends Obj>(
     return true
   }
 
-  for (let argIndex = argsCount - 1; argIndex >= 0; argIndex--) {
+  argIndex--
+  for (; argIndex >= 0; argIndex--) {
     // Skip args that weren't initialized (occurs when init failed partway through)
     if (state.argValues[argIndex] == null) {
       continue
@@ -281,7 +283,8 @@ export function retreatVariantNavigation<Args extends Obj>(
   // Arguments after belowMaxIndex can use full range since we're lexicographically below the limit.
   let belowMaxIndex = argsCount
   let resetSubsequent = false
-  for (let argIndex = 0; argIndex < argsCount; argIndex++) {
+  let argIndex = 0
+  for (; argIndex < argsCount; argIndex++) {
     // Recalculate argValues if null or if previous args changed (resetSubsequent)
     const argValuesIsNull = state.argValues[argIndex] == null
     if (argValuesIsNull || resetSubsequent) {
@@ -332,7 +335,8 @@ export function retreatVariantNavigation<Args extends Obj>(
     return true
   }
 
-  for (let argIndex = argsCount - 1; argIndex >= 0; argIndex--) {
+  argIndex--
+  for (; argIndex >= 0; argIndex--) {
     // Skip args that weren't initialized (occurs when init failed partway through)
     if (state.argValues[argIndex] == null) {
       continue
@@ -387,7 +391,12 @@ export function retreatVariantNavigation<Args extends Obj>(
   return false
 }
 
-/** Random pick within limits; returns true if successful */
+/**
+ * Random pick within limits; returns true if successful
+ * If the random variant turned out to be invalid,
+ * then we try to perform the advance or retreat operation,
+ * and they return the final result.
+ */
 export function randomVariantNavigation<Args extends Obj>(
   state: VariantNavigationState<Args>,
 ): boolean {
@@ -398,8 +407,11 @@ export function randomVariantNavigation<Args extends Obj>(
     state.argValues[argIndex] = calcArgValues(state, state.argsNames[argIndex])
     const maxIndex = getArgValueMaxIndex(state, argIndex, belowMax)
     if (maxIndex < 0) {
-      resetVariantNavigation(state)
-      return false
+      // Fall back to advance/retreat since no valid values for this combination of previous args
+      if (Math.random() < 0.5) {
+        return advanceVariantNavigation(state)
+      }
+      return retreatVariantNavigation(state)
     }
     state.indexes[argIndex] = Math.floor(Math.random() * (maxIndex + 1))
     state.args[state.argsNames[argIndex]] =
