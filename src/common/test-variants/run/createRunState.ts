@@ -33,8 +33,8 @@ export type RunState = {
   prevModeIndex: number
   modeChanged: boolean
 
-  // Time limit flag
-  timeLimitExceeded: boolean
+  // Global limit flag (limitTime or limitTests exceeded)
+  globalLimitExceeded: boolean
 }
 
 /** Create initial run state */
@@ -61,6 +61,6 @@ export function createRunState(
     prevGcIterationsAsync: 0,
     prevModeIndex: -1,
     modeChanged: false,
-    timeLimitExceeded: false,
+    globalLimitExceeded: false,
   }
 }

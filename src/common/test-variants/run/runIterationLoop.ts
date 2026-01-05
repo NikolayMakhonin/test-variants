@@ -8,11 +8,24 @@ import type { RunContext } from './RunContext'
 import { logModeChange, logProgress } from './runLogger'
 import type { TestFuncResult } from './types'
 
-function isTimeLimitExceeded(runContext: RunContext<any>): boolean {
+function isGlobalTimeLimitExceeded(runContext: RunContext<any>): boolean {
   const { options, state } = runContext
   const { limitTime, timeController } = options
   return (
     limitTime != null && timeController.now() - state.startTime >= limitTime
+  )
+}
+
+function isGlobalTestsLimitExceeded(runContext: RunContext<any>): boolean {
+  const { options, state } = runContext
+  const { limitTests } = options
+  return limitTests != null && state.tests >= limitTests
+}
+
+function isGlobalLimitExceeded(runContext: RunContext<any>): boolean {
+  return (
+    isGlobalTimeLimitExceeded(runContext) ||
+    isGlobalTestsLimitExceeded(runContext)
   )
 }
 
@@ -226,8 +239,8 @@ async function runCycleAsync<Args extends Obj>(
       await modeChangeResult
     }
 
-    if (isTimeLimitExceeded(runContext)) {
-      state.timeLimitExceeded = true
+    if (isGlobalLimitExceeded(runContext)) {
+      state.globalLimitExceeded = true
       break
     }
 
@@ -303,8 +316,8 @@ function runCycle<Args extends Obj>(
       return modeChangeResult.then(() => runCycleAsync(runContext, args))
     }
 
-    if (isTimeLimitExceeded(runContext)) {
-      state.timeLimitExceeded = true
+    if (isGlobalLimitExceeded(runContext)) {
+      state.globalLimitExceeded = true
       break
     }
 
@@ -342,7 +355,7 @@ async function runIterationLoopAsync<Args extends Obj>(
 
   while (
     variantsIterator.minCompletedCount < cycles &&
-    !state.timeLimitExceeded
+    !state.globalLimitExceeded
   ) {
     if (logOptions.debug) {
       logOptions.func(
@@ -351,8 +364,8 @@ async function runIterationLoopAsync<Args extends Obj>(
       )
     }
 
-    if (isTimeLimitExceeded(runContext)) {
-      state.timeLimitExceeded = true
+    if (isGlobalLimitExceeded(runContext)) {
+      state.globalLimitExceeded = true
       break
     }
 
@@ -369,8 +382,8 @@ async function runIterationLoopAsync<Args extends Obj>(
       )
     }
 
-    if (state.timeLimitExceeded || isTimeLimitExceeded(runContext)) {
-      state.timeLimitExceeded = true
+    if (state.globalLimitExceeded || isGlobalLimitExceeded(runContext)) {
+      state.globalLimitExceeded = true
       break
     }
 
@@ -423,7 +436,7 @@ export function runIterationLoop<Args extends Obj>(
 
   while (
     variantsIterator.minCompletedCount < cycles &&
-    !state.timeLimitExceeded
+    !state.globalLimitExceeded
   ) {
     if (logOptions.debug) {
       logOptions.func(
@@ -432,9 +445,8 @@ export function runIterationLoop<Args extends Obj>(
       )
     }
 
-    // TODO: integrate limitTests also
-    if (isTimeLimitExceeded(runContext)) {
-      state.timeLimitExceeded = true
+    if (isGlobalLimitExceeded(runContext)) {
+      state.globalLimitExceeded = true
       break
     }
 
@@ -455,8 +467,8 @@ export function runIterationLoop<Args extends Obj>(
       )
     }
 
-    if (state.timeLimitExceeded || isTimeLimitExceeded(runContext)) {
-      state.timeLimitExceeded = true
+    if (state.globalLimitExceeded || isGlobalLimitExceeded(runContext)) {
+      state.globalLimitExceeded = true
       break
     }
 
