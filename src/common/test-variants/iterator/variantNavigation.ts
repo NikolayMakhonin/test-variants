@@ -139,6 +139,7 @@ export function advanceVariantNavigation<Args extends Obj>(
   state: VariantNavigationState<Args>,
 ): boolean {
   let isInitial = false
+  let initComplete = true
   // First initialize argValues to first values if not yet done
   const argsCount = state.indexes.length
   // Arguments after belowMaxIndex can use full range since we're lexicographically below the limit.
@@ -156,8 +157,11 @@ export function advanceVariantNavigation<Args extends Obj>(
         argIndex > belowMaxIndex,
       )
       if (maxIndex < 0) {
-        resetVariantNavigation(state)
-        return false
+        // No valid values for this arg with current combination of previous args.
+        // Mark init as incomplete and let the increment section backtrack.
+        initComplete = false
+        state.indexes[argIndex] = -1
+        break
       }
       state.indexes[argIndex] = 0
       state.args[state.argsNames[argIndex]] = state.argValues[argIndex][0]
@@ -175,11 +179,15 @@ export function advanceVariantNavigation<Args extends Obj>(
     resetVariantNavigation(state)
     return false
   }
-  if (isInitial) {
+  if (isInitial && initComplete) {
     return true
   }
 
   for (let argIndex = argsCount - 1; argIndex >= 0; argIndex--) {
+    // Skip args that weren't initialized (occurs when init failed partway through)
+    if (state.argValues[argIndex] == null) {
+      continue
+    }
     let belowMax = argIndex > belowMaxIndex
     const maxIndex = getArgValueMaxIndex(state, argIndex, belowMax)
 
@@ -241,6 +249,7 @@ export function retreatVariantNavigation<Args extends Obj>(
   }
 
   let isInitial = false
+  let initComplete = true
   // First initialize argValues to last values if not yet done
   const argsCount = state.indexes.length
   // Arguments after belowMaxIndex can use full range since we're lexicographically below the limit.
@@ -258,8 +267,11 @@ export function retreatVariantNavigation<Args extends Obj>(
         argIndex > belowMaxIndex,
       )
       if (maxIndex < 0) {
-        resetVariantNavigation(state)
-        return false
+        // No valid values for this arg with current combination of previous args.
+        // Mark init as incomplete and let the decrement section backtrack.
+        initComplete = false
+        state.indexes[argIndex] = -1
+        break
       }
       state.indexes[argIndex] = maxIndex
       state.args[state.argsNames[argIndex]] =
@@ -274,11 +286,15 @@ export function retreatVariantNavigation<Args extends Obj>(
       }
     }
   }
-  if (isInitial && !isVariantNavigationAtLimit(state)) {
+  if (isInitial && initComplete && !isVariantNavigationAtLimit(state)) {
     return true
   }
 
   for (let argIndex = argsCount - 1; argIndex >= 0; argIndex--) {
+    // Skip args that weren't initialized (occurs when init failed partway through)
+    if (state.argValues[argIndex] == null) {
+      continue
+    }
     let belowMax = argIndex > belowMaxIndex
     const maxIndex = getArgValueMaxIndex(state, argIndex, belowMax)
 
@@ -329,16 +345,11 @@ export function retreatVariantNavigation<Args extends Obj>(
 export function randomVariantNavigation<Args extends Obj>(
   state: VariantNavigationState<Args>,
 ): boolean {
-  // First initialize argValues to first values if not yet done
   const argsCount = state.indexes.length
   let belowMax = false
   for (let argIndex = 0; argIndex < argsCount; argIndex++) {
-    if (state.argValues[argIndex] == null) {
-      state.argValues[argIndex] = calcArgValues(
-        state,
-        state.argsNames[argIndex],
-      )
-    }
+    // Always recalculate argValues since random picks different previous arg values each time
+    state.argValues[argIndex] = calcArgValues(state, state.argsNames[argIndex])
     const maxIndex = getArgValueMaxIndex(state, argIndex, belowMax)
     if (maxIndex < 0) {
       resetVariantNavigation(state)
