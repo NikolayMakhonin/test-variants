@@ -9,6 +9,7 @@ import {
   advanceVariantNavigation,
   createVariantNavigationState,
   resetVariantNavigation,
+  retreatVariantNavigation,
 } from 'src/common/test-variants/iterator/variantNavigation'
 import type { LimitArgOnError } from 'src/common'
 import { deepFreezeJsonLike } from 'src/common/test-variants/-tmp/-test/helpers/deepFreezeJsonLike'
@@ -241,6 +242,8 @@ describe('advanceVariantNavigation', () => {
       checkVariantNavigationState(state, '11', '01', '__')
       assert.isTrue(advanceVariantNavigation(state))
       checkVariantNavigationState(state, '11', '10', '__')
+      assert.isTrue(advanceVariantNavigation(state))
+      checkVariantNavigationState(state, '11', '11', '__')
       assert.isFalse(advanceVariantNavigation(state))
       checkVariantNavigationState(state, '11', '11', '__')
       assert.isFalse(advanceVariantNavigation(state))
