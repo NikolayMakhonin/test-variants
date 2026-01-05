@@ -107,7 +107,7 @@ export function getArgValueMaxIndex(
   return valuesCount - 1
 }
 
-/** Check if variant navigation is at limit or beyond */
+/** Check if variant navigation is at limit or beyond (lexicographic comparison) */
 function isVariantNavigationAtLimit<Args extends Obj>(
   state: VariantNavigationState<Args>,
 ): boolean {
@@ -117,10 +117,18 @@ function isVariantNavigationAtLimit<Args extends Obj>(
     if (argLimit == null) {
       return false
     }
-    if (state.indexes[argIndex] < argLimit) {
+    const index = state.indexes[argIndex]
+    if (index > argLimit) {
+      // Beyond limit in this arg - lexicographically beyond
+      return true
+    }
+    if (index < argLimit) {
+      // Below limit in this arg - lexicographically below
       return false
     }
+    // index === argLimit - continue to next arg
   }
+  // All args exactly at their limits
   return true
 }
 
