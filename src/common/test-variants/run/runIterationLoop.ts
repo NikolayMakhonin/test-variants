@@ -15,20 +15,24 @@ import { handleSyncError, handleParallelError } from './errorHandlers'
 
 /** Handle initial mode at iteration start */
 function handleInitialMode<Args extends Obj>(
-  ctx: RunContext<Args>,
+  runContext: RunContext<Args>,
 ): PromiseOrValue<void> {
-  const { config, variants, state } = ctx
+  const { config, variantsIterator, state } = runContext
   const { logOpts, onModeChange } = config
 
   if (logOpts.modeChange) {
-    logModeChange(logOpts, variants.modeConfig, variants.modeIndex)
+    logModeChange(
+      logOpts,
+      variantsIterator.modeConfig,
+      variantsIterator.modeIndex,
+    )
   }
-  state.prevModeIndex = variants.modeIndex
+  state.prevModeIndex = variantsIterator.modeIndex
 
-  if (onModeChange && variants.modeConfig) {
+  if (onModeChange && variantsIterator.modeConfig) {
     const result = onModeChange({
-      mode: variants.modeConfig,
-      modeIndex: variants.modeIndex,
+      mode: variantsIterator.modeConfig,
+      modeIndex: variantsIterator.modeIndex,
       tests: state.tests,
     })
     if (isPromiseLike(result)) return result
@@ -37,27 +41,27 @@ function handleInitialMode<Args extends Obj>(
 
 /** Handle mode change if mode index changed */
 function handleModeChangeIfNeeded<Args extends Obj>(
-  ctx: RunContext<Args>,
+  runContext: RunContext<Args>,
 ): PromiseOrValue<void> {
-  const { config, variants, state } = ctx
+  const { config, variantsIterator, state } = runContext
   const { logOpts, onModeChange } = config
 
-  if (variants.modeIndex === state.prevModeIndex) return
+  if (variantsIterator.modeIndex === state.prevModeIndex) return
 
   if (logOpts.debug) {
     logOpts.func(
       'debug',
-      `[debug] mode switch: modeIndex=${variants.modeIndex}, index=${variants.index}`,
+      `[debug] mode switch: modeIndex=${variantsIterator.modeIndex}, index=${variantsIterator.index}`,
     )
   }
 
   state.modeChanged = true
-  state.prevModeIndex = variants.modeIndex
+  state.prevModeIndex = variantsIterator.modeIndex
 
-  if (onModeChange && variants.modeConfig) {
+  if (onModeChange && variantsIterator.modeConfig) {
     const result = onModeChange({
-      mode: variants.modeConfig,
-      modeIndex: variants.modeIndex,
+      mode: variantsIterator.modeConfig,
+      modeIndex: variantsIterator.modeIndex,
       tests: state.tests,
     })
     if (isPromiseLike(result)) return result
@@ -72,9 +76,9 @@ type PeriodicTasksResult = { timeLimitExceeded: boolean }
 
 /** Handle periodic tasks: time limit check, progress logging, GC */
 function handlePeriodicTasks<Args extends Obj>(
-  ctx: RunContext<Args>,
+  runContext: RunContext<Args>,
 ): PromiseOrValue<PeriodicTasksResult> {
-  const { config, variants, state } = ctx
+  const { config, variantsIterator, state } = runContext
   const {
     logOpts,
     timeController,
@@ -100,7 +104,7 @@ function handlePeriodicTasks<Args extends Obj>(
     logProgress(
       { logOpts, timeController, findBestError: !!findBestError },
       state,
-      variants,
+      variantsIterator,
     )
   }
 
@@ -118,21 +122,21 @@ function handlePeriodicTasks<Args extends Obj>(
 
 /** Update state from test result */
 function updateStateFromResult(
-  ctx: RunContext<any>,
+  runContext: RunContext<any>,
   result: Exclude<TestFuncResult, void>,
 ): void {
-  ctx.state.iterationsAsync += result.iterationsAsync
-  ctx.state.iterations += result.iterationsSync + result.iterationsAsync
+  runContext.state.iterationsAsync += result.iterationsAsync
+  runContext.state.iterations += result.iterationsSync + result.iterationsAsync
 }
 
 type TestResult = { shouldContinue: boolean }
 
 /** Execute test sequentially; returns whether to continue to next iteration */
 function executeSequentialTest<Args extends Obj>(
-  ctx: RunContext<Args>,
+  runContext: RunContext<Args>,
   args: ArgsWithSeed<Args>,
 ): PromiseOrValue<TestResult> {
-  const { testRun, testOptions, abortControllerParallel, state } = ctx
+  const { testRun, testOptions, abortControllerParallel, state } = runContext
   const tests = state.tests
   state.tests++
 
@@ -148,11 +152,11 @@ function executeSequentialTest<Args extends Obj>(
             return { shouldContinue: true }
           }
           state.debugMode = false
-          updateStateFromResult(ctx, result)
+          updateStateFromResult(runContext, result)
           return { shouldContinue: false }
         },
         err =>
-          handleSyncError(ctx, state, args, err, tests).then(() => ({
+          handleSyncError(runContext, state, args, err, tests).then(() => ({
             shouldContinue: false,
           })),
       )
@@ -164,10 +168,10 @@ function executeSequentialTest<Args extends Obj>(
       return { shouldContinue: true }
     }
     state.debugMode = false
-    updateStateFromResult(ctx, promiseOrResult)
+    updateStateFromResult(runContext, promiseOrResult)
     return { shouldContinue: false }
   } catch (err) {
-    return handleSyncError(ctx, state, args, err, tests).then(() => ({
+    return handleSyncError(runContext, state, args, err, tests).then(() => ({
       shouldContinue: false,
     }))
   }
@@ -175,7 +179,7 @@ function executeSequentialTest<Args extends Obj>(
 
 /** Schedule test for parallel execution */
 function scheduleParallelTest<Args extends Obj>(
-  ctx: RunContext<Args>,
+  runContext: RunContext<Args>,
   args: ArgsWithSeed<Args>,
 ): void {
   const {
@@ -185,7 +189,7 @@ function scheduleParallelTest<Args extends Obj>(
     testOptions,
     abortControllerParallel,
     state,
-  } = ctx
+  } = runContext
   if (!pool) return
 
   const capturedArgs = args
@@ -208,9 +212,9 @@ function scheduleParallelTest<Args extends Obj>(
       }
 
       state.debugMode = false
-      updateStateFromResult(ctx, promiseOrResult)
+      updateStateFromResult(runContext, promiseOrResult)
     } catch (err) {
-      handleParallelError(ctx, state, capturedArgs, err, capturedTests)
+      handleParallelError(runContext, state, capturedArgs, err, capturedTests)
     } finally {
       void pool.release(1)
     }
@@ -223,9 +227,9 @@ function scheduleParallelTest<Args extends Obj>(
 
 /** Run the main iteration loop */
 export async function runIterationLoop<Args extends Obj>(
-  ctx: RunContext<Args>,
+  runContext: RunContext<Args>,
 ): Promise<void> {
-  const { config, variants, abortSignal, pool, state } = ctx
+  const { config, variantsIterator, abortSignal, pool, state } = runContext
   const {
     logOpts,
     abortSignalExternal,
@@ -235,22 +239,25 @@ export async function runIterationLoop<Args extends Obj>(
     parallel,
   } = config
 
-  variants.start()
+  variantsIterator.start()
   if (logOpts.debug) {
     logOpts.func(
       'debug',
-      `[debug] start(): cycleIndex=${variants.cycleIndex}, modeIndex=${variants.modeIndex}, minCompletedCount=${variants.minCompletedCount}, cycles=${cycles}`,
+      `[debug] start(): cycleIndex=${variantsIterator.cycleIndex}, modeIndex=${variantsIterator.modeIndex}, minCompletedCount=${variantsIterator.minCompletedCount}, cycles=${cycles}`,
     )
   }
 
-  const initialModeResult = handleInitialMode(ctx)
+  const initialModeResult = handleInitialMode(runContext)
   if (isPromiseLike(initialModeResult)) await initialModeResult
 
-  while (variants.minCompletedCount < cycles && !state.timeLimitExceeded) {
+  while (
+    variantsIterator.minCompletedCount < cycles &&
+    !state.timeLimitExceeded
+  ) {
     if (logOpts.debug) {
       logOpts.func(
         'debug',
-        `[debug] outer loop: minCompletedCount=${variants.minCompletedCount} < cycles=${cycles}`,
+        `[debug] outer loop: minCompletedCount=${variantsIterator.minCompletedCount} < cycles=${cycles}`,
       )
     }
 
@@ -266,15 +273,15 @@ export async function runIterationLoop<Args extends Obj>(
 
     while (!abortSignalExternal?.aborted) {
       if (!state.debugMode) {
-        const nextArgs = variants.next()
+        const nextArgs = variantsIterator.next()
         if (nextArgs == null) break
         args = nextArgs
       }
 
-      const modeChangeResult = handleModeChangeIfNeeded(ctx)
+      const modeChangeResult = handleModeChangeIfNeeded(runContext)
       if (isPromiseLike(modeChangeResult)) await modeChangeResult
 
-      const periodicResult = handlePeriodicTasks(ctx)
+      const periodicResult = handlePeriodicTasks(runContext)
       if (isPromiseLike(periodicResult)) {
         if ((await periodicResult).timeLimitExceeded) break
       } else if (periodicResult.timeLimitExceeded) {
@@ -284,7 +291,7 @@ export async function runIterationLoop<Args extends Obj>(
       if (abortSignalExternal?.aborted) continue
 
       if (!pool || abortSignal.aborted) {
-        const testResult = executeSequentialTest(ctx, args)
+        const testResult = executeSequentialTest(runContext, args)
         if (isPromiseLike(testResult)) {
           if ((await testResult).shouldContinue) continue
         } else if (testResult.shouldContinue) {
@@ -294,18 +301,18 @@ export async function runIterationLoop<Args extends Obj>(
         if (!pool.hold(1)) {
           await poolWait({ pool, count: 1, hold: true })
         }
-        scheduleParallelTest(ctx, args)
+        scheduleParallelTest(runContext, args)
       }
     }
 
     if (logOpts.debug) {
       logOpts.func(
         'debug',
-        `[debug] inner loop exited: modeIndex=${variants.modeIndex}, index=${variants.index}, count=${variants.count}, iterations=${state.iterations}`,
+        `[debug] inner loop exited: modeIndex=${variantsIterator.modeIndex}, index=${variantsIterator.index}, count=${variantsIterator.count}, iterations=${state.iterations}`,
       )
     }
 
-    state.prevCycleVariantsCount = variants.count
+    state.prevCycleVariantsCount = variantsIterator.count
     state.prevCycleDuration = timeController.now() - state.cycleStartTime
     state.cycleStartTime = timeController.now()
 
@@ -320,14 +327,14 @@ export async function runIterationLoop<Args extends Obj>(
     if (logOpts.debug) {
       logOpts.func(
         'debug',
-        `[debug] calling start() again: cycleIndex=${variants.cycleIndex}, minCompletedCount=${variants.minCompletedCount}`,
+        `[debug] calling start() again: cycleIndex=${variantsIterator.cycleIndex}, minCompletedCount=${variantsIterator.minCompletedCount}`,
       )
     }
-    variants.start()
+    variantsIterator.start()
     if (logOpts.debug) {
       logOpts.func(
         'debug',
-        `[debug] after start(): cycleIndex=${variants.cycleIndex}, modeIndex=${variants.modeIndex}, minCompletedCount=${variants.minCompletedCount}`,
+        `[debug] after start(): cycleIndex=${variantsIterator.cycleIndex}, modeIndex=${variantsIterator.modeIndex}, minCompletedCount=${variantsIterator.minCompletedCount}`,
       )
     }
   }

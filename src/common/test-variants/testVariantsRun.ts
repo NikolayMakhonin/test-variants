@@ -55,7 +55,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   if (store) {
     await store.replay({
       testRun,
-      variants,
+      variantsIterator,
       testOptions,
       findBestErrorEnabled: !!findBestError,
     })
@@ -72,7 +72,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   const runContext: RunContext<Args> = {
     config,
     testRun,
-    variants,
+    variantsIterator,
     testOptions,
     abortControllerParallel,
     abortSignal,
