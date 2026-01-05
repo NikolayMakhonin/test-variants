@@ -883,6 +883,34 @@ const testVariantsComplex = createTestVariants(
 
       const indexes = formatIndexes(state.indexes)
 
+      // Early check: verify state consistency after navigation
+      // This catches the resetSubsequent bug where args become stale after clamping
+      if (result) {
+        const checkArgs: Partial<ComplexArgs> = {}
+        for (let i = 0; i < argsCount; i++) {
+          const argName = state.argsNames[i] as keyof ComplexArgs
+          const template = state.templates.templates[argName]
+          const templateValues =
+            typeof template === 'function'
+              ? (template as (args: ComplexArgs) => number[])(
+                  checkArgs as ComplexArgs,
+                )
+              : (template as number[])
+          const idx = state.indexes[i]
+          assert.isTrue(
+            idx >= 0 && idx < templateValues.length,
+            `${argName}: index ${idx} out of bounds [0, ${templateValues.length})`,
+          )
+          const expectedVal = templateValues[idx]
+          assert.strictEqual(
+            state.args[argName],
+            expectedVal,
+            `${argName}: args[${argName}]=${state.args[argName]} but template[${idx}]=${expectedVal}`,
+          )
+          checkArgs[argName] = expectedVal
+        }
+      }
+
       if (result) {
         hitVariants.add(indexes)
 
@@ -909,7 +937,8 @@ const testVariantsComplex = createTestVariants(
         }
 
         // Invariant: indexes are within recalculated template bounds
-        // This catches stale argValues and missing resetSubsequent bugs
+        // and args match recalculated values.
+        // This catches stale argValues and missing resetSubsequent bugs.
         const recalcArgs: Partial<ComplexArgs> = {}
         for (let i = 0; i < argsCount; i++) {
           const argName = state.argsNames[i]
@@ -924,7 +953,13 @@ const testVariantsComplex = createTestVariants(
               `index(${valueIndex}) >= recalculated values.length(${values.length}) for ${argName}`,
             )
           }
-          recalcArgs[argName] = values[valueIndex]
+          const expectedValue = values[valueIndex]
+          if (state.args[argName] !== expectedValue) {
+            assert.fail(
+              `args[${argName}](${state.args[argName]}) !== recalculated value(${expectedValue}) at index ${valueIndex}`,
+            )
+          }
+          recalcArgs[argName] = expectedValue
         }
 
         // Invariant: order (advance/retreat/random)
