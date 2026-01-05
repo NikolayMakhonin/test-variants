@@ -103,6 +103,23 @@ export function getArgValueMaxIndex(
   return valuesLen - 1
 }
 
+/** Check if variant navigation is at limit or beyond */
+function isVariantNavigationAtLimit<Args extends Obj>(
+  state: VariantNavigationState<Args>,
+): boolean {
+  const argsCount = state.indexes.length
+  for (let argIndex = 0; argIndex < argsCount; argIndex++) {
+    const limit = state.argLimits[argIndex]
+    if (limit == null) {
+      return false
+    }
+    if (state.indexes[argIndex] < limit) {
+      return false
+    }
+  }
+  return true
+}
+
 /**
  * Reset variant navigation to initial state
  * Variant position will be undefined
@@ -172,6 +189,10 @@ export function advanceVariantNavigation<Args extends Obj>(
       }
     }
   }
+  if (isVariantNavigationAtLimit(state)) {
+    resetVariantNavigation(state)
+    return false
+  }
   if (isInitial) {
     return true
   }
@@ -213,10 +234,17 @@ export function advanceVariantNavigation<Args extends Obj>(
         }
       }
       if (argIndex >= argsCount) {
+        if (isVariantNavigationAtLimit(state)) {
+          resetVariantNavigation(state)
+          return false
+        }
         return true
       }
     }
   }
+
+  resetVariantNavigation(state)
+
   return false
 }
 
@@ -240,28 +268,36 @@ function fixVariantNavigation<Args extends Obj>(
 export function retreatVariantNavigation<Args extends Obj>(
   state: VariantNavigationState<Args>,
 ): boolean {
-  fixVariantNavigation(state)
-
-  // First initialize argValues if not yet done
+  let isInitial = false
+  // First initialize argValues to last values if not yet done
   const argsCount = state.indexes.length
+  // Arguments after belowMaxIndex can use full range since we're lexicographically below the limit.
+  let belowMaxIndex = argsCount
   for (let argIndex = 0; argIndex < argsCount; argIndex++) {
     if (state.argValues[argIndex] == null) {
+      isInitial = true
       state.argValues[argIndex] = calcArgValues(
         state,
         state.argsNames[argIndex],
       )
+      const maxIndex = getArgValueMaxIndex(
+        state,
+        argIndex,
+        argIndex > belowMaxIndex,
+      )
+      if (maxIndex < 0) {
+        return false
+      }
+      state.indexes[argIndex] = maxIndex
+      state.args[state.argsNames[argIndex]] =
+        state.argValues[argIndex][maxIndex]
+      if (state.indexes[argIndex] < maxIndex) {
+        belowMaxIndex = argIndex
+      }
     }
   }
-
-  // Find first argument below its limited max (belowMaxIndex).
-  // Arguments after belowMaxIndex can use full range since we're lexicographically below the limit.
-  let belowMaxIndex = argsCount
-  for (let argIndex = 0; argIndex < argsCount; argIndex++) {
-    const maxIndex = getArgValueMaxIndex(state, argIndex, false)
-    if (state.indexes[argIndex] < maxIndex) {
-      belowMaxIndex = argIndex
-      break
-    }
+  if (isInitial && !isVariantNavigationAtLimit(state)) {
+    return true
   }
 
   for (let argIndex = argsCount - 1; argIndex >= 0; argIndex--) {
@@ -306,56 +342,34 @@ export function retreatVariantNavigation<Args extends Obj>(
       }
     }
   }
+
+  resetVariantNavigation(state)
+
   return false
 }
 
 /** Random pick within limits; returns true if successful */
-export function randomPickVariantNavigation<Args extends Obj>(
+export function randomVariantNavigation<Args extends Obj>(
   state: VariantNavigationState<Args>,
 ): boolean {
-  const keysCount = state.argsNames.length
-
-  if (keysCount <= 0) {
-    return false
-  }
-
-  state.argValues[0] = calcArgValues(state, state.argsNames[0])
-
-  // Once we pick a value strictly below the limit at some key,
-  // all subsequent state.argsNames can have any value (lexicographically less than limit).
-  // Only relevant when state.limitArgOnError is false.
+  // First initialize argValues to first values if not yet done
+  const argsCount = state.indexes.length
   let belowMax = false
-
-  for (let keyIndex = 0; keyIndex < keysCount; keyIndex++) {
-    const len = state.argValues[keyIndex].length
-    if (len === 0) {
-      return false
-    }
-
-    let maxIndexExclusive: number
-    if (!belowMax || state.limitArgOnError) {
-      maxIndexExclusive = getArgValueMaxIndex(state, keyIndex)
-    } else {
-      maxIndexExclusive = len
-    }
-    if (maxIndexExclusive <= 0) {
-      return false
-    }
-
-    const randomIndex = Math.floor(Math.random() * maxIndexExclusive)
-    state.indexes[keyIndex] = randomIndex
-    state.args[state.argsNames[keyIndex]] =
-      state.argValues[keyIndex][randomIndex]
-
-    if (!belowMax && randomIndex < maxIndexExclusive - 1) {
-      belowMax = true
-    }
-
-    if (keyIndex + 1 < keysCount) {
-      state.argValues[keyIndex + 1] = calcArgValues(
+  for (let argIndex = 0; argIndex < argsCount; argIndex++) {
+    if (state.argValues[argIndex] == null) {
+      state.argValues[argIndex] = calcArgValues(
         state,
-        state.argsNames[keyIndex + 1],
+        state.argsNames[argIndex],
       )
+    }
+    const maxIndex = getArgValueMaxIndex(state, argIndex, belowMax)
+    if (maxIndex < 0) {
+      return false
+    }
+    state.indexes[argIndex] = Math.floor(Math.random() * (maxIndex + 1))
+    state.args[state.argsNames[argIndex]] = state.argValues[argIndex][0]
+    if (state.indexes[argIndex] < maxIndex) {
+      belowMax = true
     }
   }
 
