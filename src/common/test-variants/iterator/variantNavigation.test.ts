@@ -234,18 +234,20 @@ function _createVariantNavigationState(
 function checkVariantNavigationState(
   state: VariantNavigationState<any>,
   valuesPattern: string,
-  indexesPattern: string,
+  indexesPattern: string | null,
   limitPattern: string,
 ): void {
-  const expectedIndexes = parseIndexes(indexesPattern)
-  assert.deepStrictEqual(
-    formatIndexes(state.indexes),
-    indexesPattern,
-    'state.indexes format',
-  )
-  assert.deepStrictEqual(state.indexes, expectedIndexes, 'state.indexes')
+  if (indexesPattern != null) {
+    const expectedIndexes = parseIndexes(indexesPattern)
+    assert.deepStrictEqual(
+      formatIndexes(state.indexes),
+      indexesPattern,
+      'state.indexes format',
+    )
+    assert.deepStrictEqual(state.indexes, expectedIndexes, 'state.indexes')
+  }
 
-  const expectedArgs = createArgs(expectedIndexes, state.templates.templates)
+  const expectedArgs = createArgs(state.indexes, state.templates.templates)
   assert.deepStrictEqual(state.args, expectedArgs, 'state.args')
 
   const expectedValues = parseTemplatesValues(valuesPattern)
@@ -491,6 +493,7 @@ describe('randomVariantNavigation', () => {
       checkVariantNavigationState(state, '_', '_', '_')
       for (let i = 0; i < 1000; i++) {
         assert.isTrue(randomVariantNavigation(state))
+        checkVariantNavigationState(state, '2', null, '_')
         actualStates.add(formatState(state))
       }
       resetVariantNavigation(state)
@@ -513,6 +516,7 @@ describe('randomVariantNavigation', () => {
       checkVariantNavigationState(state, '__', '__', '__')
       for (let i = 0; i < 1000; i++) {
         assert.isTrue(randomVariantNavigation(state))
+        checkVariantNavigationState(state, '11', null, '__')
         actualStates.add(formatState(state))
       }
       resetVariantNavigation(state)
