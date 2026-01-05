@@ -686,46 +686,62 @@ const funcFalse = () => false
 
 const testVariants = createTestVariants(
   ({
-    argsPattern,
+    valuesPattern,
     extraPatterns,
     limitPattern,
     setLimitAtIteration,
-    limitOnError,
+    limitArgOnError,
     includeErrorVariant,
     changeMethod,
   }: {
-    argsPattern: string
+    valuesPattern: string
     extraPatterns: string[]
     limitPattern: string
     setLimitAtIteration: null | number
-    limitOnError: null | boolean | LimitArgOnError
+    limitArgOnError: null | boolean | LimitArgOnError
     includeErrorVariant: boolean
     changeMethod: 'advance' | 'retreat' | 'random'
   }) => {
-    const valuesEmpty = '_'.repeat(argsPattern.length)
-    const indexesEmpty = '_'.repeat(argsPattern.length)
+    const valuesEmpty = '_'.repeat(valuesPattern.length)
+    const indexesEmpty = '_'.repeat(valuesPattern.length)
     const limitEmpty = '_'.repeat(limitPattern.length)
 
     const state = _createVariantNavigationState(
-      argsPattern,
+      valuesPattern,
       extraPatterns,
       limitEmpty,
     )
-    state.limitArgOnError = limitOnError
+    state.limitArgOnError = limitArgOnError
     state.includeErrorVariant = includeErrorVariant
 
     checkVariantNavigationState(state, valuesEmpty, indexesEmpty, limitEmpty)
     resetVariantNavigation(state)
     checkVariantNavigationState(state, valuesEmpty, indexesEmpty, limitEmpty)
 
+    const maxIndexes =
+      extraPatterns.length === 0
+        ? valuesPattern
+        : valuesPattern
+            .split('')
+            .map(o => String(Number(o) + extraPatterns.length))
+            .join('')
+    const limitNeverHit =
+      setLimitAtIteration == null ||
+      limitPattern > maxIndexes ||
+      limitPattern
+        .split('')
+        .some((o, i) => o === '_' || Number(o) > Number(maxIndexes[i]))
     let prevIndexes: string = formatIndexes(state.indexes)
     let prevValues: string = formatTemplatesValues(state.argValues)
     let countIncrements = 0
     let countDecrements = 0
     let countEquals = 0
-    let iteration = 0
+    let limitHit = false
+    const notHitIndexes = valuesPattern
+      .split('')
+      .map(o => new Set(Array.from({ length: Number(o) + 1 }, (_, i) => i)))
     const countIterations = 5
-    for (; iteration < countIterations; iteration++) {
+    for (let iteration = 0; iteration < countIterations; iteration++) {
       // set limit at iteration
       if (setLimitAtIteration != null && iteration === setLimitAtIteration) {
         state.argLimits = parseLimits(limitPattern)
@@ -744,6 +760,9 @@ const testVariants = createTestVariants(
 
       const indexes = formatIndexes(state.indexes)
       const values = formatTemplatesValues(state.argValues)
+      state.indexes.forEach((index, i) => {
+        notHitIndexes[i].delete(index)
+      })
 
       if (result) {
         // check order
@@ -779,15 +798,11 @@ const testVariants = createTestVariants(
           }
         }
       } else {
-        if (prevIndexes !== indexesEmpty) {
-          assert.fail(
-            `prevIndexes(${prevIndexes}) !== indexesEmpty(${indexesEmpty})`,
-          )
+        if (indexes !== indexesEmpty) {
+          assert.fail(`indexes(${indexes}) !== indexesEmpty(${indexesEmpty})`)
         }
-        if (prevValues !== valuesEmpty) {
-          assert.fail(
-            `prevValues(${prevValues}) !== valuesEmpty(${valuesEmpty})`,
-          )
+        if (values !== valuesEmpty) {
+          assert.fail(`values(${values}) !== valuesEmpty(${valuesEmpty})`)
         }
       }
 
@@ -797,6 +812,9 @@ const testVariants = createTestVariants(
           if (includeErrorVariant) {
             if (indexes > limitPattern) {
               assert.fail(`indexes(${indexes}) > limitPattern(${limitPattern})`)
+            }
+            if (indexes === limitPattern) {
+              limitHit = true
             }
           } else {
             if (indexes >= limitPattern) {
@@ -810,6 +828,32 @@ const testVariants = createTestVariants(
 
       prevIndexes = indexes
       prevValues = values
+    }
+
+    if (
+      setLimitAtIteration == null &&
+      (changeMethod !== 'random' || countIterations > 50)
+    ) {
+      notHitIndexes.forEach((set, i) => {
+        if (set.size > 0) {
+          assert.fail(
+            `Not hit indexes for arg${i}: ${Array.from(set).join(', ')}`,
+          )
+        }
+      })
+    }
+
+    if (
+      setLimitAtIteration != null &&
+      !limitNeverHit &&
+      limitPattern &&
+      valuesPattern >= limitPattern &&
+      countIterations > setLimitAtIteration &&
+      includeErrorVariant &&
+      (changeMethod !== 'random' || countIterations > 50) &&
+      !limitHit
+    ) {
+      assert.fail(`limitPattern(${limitPattern}) not hit`)
     }
 
     if (countIterations > 50) {
@@ -829,15 +873,19 @@ describe('variantNavigation variants', () => {
     const patternsAll = [...patterns1, ...patterns2]
 
     await testVariants({
-      argsPattern: patternsAll,
-      extraPatterns: ({ argsPattern }) => {
-        return [[], argsPattern.length === 1 ? extra1 : extra2]
-      },
-      limitPattern: ({ argsPattern }) => {
-        return argsPattern.length === 1 ? patterns1 : patterns2
+      valuesPattern: patternsAll,
+      extraPatterns: ({ valuesPattern }) => {
+        return [[], valuesPattern.length === 1 ? extra1 : extra2]
       },
       setLimitAtIteration: [null, 0, 1, 2],
-      limitOnError: [null, true, false, funcTrue, funcFalse],
+      limitPattern: ({ setLimitAtIteration, valuesPattern }) => {
+        return setLimitAtIteration == null
+          ? ['_'.repeat(valuesPattern.length)]
+          : valuesPattern.length === 1
+            ? patterns1
+            : patterns2
+      },
+      limitArgOnError: [null, true, false, funcTrue, funcFalse],
       includeErrorVariant: [false, true],
       changeMethod: ['advance', 'retreat', 'random'],
     })()

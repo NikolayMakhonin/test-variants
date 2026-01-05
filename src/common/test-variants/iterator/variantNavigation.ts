@@ -129,7 +129,7 @@ function isVariantNavigationAtLimit<Args extends Obj>(
     // index === argLimit - continue to next arg
   }
   // All args exactly at their limits
-  return true
+  return !state.includeErrorVariant
 }
 
 /** Reset variant navigation to initial state; variant position will be undefined */
