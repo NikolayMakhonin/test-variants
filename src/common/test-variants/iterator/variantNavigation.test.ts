@@ -192,7 +192,6 @@ function _createVariantNavigationState(
     'argsNames',
     'indexes',
     'argValues',
-    'argLimits',
     'templates',
     'equals',
   )
@@ -727,6 +726,11 @@ const testVariants = createTestVariants(
     let iteration = 0
     const countIterations = 5
     for (; iteration < countIterations; iteration++) {
+      // set limit at iteration
+      if (setLimitAtIteration != null && iteration === setLimitAtIteration) {
+        state.argLimits = parseLimits(limitPattern)
+      }
+
       let result: boolean
       if (changeMethod === 'advance') {
         result = advanceVariantNavigation(state)
@@ -743,7 +747,7 @@ const testVariants = createTestVariants(
 
       if (result) {
         // check order
-        if (prevValues === valuesEmpty || prevIndexes === indexesEmpty) {
+        if (prevIndexes === indexesEmpty || prevValues === valuesEmpty) {
           if (prevIndexes !== indexesEmpty) {
             assert.fail(
               `prevIndexes(${prevIndexes}) !== indexesEmpty(${indexesEmpty})`,
@@ -771,6 +775,34 @@ const testVariants = createTestVariants(
               countDecrements++
             } else {
               countEquals++
+            }
+          }
+        }
+      } else {
+        if (prevIndexes !== indexesEmpty) {
+          assert.fail(
+            `prevIndexes(${prevIndexes}) !== indexesEmpty(${indexesEmpty})`,
+          )
+        }
+        if (prevValues !== valuesEmpty) {
+          assert.fail(
+            `prevValues(${prevValues}) !== valuesEmpty(${valuesEmpty})`,
+          )
+        }
+      }
+
+      // check limit
+      if (setLimitAtIteration != null && iteration >= setLimitAtIteration) {
+        if (limitPattern !== limitEmpty && indexes !== indexesEmpty) {
+          if (includeErrorVariant) {
+            if (indexes > limitPattern) {
+              assert.fail(`indexes(${indexes}) > limitPattern(${limitPattern})`)
+            }
+          } else {
+            if (indexes >= limitPattern) {
+              assert.fail(
+                `indexes(${indexes}) >= limitPattern(${limitPattern})`,
+              )
             }
           }
         }
