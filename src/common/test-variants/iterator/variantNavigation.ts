@@ -155,35 +155,41 @@ export function advanceVariantNavigation<Args extends Obj>(
   const argsCount = state.indexes.length
   // Arguments after belowMaxIndex can use full range since we're lexicographically below the limit.
   let belowMaxIndex = argsCount
+  let resetSubsequent = false
   for (let argIndex = 0; argIndex < argsCount; argIndex++) {
-    if (state.argValues[argIndex] == null) {
+    const argValuesIsNull = state.argValues[argIndex] == null
+    if (argValuesIsNull) {
       isInitial = true
       state.argValues[argIndex] = calcArgValues(
         state,
         state.argsNames[argIndex],
       )
-      const maxIndex = getArgValueMaxIndex(
-        state,
-        argIndex,
-        argIndex > belowMaxIndex,
-      )
-      if (maxIndex < 0) {
-        // No valid values for this arg with current combination of previous args.
-        // Mark init as incomplete and let the increment section backtrack.
-        initComplete = false
-        state.indexes[argIndex] = -1
-        break
-      }
+    }
+
+    const maxIndex = getArgValueMaxIndex(
+      state,
+      argIndex,
+      argIndex > belowMaxIndex,
+    )
+    if (maxIndex < 0) {
+      // No valid values for this arg with current combination of previous args.
+      // Mark init as incomplete and let the increment section backtrack.
+      initComplete = false
+      state.indexes[argIndex] = -1
+      break
+    }
+
+    if (argValuesIsNull) {
       state.indexes[argIndex] = 0
       state.args[state.argsNames[argIndex]] = state.argValues[argIndex][0]
-      if (belowMaxIndex === argsCount && state.indexes[argIndex] < maxIndex) {
-        belowMaxIndex = argIndex
-      }
-    } else if (belowMaxIndex === argsCount) {
-      const maxIndex = getArgValueMaxIndex(state, argIndex, false)
-      if (state.indexes[argIndex] < maxIndex) {
-        belowMaxIndex = argIndex
-      }
+    }
+
+    if (resetSubsequent || state.indexes[argIndex] > maxIndex) {
+      state.indexes[argIndex] = maxIndex
+      resetSubsequent = true
+    }
+    if (belowMaxIndex === argsCount && state.indexes[argIndex] < maxIndex) {
+      belowMaxIndex = argIndex
     }
   }
   if (isVariantNavigationAtLimit(state)) {
@@ -265,36 +271,42 @@ export function retreatVariantNavigation<Args extends Obj>(
   const argsCount = state.indexes.length
   // Arguments after belowMaxIndex can use full range since we're lexicographically below the limit.
   let belowMaxIndex = argsCount
+  let resetSubsequent = false
   for (let argIndex = 0; argIndex < argsCount; argIndex++) {
-    if (state.argValues[argIndex] == null) {
+    const argValuesIsNull = state.argValues[argIndex] == null
+    if (argValuesIsNull) {
       isInitial = true
       state.argValues[argIndex] = calcArgValues(
         state,
         state.argsNames[argIndex],
       )
-      const maxIndex = getArgValueMaxIndex(
-        state,
-        argIndex,
-        argIndex > belowMaxIndex,
-      )
-      if (maxIndex < 0) {
-        // No valid values for this arg with current combination of previous args.
-        // Mark init as incomplete and let the decrement section backtrack.
-        initComplete = false
-        state.indexes[argIndex] = -1
-        break
-      }
+    }
+
+    const maxIndex = getArgValueMaxIndex(
+      state,
+      argIndex,
+      argIndex > belowMaxIndex,
+    )
+    if (maxIndex < 0) {
+      // No valid values for this arg with current combination of previous args.
+      // Mark init as incomplete and let the decrement section backtrack.
+      initComplete = false
+      state.indexes[argIndex] = -1
+      break
+    }
+
+    if (argValuesIsNull) {
       state.indexes[argIndex] = maxIndex
       state.args[state.argsNames[argIndex]] =
         state.argValues[argIndex][maxIndex]
-      if (belowMaxIndex === argsCount && state.indexes[argIndex] < maxIndex) {
-        belowMaxIndex = argIndex
-      }
-    } else if (belowMaxIndex === argsCount) {
-      const maxIndex = getArgValueMaxIndex(state, argIndex, false)
-      if (state.indexes[argIndex] < maxIndex) {
-        belowMaxIndex = argIndex
-      }
+    }
+
+    if (resetSubsequent || state.indexes[argIndex] > maxIndex) {
+      state.indexes[argIndex] = maxIndex
+      resetSubsequent = true
+    }
+    if (belowMaxIndex === argsCount && state.indexes[argIndex] < maxIndex) {
+      belowMaxIndex = argIndex
     }
   }
   if (isInitial && initComplete && !isVariantNavigationAtLimit(state)) {
