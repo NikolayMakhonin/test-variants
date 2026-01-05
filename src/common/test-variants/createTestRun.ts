@@ -18,7 +18,6 @@ const DEBUG_PAUSE_THRESHOLD_MS = 50
 /** Maximum debug iterations before throwing error */
 const MAX_DEBUG_ITERATIONS = 5
 
-/** Normalize test result to standard format */
 function normalizeTestResult(
   value: TestVariantsTestResult,
   isAsync: boolean,
@@ -26,7 +25,7 @@ function normalizeTestResult(
   if (typeof value === 'number') {
     return { iterationsAsync: 0, iterationsSync: value }
   }
-  if (value !== null && typeof value === 'object') {
+  if (value != null && typeof value === 'object') {
     return value
   }
   return isAsync
@@ -40,21 +39,22 @@ export function createTestRun<Args extends Obj>(
 ): TestVariantsTestRun<Args> {
   const logOptions = options.log
 
-  let errorEvent: ErrorEvent<Args> | null = null
-  let debugIteration = 0
+  let firstError: ErrorEvent<Args> | null = null
+  let debugIterations = 0
 
   /**
-   * Error handler with debug mode support.
-   * When debugger pauses execution and developer resumes (elapsed > threshold),
-   * returns void instead of throwing to repeat the same variant for debugging.
+   * Handle test error with debugger support.
+   *
+   * Returns void to signal "repeat same variant" when:
+   * - Debugger is attached (pause > threshold)
+   * - Debug iteration limit not reached
+   *
+   * Otherwise throws the error.
    */
-  function onError(error: unknown, args: Args, tests: number): void {
-    if (errorEvent == null) {
-      errorEvent = {
-        error,
-        args,
-        tests,
-      }
+  function handleTestError(error: unknown, args: Args, tests: number): void {
+    if (firstError == null) {
+      firstError = { error, args, tests }
+
       if (logOptions.error) {
         logOptions.func(
           'error',
@@ -63,27 +63,30 @@ export function createTestRun<Args extends Obj>(
       }
     }
 
-    const startTime = Date.now()
+    const beforeDebugger = Date.now()
     // eslint-disable-next-line no-debugger
     debugger
-    const elapsed = Date.now() - startTime
+    const pauseDuration = Date.now() - beforeDebugger
+
+    // Debugger was attached and user stepped through - repeat variant for debugging
     if (
-      elapsed > DEBUG_PAUSE_THRESHOLD_MS &&
-      debugIteration < MAX_DEBUG_ITERATIONS
+      pauseDuration > DEBUG_PAUSE_THRESHOLD_MS &&
+      debugIterations < MAX_DEBUG_ITERATIONS
     ) {
       logOptions.func(
         'debug',
-        `[test-variants] debug iteration: ${debugIteration}`,
+        `[test-variants] debug iteration: ${debugIterations}`,
       )
-      debugIteration++
+      debugIterations++
+      // Return void to signal debug mode (repeat same variant)
       return
     }
 
     if (options.onError) {
-      options.onError(errorEvent)
+      options.onError(firstError)
     }
 
-    throw errorEvent.error
+    throw firstError.error
   }
 
   return function testRun(
@@ -97,13 +100,13 @@ export function createTestRun<Args extends Obj>(
       if (isPromiseLike(promiseOrResult)) {
         return promiseOrResult.then(
           value => normalizeTestResult(value, true),
-          err => onError(err, args, tests),
+          err => handleTestError(err, args, tests),
         )
       }
 
       return normalizeTestResult(promiseOrResult, false)
     } catch (err) {
-      return onError(err, args, tests)
+      return handleTestError(err, args, tests)
     }
   }
 }

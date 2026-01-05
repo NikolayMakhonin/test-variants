@@ -20,4 +20,7 @@
 
 @ai/project/base/docs/Decision_Map.md
 @ai/project/test-variants/docs/Decision_Map.md
+
 @README.md
+
+The only truth source and invariant of this project is the README.md file at the root of the repository. Always follow its instructions and rules first and foremost. All the existing code and code you write must fully comply with it.

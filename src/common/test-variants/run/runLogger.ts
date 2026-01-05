@@ -64,64 +64,63 @@ export function logModeChange(
   )
 }
 
-function calcEstimatedCycleTime(
-  cycleElapsed: number,
-  index: number,
-  max: number,
-  prevCycleDuration: number | null,
-  prevCycleVariantsCount: number | null,
+function estimateCycleTime(
+  elapsed: number,
+  current: number,
+  total: number,
+  prevDuration: number | null,
+  prevCount: number | null,
 ): number {
-  if (index <= 0) {
+  if (current <= 0) {
     return 0
   }
 
-  // Use previous cycle data if available and current progress is within previous bounds
+  // Use previous cycle data when available and current progress is within bounds
   if (
-    prevCycleDuration != null &&
-    prevCycleVariantsCount != null &&
-    index < prevCycleVariantsCount &&
-    cycleElapsed < prevCycleDuration
+    prevDuration != null &&
+    prevCount != null &&
+    current < prevCount &&
+    elapsed < prevDuration
   ) {
-    const remainingCount = prevCycleVariantsCount - index
-    const remainingDuration = prevCycleDuration - cycleElapsed
-    const speedPerVariant = remainingDuration / remainingCount
-    return cycleElapsed + (max - index) * speedPerVariant
+    const remainingCount = prevCount - current
+    const remainingTime = prevDuration - elapsed
+    const timePerVariant = remainingTime / remainingCount
+    return elapsed + (total - current) * timePerVariant
   }
 
-  return (cycleElapsed * max) / index
+  // Linear extrapolation from current progress
+  return (elapsed * total) / current
 }
 
 function formatVariantProgress(runContext: RunContext<Obj>): string {
   const { options, variantsIterator, state } = runContext
   const { findBestError, timeController } = options
-  const cycleElapsed = timeController.now() - state.cycleStartTime
+  const elapsed = timeController.now() - state.cycleStartTime
 
   if (!findBestError) {
-    return `variant: ${variantsIterator.index} (${formatDuration(cycleElapsed)})`
+    return `variant: ${variantsIterator.index} (${formatDuration(elapsed)})`
   }
 
-  const msg = `cycle: ${variantsIterator.cycleIndex}, variant: ${variantsIterator.index}`
+  const prefix = `cycle: ${variantsIterator.cycleIndex}, variant: ${variantsIterator.index}`
 
-  let max = variantsIterator.count
-  if (max != null && state.prevCycleVariantsCount != null) {
-    max = Math.min(max, state.prevCycleVariantsCount)
+  let total = variantsIterator.count
+  if (total != null && state.prevCycleVariantsCount != null) {
+    total = Math.min(total, state.prevCycleVariantsCount)
   }
 
-  if (max == null) {
-    return msg + ` (${formatDuration(cycleElapsed)})`
+  if (total == null) {
+    return `${prefix} (${formatDuration(elapsed)})`
   }
 
-  const estimated = calcEstimatedCycleTime(
-    cycleElapsed,
+  const estimated = estimateCycleTime(
+    elapsed,
     variantsIterator.index,
-    max,
+    total,
     state.prevCycleDuration,
     state.prevCycleVariantsCount,
   )
-  return (
-    msg +
-    `/${max} (${formatDuration(cycleElapsed)}/${formatDuration(estimated)})`
-  )
+
+  return `${prefix}/${total} (${formatDuration(elapsed)}/${formatDuration(estimated)})`
 }
 
 export function logProgress(runContext: RunContext<Obj>): void {
