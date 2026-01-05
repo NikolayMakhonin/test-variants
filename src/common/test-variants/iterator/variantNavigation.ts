@@ -156,6 +156,7 @@ export function advanceVariantNavigation<Args extends Obj>(
         argIndex > belowMaxIndex,
       )
       if (maxIndex < 0) {
+        resetVariantNavigation(state)
         return false
       }
       state.indexes[argIndex] = 0
@@ -225,7 +226,6 @@ export function advanceVariantNavigation<Args extends Obj>(
   }
 
   resetVariantNavigation(state)
-
   return false
 }
 
@@ -258,6 +258,7 @@ export function retreatVariantNavigation<Args extends Obj>(
         argIndex > belowMaxIndex,
       )
       if (maxIndex < 0) {
+        resetVariantNavigation(state)
         return false
       }
       state.indexes[argIndex] = maxIndex
@@ -321,7 +322,6 @@ export function retreatVariantNavigation<Args extends Obj>(
   }
 
   resetVariantNavigation(state)
-
   return false
 }
 
@@ -341,6 +341,7 @@ export function randomVariantNavigation<Args extends Obj>(
     }
     const maxIndex = getArgValueMaxIndex(state, argIndex, belowMax)
     if (maxIndex < 0) {
+      resetVariantNavigation(state)
       return false
     }
     state.indexes[argIndex] = Math.floor(Math.random() * (maxIndex + 1))
