@@ -22,7 +22,9 @@ function saveArgs<Args extends Obj>(
 /**
  * Handle test error in parallel execution mode.
  *
- * In findBestError mode: adds limit to iterator, saves args, aborts parallel tests.
+ * In findBestError mode:
+ * - With sequentialOnError=true: adds limit, saves args, aborts parallel (fall back to sequential)
+ * - With sequentialOnError=false: adds limit, saves args, continues parallel with new limits
  * Without findBestError: saves args and aborts with error.
  */
 export function handleErrorParallel<Args extends Obj>(
@@ -31,18 +33,34 @@ export function handleErrorParallel<Args extends Obj>(
   error: unknown,
   tests: number,
 ): void {
-  const { abortControllerParallel, state } = runContext
-
-  if (abortControllerParallel.signal.aborted) {
-    return
-  }
+  const { abortControllerParallel, state, options } = runContext
+  const { logOptions } = options
 
   if (runContext.options.findBestError) {
     runContext.variantsIterator.addLimit({ args, error, tests })
     state.debugMode = false
     saveArgs(runContext, args, false)
-    abortControllerParallel.abort(null)
+
+    // Only abort parallel when sequentialOnError is true
+    // Otherwise, let parallel threads continue working with new limits
+    if (options.sequentialOnError && !abortControllerParallel.signal.aborted) {
+      if (logOptions.debug) {
+        logOptions.func(
+          'debug',
+          `[test-variants] sequentialOnError: aborting parallel, switching to sequential`,
+        )
+      }
+      abortControllerParallel.abort(null)
+    } else if (logOptions.debug) {
+      logOptions.func(
+        'debug',
+        `[test-variants] parallel error in findBestError mode, continuing with new limits`,
+      )
+    }
   } else {
+    if (abortControllerParallel.signal.aborted) {
+      return
+    }
     saveArgs(runContext, args, false)
     abortControllerParallel.abort(error)
   }

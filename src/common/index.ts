@@ -8,6 +8,7 @@ export {
   type ModeConfig,
   type OnErrorCallback,
   type OnModeChangeCallback,
+  type ParallelOptions,
   type SaveErrorVariantsOptions,
   type TestVariantsBestError,
   type FindBestErrorOptions,

@@ -9,6 +9,7 @@ import type {
   TestVariantsLogOptions,
   FindBestErrorOptions,
   OnModeChangeCallback,
+  ParallelOptions,
 } from '../types'
 import type {
   TestVariantsRunOptionsInternal,
@@ -16,6 +17,44 @@ import type {
 } from './types'
 
 const PARALLEL_UNLIMITED = 2 ** 31
+
+type ResolvedParallelOptions = {
+  parallel: number
+  sequentialOnError: boolean
+}
+
+function resolveParallelOptions(
+  option: null | undefined | number | boolean | ParallelOptions,
+): ResolvedParallelOptions {
+  if (option == null) {
+    return { parallel: 1, sequentialOnError: false }
+  }
+
+  if (typeof option === 'boolean') {
+    return {
+      parallel: option ? PARALLEL_UNLIMITED : 1,
+      sequentialOnError: false,
+    }
+  }
+
+  if (typeof option === 'number') {
+    return { parallel: option > 0 ? option : 1, sequentialOnError: false }
+  }
+
+  // ParallelOptions object
+  const count = option.count
+  let parallel = 1
+  if (count === true) {
+    parallel = PARALLEL_UNLIMITED
+  } else if (typeof count === 'number' && count > 0) {
+    parallel = count
+  }
+
+  return {
+    parallel,
+    sequentialOnError: option.sequentialOnError ?? false,
+  }
+}
 
 /** Resolved configuration for test variants run */
 export type RunOptionsResolved<Args extends Obj> = {
@@ -31,7 +70,10 @@ export type RunOptionsResolved<Args extends Obj> = {
   limitTime: number | null | undefined
   timeController: ITimeController
   onModeChange: OnModeChangeCallback | null | undefined
+  /** Maximum number of parallel threads */
   parallel: number
+  /** Switch to sequential mode after first error in findBestError mode */
+  sequentialOnError: boolean
   limitTests: number | null | undefined
 }
 
@@ -47,13 +89,9 @@ export function resolveRunOptions<Args extends Obj, SavedArgs = Args>(
 
   const findBestError = options?.findBestError
 
-  const parallelOption = options?.parallel
-  let parallel = 1
-  if (parallelOption === true) {
-    parallel = PARALLEL_UNLIMITED
-  } else if (typeof parallelOption === 'number' && parallelOption > 0) {
-    parallel = parallelOption
-  }
+  const { parallel, sequentialOnError } = resolveParallelOptions(
+    options?.parallel,
+  )
 
   return {
     store,
@@ -69,6 +107,7 @@ export function resolveRunOptions<Args extends Obj, SavedArgs = Args>(
     timeController: options?.timeController ?? timeControllerDefault,
     onModeChange: options?.onModeChange,
     parallel,
+    sequentialOnError,
     limitTests: options?.limitTests,
   }
 }

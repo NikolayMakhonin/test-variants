@@ -234,6 +234,18 @@ export type OnModeChangeCallback = (
 
 // endregion
 
+// region Parallel options
+
+/** Options for parallel test execution */
+export type ParallelOptions = {
+  /** Number of parallel threads; true = unlimited, false/1 = sequential */
+  count?: null | number | boolean
+  /** Switch to sequential mode after first error in findBestError mode */
+  sequentialOnError?: null | boolean
+}
+
+// endregion
+
 // region Run options
 
 export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
@@ -250,8 +262,8 @@ export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
   /** Logging options; null/true uses defaults; false disables all; object for fine-grained control */
   log?: null | boolean | TestVariantsLogOptions
   abortSignal?: null | IAbortSignalFast
-  /** true - all in parallel; number - max parallel; false/0/undefined - sequential */
-  parallel?: null | number | boolean
+  /** Parallel execution; true = unlimited, number = max parallel, false/1 = sequential, object = ParallelOptions */
+  parallel?: null | number | boolean | ParallelOptions
   /** Number of full passes through all variants; default 1 */
   cycles?: null | number
   /** Generates seed for reproducible randomized testing; seed is added to args */

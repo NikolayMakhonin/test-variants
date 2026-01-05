@@ -126,16 +126,24 @@ async function handleModeChangeIfNeeded(
   runContext: RunContext<Obj>,
 ): Promise<void> {
   const { options, variantsIterator, state } = runContext
+  const { logOptions } = options
 
   if (variantsIterator.modeIndex === state.prevModeIndex) {
     return
+  }
+
+  if (logOptions.debug) {
+    logOptions.func(
+      'debug',
+      `[test-variants] mode switch: modeIndex=${variantsIterator.modeIndex}, index=${variantsIterator.index}`,
+    )
   }
 
   state.modeChanged = true
   state.prevModeIndex = variantsIterator.modeIndex
 
   logModeChange(
-    options.logOptions,
+    logOptions,
     variantsIterator.modeConfig,
     variantsIterator.modeIndex,
   )
@@ -167,12 +175,14 @@ function updateCycleState(runContext: RunContext<Obj>): void {
   state.cycleStartTime = now
 }
 
-function isAborted(runContext: RunContext<Obj>): boolean {
-  const { options, abortSignal, pool } = runContext
-  return !!(
-    options.abortSignalExternal?.aborted ||
-    (pool && abortSignal.aborted)
-  )
+/** Check if external abort was requested (user cancellation) */
+function isExternalAborted(runContext: RunContext<Obj>): boolean {
+  return !!runContext.options.abortSignalExternal?.aborted
+}
+
+/** Check if parallel execution was aborted (error in findBestError mode) */
+function isParallelAborted(runContext: RunContext<Obj>): boolean {
+  return !!runContext.abortSignal.aborted
 }
 
 /**
@@ -193,11 +203,13 @@ async function runCycle<Args extends Obj>(
   runContext: RunContext<Args>,
 ): Promise<void> {
   const { pool, state, options } = runContext
-  const { parallel } = options
+  const { parallel, logOptions } = options
 
   let currentArgs: ArgsWithSeed<Args> | null = null
 
-  while (!isAborted(runContext)) {
+  // Only check external abort for cycle continuation
+  // Parallel abort (from findBestError) causes fallback to sequential, not cycle exit
+  while (!isExternalAborted(runContext)) {
     currentArgs = getNextArgs(runContext, currentArgs)
     if (currentArgs == null) {
       break
@@ -212,16 +224,24 @@ async function runCycle<Args extends Obj>(
 
     await handlePeriodicTasks(runContext)
 
-    if (isAborted(runContext)) {
+    if (isExternalAborted(runContext)) {
       continue
     }
 
-    if (pool) {
+    // When parallel is aborted (error in findBestError mode), fall back to sequential
+    // This matches previous version behavior: if (!pool || abortSignal.aborted) -> sequential
+    if (pool && !isParallelAborted(runContext)) {
       if (!pool.hold(1)) {
         await poolWait({ pool, count: 1, hold: true })
       }
       runParallelTest(runContext, currentArgs)
     } else {
+      if (logOptions.debug && pool && isParallelAborted(runContext)) {
+        logOptions.func(
+          'debug',
+          `[test-variants] parallel aborted, running sequential: variant=${runContext.variantsIterator.index}`,
+        )
+      }
       const result = runSequentialTest(runContext, currentArgs)
       if (isPromiseLike(result)) {
         await result
@@ -243,6 +263,13 @@ export async function runIterationLoop<Args extends Obj>(
 
   variantsIterator.start()
 
+  if (logOptions.debug) {
+    logOptions.func(
+      'debug',
+      `[test-variants] start: cycleIndex=${variantsIterator.cycleIndex}, modeIndex=${variantsIterator.modeIndex}, minCompletedCount=${variantsIterator.minCompletedCount}, cycles=${cycles}`,
+    )
+  }
+
   logModeChange(
     logOptions,
     variantsIterator.modeConfig,
@@ -255,6 +282,13 @@ export async function runIterationLoop<Args extends Obj>(
     variantsIterator.minCompletedCount < cycles &&
     !state.timeLimitExceeded
   ) {
+    if (logOptions.debug) {
+      logOptions.func(
+        'debug',
+        `[test-variants] outer loop: minCompletedCount=${variantsIterator.minCompletedCount} < cycles=${cycles}`,
+      )
+    }
+
     if (isTimeLimitExceeded(runContext)) {
       state.timeLimitExceeded = true
       break
@@ -263,11 +297,30 @@ export async function runIterationLoop<Args extends Obj>(
     await runCycle(runContext)
     updateCycleState(runContext)
 
+    if (logOptions.debug) {
+      logOptions.func(
+        'debug',
+        `[test-variants] cycle ended: modeIndex=${variantsIterator.modeIndex}, index=${variantsIterator.index}, count=${variantsIterator.count}, tests=${state.tests}`,
+      )
+    }
+
     if (state.timeLimitExceeded || isTimeLimitExceeded(runContext)) {
       state.timeLimitExceeded = true
       break
     }
 
+    if (logOptions.debug) {
+      logOptions.func(
+        'debug',
+        `[test-variants] calling start(): cycleIndex=${variantsIterator.cycleIndex}, minCompletedCount before start=${variantsIterator.minCompletedCount}`,
+      )
+    }
     variantsIterator.start()
+    if (logOptions.debug) {
+      logOptions.func(
+        'debug',
+        `[test-variants] after start(): cycleIndex=${variantsIterator.cycleIndex}, modeIndex=${variantsIterator.modeIndex}, minCompletedCount=${variantsIterator.minCompletedCount}`,
+      )
+    }
   }
 }

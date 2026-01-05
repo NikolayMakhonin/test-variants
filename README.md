@@ -103,10 +103,14 @@ const result = await testVariants({
   abortSignal: IAbortSignalFast,
 
   // Parallel execution (for async tests)
-  parallel: boolean | number, // default: 1 - no parallel
+  parallel: boolean | number | ParallelOptions, // default: 1 - no parallel
   parallel: true,             // all parallel
   parallel: 4,                // maximum 4 parallel
   parallel: false | 1,        // sequential
+  parallel: {
+    count: 4,                 // maximum 4 parallel
+    sequentialOnError: true,  // switch to sequential after first error (findBestError mode)
+  },
 
   // Global limits
   // Maximum total number of tests run (including attemptsPerVariant)
