@@ -157,9 +157,12 @@ export function advanceVariantNavigation<Args extends Obj>(
   let belowMaxIndex = argsCount
   let resetSubsequent = false
   for (let argIndex = 0; argIndex < argsCount; argIndex++) {
+    // Recalculate argValues if null or if previous args changed (resetSubsequent)
     const argValuesIsNull = state.argValues[argIndex] == null
-    if (argValuesIsNull) {
-      isInitial = true
+    if (argValuesIsNull || resetSubsequent) {
+      if (argValuesIsNull) {
+        isInitial = true
+      }
       state.argValues[argIndex] = calcArgValues(
         state,
         state.argsNames[argIndex],
@@ -186,7 +189,9 @@ export function advanceVariantNavigation<Args extends Obj>(
 
     if (resetSubsequent || state.indexes[argIndex] > maxIndex) {
       state.indexes[argIndex] = maxIndex
-      resetSubsequent = true // TODO: если это закомментить тесты упадут, здесь все ок
+      state.args[state.argsNames[argIndex]] =
+        state.argValues[argIndex][maxIndex]
+      resetSubsequent = true
     }
     if (belowMaxIndex === argsCount && state.indexes[argIndex] < maxIndex) {
       belowMaxIndex = argIndex
@@ -273,9 +278,12 @@ export function retreatVariantNavigation<Args extends Obj>(
   let belowMaxIndex = argsCount
   let resetSubsequent = false
   for (let argIndex = 0; argIndex < argsCount; argIndex++) {
+    // Recalculate argValues if null or if previous args changed (resetSubsequent)
     const argValuesIsNull = state.argValues[argIndex] == null
-    if (argValuesIsNull) {
-      isInitial = true
+    if (argValuesIsNull || resetSubsequent) {
+      if (argValuesIsNull) {
+        isInitial = true
+      }
       state.argValues[argIndex] = calcArgValues(
         state,
         state.argsNames[argIndex],
@@ -303,13 +311,20 @@ export function retreatVariantNavigation<Args extends Obj>(
 
     if (resetSubsequent || state.indexes[argIndex] > maxIndex) {
       state.indexes[argIndex] = maxIndex
-      resetSubsequent = true // TODO: а если если это закомментить тесты не падают, значит тесты не покрывают этот кейс, нужно исправить
+      state.args[state.argsNames[argIndex]] =
+        state.argValues[argIndex][maxIndex]
+      resetSubsequent = true
     }
     if (belowMaxIndex === argsCount && state.indexes[argIndex] < maxIndex) {
       belowMaxIndex = argIndex
     }
   }
-  if (isInitial && initComplete && !isVariantNavigationAtLimit(state)) {
+  // Return early if init loop produced valid position through initialization or clamping
+  if (
+    (isInitial || resetSubsequent) &&
+    initComplete &&
+    !isVariantNavigationAtLimit(state)
+  ) {
     return true
   }
 

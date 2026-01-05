@@ -998,6 +998,11 @@ const testVariantsComplex = createTestVariants(
         }
       }
 
+      // Note: The resetSubsequent bug in retreat is covered by the dedicated test
+      // 'retreat resets subsequent args when prior arg clamped'
+      // A general invariant for retreat correctness is complex due to per-arg limits
+      // affecting the valid position space in non-lexicographic ways
+
       prevIndexes = indexes
     }
 
@@ -1377,6 +1382,18 @@ describe(
         '1033', // a<=1 but c,d have high limits
         '0133', // b<=1 but c,d have high limits
         '1133', // a,b limited, c,d have high limits
+        // Patterns with first arg unlimited to trigger resetSubsequent bug:
+        // isVariantNavigationAtLimit returns false early when argLimits[0]=null,
+        // preventing reset and exposing the bug when later args are clamped
+        '_0__', // only b limited
+        '__0_', // only c limited (exactly what the dedicated test uses)
+        '___0', // only d limited
+        '_00_', // b and c limited, not a
+        '_0_0', // b and d limited, not a
+        '__00', // c and d limited, not a
+        '_1__', // b<=1, others unlimited
+        '__1_', // c<=1, others unlimited
+        '_11_', // b<=1, c<=1, a and d unlimited
       ]
 
       await testVariantsComplex({
