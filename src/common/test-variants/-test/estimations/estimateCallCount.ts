@@ -12,10 +12,13 @@ export function estimateCallCount(
     return [0, 0]
   }
 
+  let sumSequentialTestsPerCompletion = 0
+
   let minCompletionCount: number | null = null
   let countActiveSequentialModes = 0
   let hasSequentialMode = false
   let countActiveRandomModes = 0
+  let countRandomTests = 0
 
   const completionCount = runOptions.cycles ?? 1
   const modes = runOptions.iterationModes ?? MODES_DEFAULT
@@ -36,18 +39,20 @@ export function estimateCallCount(
       case 'backward': {
         const modeCycles = mode.cycles ?? 1
         const attempts = mode.attemptsPerVariant ?? 1
-        const tests = variantsCount * modeCycles * attempts * completionCount
-        if (tests <= 0) {
+        const testsPerCompletion = variantsCount * modeCycles * attempts
+        if (testsPerCompletion <= 0) {
           continue
         }
+        sumSequentialTestsPerCompletion += testsPerCompletion
         countActiveSequentialModes++
         if (!runOptions.findBestError) {
-          minCompletionCount = max(minCompletionCount, tests)
+          minCompletionCount = max(minCompletionCount, testsPerCompletion)
         }
         break
       }
       case 'random':
         countActiveRandomModes++
+        countRandomTests += mode.limitTests ?? LIMIT_MAX
         break
       default: {
         throw new Error(`Unknown mode type: ${(mode as any).mode}`)
@@ -56,6 +61,9 @@ export function estimateCallCount(
   }
 
   if (hasSequentialMode) {
+    if (countActiveRandomModes) {
+      return [countRandomTests, countRandomTests]
+    }
     if (countActiveSequentialModes === 0) {
       return [0, 0]
     }
