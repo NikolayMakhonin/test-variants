@@ -50,8 +50,6 @@ export type VariantsIterator<Args extends Obj> = {
   readonly index: number
   /** Current cycle index; starts at 0 after first start() */
   readonly cycleIndex: number
-  /** Maximum variant count; variants with index >= count are not yielded */
-  readonly count: number | null
   /** Last applied limit's args and error; null if no args-based limit applied */
   readonly limit: VariantsIteratorLimit<Args> | null
   /** Current mode index in modes array */
@@ -59,7 +57,7 @@ export type VariantsIterator<Args extends Obj> = {
   /** Current mode configuration; null if no modes */
   readonly modeConfig: ModeConfig | null
   /** Minimum completed cycles across all modes; used for completion condition */
-  readonly minCompletedCount: number
+  readonly minCompletedCount: number | null
   /** Add or tighten limit */
   addLimit(options?: null | AddLimitOptions<Args>): void
   /** Reset to beginning of iteration for next cycle */

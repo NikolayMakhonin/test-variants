@@ -106,9 +106,9 @@ function formatVariantProgress(runContext: RunContext<any>): string {
 
   const prefix = `cycle: ${variantsIterator.cycleIndex}, variant: ${variantsIterator.index}`
   const totalVariants =
-    variantsIterator.count != null && state.prevCycleVariantsCount != null
-      ? Math.min(variantsIterator.count, state.prevCycleVariantsCount)
-      : variantsIterator.count
+    variantsIterator.index >= 0 && state.prevCycleVariantsCount != null
+      ? Math.min(variantsIterator.index + 1, state.prevCycleVariantsCount)
+      : variantsIterator.index + 1
 
   if (totalVariants == null) {
     return `${prefix} (${elapsedStr})`

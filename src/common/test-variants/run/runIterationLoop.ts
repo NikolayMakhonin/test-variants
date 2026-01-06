@@ -181,7 +181,7 @@ function updateCycleState(runContext: RunContext<any>): void {
   const { options, variantsIterator, state } = runContext
   const now = options.timeController.now()
 
-  state.prevCycleVariantsCount = variantsIterator.count
+  state.prevCycleVariantsCount = variantsIterator.index + 1
   state.prevCycleDuration = now - state.cycleStartTime
   state.cycleStartTime = now
 }
@@ -354,7 +354,7 @@ async function runIterationLoopAsync<Args extends Obj>(
   const { logOptions, cycles } = options
 
   while (
-    variantsIterator.minCompletedCount < cycles &&
+    (variantsIterator.minCompletedCount ?? Infinity) < cycles &&
     !state.globalLimitExceeded
   ) {
     if (logOptions.debug) {
@@ -378,7 +378,7 @@ async function runIterationLoopAsync<Args extends Obj>(
     if (logOptions.debug) {
       logOptions.func(
         'debug',
-        `[test-variants] cycle ended: modeIndex=${variantsIterator.modeIndex}, index=${variantsIterator.index}, count=${variantsIterator.count}, tests=${state.tests}`,
+        `[test-variants] cycle ended: modeIndex=${variantsIterator.modeIndex}, index=${variantsIterator.index}, tests=${state.tests}`,
       )
     }
 
@@ -435,7 +435,7 @@ export function runIterationLoop<Args extends Obj>(
   }
 
   while (
-    variantsIterator.minCompletedCount < cycles &&
+    (variantsIterator.minCompletedCount ?? Infinity) < cycles &&
     !state.globalLimitExceeded
   ) {
     if (logOptions.debug) {
@@ -463,7 +463,7 @@ export function runIterationLoop<Args extends Obj>(
     if (logOptions.debug) {
       logOptions.func(
         'debug',
-        `[test-variants] cycle ended: modeIndex=${variantsIterator.modeIndex}, index=${variantsIterator.index}, count=${variantsIterator.count}, tests=${state.tests}`,
+        `[test-variants] cycle ended: modeIndex=${variantsIterator.modeIndex}, index=${variantsIterator.index}, tests=${state.tests}`,
       )
     }
 
