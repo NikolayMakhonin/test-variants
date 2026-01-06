@@ -10,15 +10,13 @@ import { findValueIndex } from 'src/common/test-variants/iterator/helpers/findVa
 /** Extend template arg with extra value */
 function extendTemplateWithValue<Args extends Obj>(
   templates: TestVariantsTemplatesWithExtra<Args, any>,
-  addingArgs: Args,
-  keys: ArgName<Args>[],
-  keyIndex: number,
+  args: Args,
+  argName: ArgName<Args>,
   equals?: null | Equals,
 ): void {
-  const key = keys[keyIndex]
-  const value = addingArgs[key]
+  const value = args[argName]
 
-  const template = templates.templates[key] as any[]
+  const template = templates.templates[argName] as any[]
   if (typeof template !== 'function') {
     if (findValueIndex(template, value, equals) >= 0) {
       return
@@ -31,7 +29,12 @@ function extendTemplateWithValue<Args extends Obj>(
     return
   }
 
-  const extra = templates.extra[key]
+  const extra = templates.extra[argName]
+  if (extra == null) {
+    templates.extra[argName] = [value]
+    return
+  }
+
   if (findValueIndex(extra, value, equals) >= 0) {
     return
   }
@@ -39,30 +42,33 @@ function extendTemplateWithValue<Args extends Obj>(
   extra.push(value)
 }
 
-/** Extend templates with all missing values from saved args */
-export function extendTemplatesForArgs<Args extends Obj>(
+/** Extend templates with all extra values */
+export function extendTemplatesWithExtraArgs<Args extends Obj>(
   templates: TestVariantsTemplatesWithExtra<Args, any>,
-  addingArgs: Args,
-  keys: ArgName<Args>[],
-  keysCount: number,
+  args: Args,
   equals?: null | Equals,
 ): void {
-  for (let i = 0; i < keysCount; i++) {
-    extendTemplateWithValue(templates, addingArgs, keys, i, equals)
+  for (const argName in args) {
+    if (Object.prototype.hasOwnProperty.call(args, argName)) {
+      if (argName === 'seed') {
+        continue
+      }
+      extendTemplateWithValue(templates, args, argName, equals)
+    }
   }
 }
 
-/** Check if all args keys exist in template */
+/** Check if all args except `seed` exist in template */
 export function isArgsKeysInTemplate<Args extends Obj>(
   template: TestVariantsTemplates<Args>,
   args: Args,
 ): boolean {
-  for (const key in args) {
-    if (Object.prototype.hasOwnProperty.call(args, key)) {
-      if (key === 'seed') {
+  for (const argName in args) {
+    if (Object.prototype.hasOwnProperty.call(args, argName)) {
+      if (argName === 'seed') {
         continue
       }
-      if (!template[key]) {
+      if (!template[argName]) {
         return false
       }
     }

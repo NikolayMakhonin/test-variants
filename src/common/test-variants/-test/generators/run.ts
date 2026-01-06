@@ -15,7 +15,7 @@ import { StressTestArgs, Template, TestArgs } from '../types'
 import { isLogEnabled } from '../log'
 import { generateFindBestErrorOptions } from './findBestError'
 import type { TestVariantsLogType } from 'src/common/test-variants/types'
-import type { ModeType } from 'src/common/test-variants/iterator/types'
+import type { ModeType } from 'src/common/test-variants/types'
 
 function generateModeType(rnd: Random, options: StressTestArgs): ModeType {
   if (options.modeType != null) {

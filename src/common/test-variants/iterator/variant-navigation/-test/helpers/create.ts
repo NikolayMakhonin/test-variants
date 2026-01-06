@@ -9,7 +9,7 @@ import {
   parseTemplates,
   parseTemplatesExtra,
 } from 'src/common/test-variants/iterator/variant-navigation/-test/helpers/parse'
-import { deepFreezeJsonLike } from 'src/common/test-variants/-tmp/-test/helpers/deepFreezeJsonLike'
+import { deepFreezeJsonLike } from 'src/common/test-variants/-test/helpers/deepFreezeJsonLike'
 import { createVariantNavigationState } from 'src/common/test-variants/iterator/variant-navigation/variantNavigation'
 import { assert } from 'vitest'
 import { freezeProps } from 'src/common/-test/freezeProps'

@@ -23,7 +23,10 @@ import {
   retreatVariantNavigation,
 } from './variant-navigation/variantNavigation'
 import { isSequentialMode } from './helpers/mode'
-import { extendTemplatesForArgs } from './helpers/template'
+import {
+  extendTemplatesWithExtraArgs,
+  isArgsKeysInTemplate,
+} from './helpers/template'
 
 const DEFAULT_MODE_CONFIGS: ModeConfig[] = [{ mode: 'forward' }]
 
@@ -150,12 +153,14 @@ export function createVariantsIterator<Args extends Obj>(
     // Ensure mode states exist before updating limits
     ensureInitialized()
 
-    const firstNavState = modeStates[0].navigationState
-    const argsNames = firstNavState.argsNames
-    const argsCount = argsNames.length
+    // Validate args
+    if (!isArgsKeysInTemplate(templates.templates, args)) {
+      // TODO: debug log here
+      return
+    }
 
     // Extend templates with values from args that may not be in templates
-    extendTemplatesForArgs(templates, args, argsNames, argsCount, equals)
+    extendTemplatesWithExtraArgs(templates, args, equals)
 
     // Create or reuse dedicated navigation state for computing indices
     if (computeState == null) {
