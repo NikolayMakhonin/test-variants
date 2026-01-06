@@ -71,10 +71,6 @@ export type ModeType = ModeConfig['mode']
 export type GetSeedParams = {
   /** Total number of tests run */
   tests: number
-  /** Number of full passes through all variants */
-  cycles: number
-  /** Number of repeats of current variant */
-  repeats: number
 }
 
 // endregion

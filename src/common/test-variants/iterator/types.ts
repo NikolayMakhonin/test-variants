@@ -44,18 +44,18 @@ export type VariantsIteratorOptions<Args extends Obj> = {
   log: RequiredNonNullable<TestVariantsLogOptions>
 }
 
+export type ModeState = {
+  // TODO
+}
+
 /** Test variants iterator with limiting capabilities */
 export type VariantsIterator<Args extends Obj> = {
-  /** Current cycle index; starts at 0 after first start() */
-  readonly cycleIndex: number
   /** Last applied limit's args and error; null if no args-based limit applied */
   readonly limit: VariantsIteratorLimit<Args> | null
   /** Current mode index in modes array */
   readonly modeIndex: number
-  /** Current mode configuration; null if no modes */
-  readonly modeConfig: ModeConfig | null
-  /** Minimum completed cycles across all modes; used for completion condition */
-  readonly minCompletedCount: number | null
+  readonly modeConfigs: ModeConfig[]
+  readonly modeStates: ModeState[]
   /** Add or tighten limit */
   addLimit(options?: null | AddLimitOptions<Args>): void
   /** Reset to beginning of iteration for next cycle */

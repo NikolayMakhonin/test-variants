@@ -354,16 +354,10 @@ async function runIterationLoopAsync<Args extends Obj>(
   const { logOptions, cycles } = options
 
   while (
-    (variantsIterator.minCompletedCount ?? Infinity) < cycles &&
+    // (variantsIterator.minCompletedCount ?? Infinity) < cycles &&
+    // TODO: сделать хэлпер, который решает завершать ли общий цикл в зависимости от variantsIterator.modeStates
     !state.globalLimitExceeded
   ) {
-    if (logOptions.debug) {
-      logOptions.func(
-        'debug',
-        `[test-variants] outer loop: minCompletedCount=${variantsIterator.minCompletedCount} < cycles=${cycles}`,
-      )
-    }
-
     if (isGlobalLimitExceeded(runContext)) {
       state.globalLimitExceeded = true
       break
@@ -394,7 +388,7 @@ async function runIterationLoopAsync<Args extends Obj>(
     if (logOptions.debug) {
       logOptions.func(
         'debug',
-        `[test-variants] after start(): cycleIndex=${variantsIterator.cycleIndex}, modeIndex=${variantsIterator.modeIndex}, minCompletedCount=${variantsIterator.minCompletedCount}`,
+        `[test-variants] after start(): modeIndex=${variantsIterator.modeIndex}`,
       )
     }
   }
@@ -415,7 +409,7 @@ export function runIterationLoop<Args extends Obj>(
   if (logOptions.debug) {
     logOptions.func(
       'debug',
-      `[test-variants] start: cycleIndex=${variantsIterator.cycleIndex}, modeIndex=${variantsIterator.modeIndex}, minCompletedCount=${variantsIterator.minCompletedCount}, cycles=${cycles}`,
+      `[test-variants] start: modeIndex=${variantsIterator.modeIndex}, cycles=${cycles}`,
     )
   }
 
@@ -432,16 +426,10 @@ export function runIterationLoop<Args extends Obj>(
   }
 
   while (
-    (variantsIterator.minCompletedCount ?? Infinity) < cycles &&
+    // (variantsIterator.minCompletedCount ?? Infinity) < cycles &&
+    // TODO: сделать хэлпер, который решает завершать ли общий цикл в зависимости от variantsIterator.modeStates
     !state.globalLimitExceeded
   ) {
-    if (logOptions.debug) {
-      logOptions.func(
-        'debug',
-        `[test-variants] outer loop: minCompletedCount=${variantsIterator.minCompletedCount} < cycles=${cycles}`,
-      )
-    }
-
     if (isGlobalLimitExceeded(runContext)) {
       state.globalLimitExceeded = true
       break
@@ -470,16 +458,13 @@ export function runIterationLoop<Args extends Obj>(
     }
 
     if (logOptions.debug) {
-      logOptions.func(
-        'debug',
-        `[test-variants] calling start(): cycleIndex=${variantsIterator.cycleIndex}, minCompletedCount before start=${variantsIterator.minCompletedCount}`,
-      )
+      logOptions.func('debug', `[test-variants] calling start()`)
     }
     variantsIterator.start()
     if (logOptions.debug) {
       logOptions.func(
         'debug',
-        `[test-variants] after start(): cycleIndex=${variantsIterator.cycleIndex}, modeIndex=${variantsIterator.modeIndex}, minCompletedCount=${variantsIterator.minCompletedCount}`,
+        `[test-variants] after start(): modeIndex=${variantsIterator.modeIndex}`,
       )
     }
   }
