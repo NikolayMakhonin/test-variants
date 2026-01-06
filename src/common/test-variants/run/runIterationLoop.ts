@@ -144,7 +144,7 @@ function handleModeChangeIfNeeded(
   if (logOptions.debug) {
     logOptions.func(
       'debug',
-      `[test-variants] mode switch: modeIndex=${variantsIterator.modeIndex}, index=${variantsIterator.index}`,
+      `[test-variants] mode switch: modeIndex=${variantsIterator.modeIndex}, tests=${state.tests}`,
     )
   }
 
@@ -181,8 +181,8 @@ function updateCycleState(runContext: RunContext<any>): void {
   const { options, variantsIterator, state } = runContext
   const now = options.timeController.now()
 
-  state.prevCycleVariantsCount = variantsIterator.index + 1
-  state.prevCycleDuration = now - state.cycleStartTime
+  // state.prevCycleVariantsCount = variantsIterator.index + 1
+  // state.prevCycleDuration = now - state.cycleStartTime
   state.cycleStartTime = now
 }
 
@@ -265,7 +265,7 @@ async function runCycleAsync<Args extends Obj>(
       if (logOptions.debug && pool && isParallelAborted(runContext)) {
         logOptions.func(
           'debug',
-          `[test-variants] parallel aborted, running sequential: variant=${runContext.variantsIterator.index}`,
+          `[test-variants] parallel aborted, running sequential: tests=${state.tests}`,
         )
       }
       const result = runSequentialTest(runContext, currentArgs)
@@ -335,7 +335,7 @@ function runCycle<Args extends Obj>(
     if (logOptions.debug && isParallelAborted(runContext)) {
       logOptions.func(
         'debug',
-        `[test-variants] parallel aborted, running sequential: variant=${runContext.variantsIterator.index}`,
+        `[test-variants] parallel aborted, running sequential: tests=${state.tests}`,
       )
     }
 
@@ -378,7 +378,7 @@ async function runIterationLoopAsync<Args extends Obj>(
     if (logOptions.debug) {
       logOptions.func(
         'debug',
-        `[test-variants] cycle ended: modeIndex=${variantsIterator.modeIndex}, index=${variantsIterator.index}, tests=${state.tests}`,
+        `[test-variants] cycle ended: modeIndex=${variantsIterator.modeIndex}, tests=${state.tests}`,
       )
     }
 
@@ -463,7 +463,7 @@ export function runIterationLoop<Args extends Obj>(
     if (logOptions.debug) {
       logOptions.func(
         'debug',
-        `[test-variants] cycle ended: modeIndex=${variantsIterator.modeIndex}, index=${variantsIterator.index}, tests=${state.tests}`,
+        `[test-variants] cycle ended: modeIndex=${variantsIterator.modeIndex}, tests=${state.tests}`,
       )
     }
 

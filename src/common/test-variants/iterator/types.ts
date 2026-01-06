@@ -46,8 +46,6 @@ export type VariantsIteratorOptions<Args extends Obj> = {
 
 /** Test variants iterator with limiting capabilities */
 export type VariantsIterator<Args extends Obj> = {
-  /** Current variant index; -1 before first next() */
-  readonly index: number
   /** Current cycle index; starts at 0 after first start() */
   readonly cycleIndex: number
   /** Last applied limit's args and error; null if no args-based limit applied */

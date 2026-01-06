@@ -3,8 +3,8 @@ import type { ITimeController } from '@flemist/time-controller'
 /** Runtime state for test variants run */
 export type RunState = {
   // Cycle tracking
-  prevCycleVariantsCount: number | null
-  prevCycleDuration: number | null
+  // prevCycleVariantsCount: number | null
+  // prevCycleDuration: number | null
   startTime: number
   cycleStartTime: number
 
@@ -45,8 +45,8 @@ export function createRunState(
   const startTime = timeController.now()
 
   return {
-    prevCycleVariantsCount: null,
-    prevCycleDuration: null,
+    // prevCycleVariantsCount: null,
+    // prevCycleDuration: null,
     startTime,
     cycleStartTime: startTime,
     startMemory,

@@ -94,36 +94,36 @@ function estimateCycleTime(
   return (elapsedTime * totalVariants) / completedVariants
 }
 
-function formatVariantProgress(runContext: RunContext<any>): string {
-  const { options, variantsIterator, state } = runContext
-  const { findBestError, timeController } = options
-  const elapsedTime = timeController.now() - state.cycleStartTime
-  const elapsedStr = formatDuration(elapsedTime)
-
-  if (!findBestError) {
-    return `variant: ${variantsIterator.index} (${elapsedStr})`
-  }
-
-  const prefix = `cycle: ${variantsIterator.cycleIndex}, variant: ${variantsIterator.index}`
-  const totalVariants =
-    variantsIterator.index >= 0 && state.prevCycleVariantsCount != null
-      ? Math.min(variantsIterator.index + 1, state.prevCycleVariantsCount)
-      : variantsIterator.index + 1
-
-  if (totalVariants == null) {
-    return `${prefix} (${elapsedStr})`
-  }
-
-  const estimatedTime = estimateCycleTime(
-    elapsedTime,
-    variantsIterator.index,
-    totalVariants,
-    state.prevCycleDuration,
-    state.prevCycleVariantsCount,
-  )
-
-  return `${prefix}/${totalVariants} (${elapsedStr}/${formatDuration(estimatedTime)})`
-}
+// function formatVariantProgress(runContext: RunContext<any>): string {
+//   const { options, variantsIterator, state } = runContext
+//   const { findBestError, timeController } = options
+//   const elapsedTime = timeController.now() - state.cycleStartTime
+//   const elapsedStr = formatDuration(elapsedTime)
+//
+//   if (!findBestError) {
+//     return `variant: ${variantsIterator.index} (${elapsedStr})`
+//   }
+//
+//   const prefix = `cycle: ${variantsIterator.cycleIndex}, variant: ${variantsIterator.index}`
+//   const totalVariants =
+//     variantsIterator.index >= 0 && state.prevCycleVariantsCount != null
+//       ? Math.min(variantsIterator.index + 1, state.prevCycleVariantsCount)
+//       : variantsIterator.index + 1
+//
+//   if (totalVariants == null) {
+//     return `${prefix} (${elapsedStr})`
+//   }
+//
+//   const estimatedTime = estimateCycleTime(
+//     elapsedTime,
+//     variantsIterator.index,
+//     totalVariants,
+//     state.prevCycleDuration,
+//     state.prevCycleVariantsCount,
+//   )
+//
+//   return `${prefix}/${totalVariants} (${elapsedStr}/${formatDuration(estimatedTime)})`
+// }
 
 /** Returns true if logging was performed */
 export function logProgress(runContext: RunContext<any>): boolean {
@@ -145,8 +145,8 @@ export function logProgress(runContext: RunContext<any>): boolean {
   }
 
   const totalElapsed = now - state.startTime
-  let msg = `[test-variants] ${formatVariantProgress(runContext)}`
-  msg += `, tests: ${state.tests} (${formatDuration(totalElapsed)}), async: ${state.iterationsAsync}`
+  // let msg = `[test-variants] ${formatVariantProgress(runContext)}`
+  let msg = `[test-variants] tests: ${state.tests} (${formatDuration(totalElapsed)}), async: ${state.iterationsAsync}`
 
   if (state.prevLogMemory != null) {
     const memory = getMemoryUsage()
