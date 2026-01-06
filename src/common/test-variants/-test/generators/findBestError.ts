@@ -1,4 +1,9 @@
-import { deepEqualJsonLike, Random, randomInt } from '@flemist/simple-utils'
+import {
+  deepEqualJsonLike,
+  Random,
+  randomBoolean,
+  randomInt,
+} from '@flemist/simple-utils'
 import { StressTestArgs, Template } from '../types'
 import type {
   LimitArgOnError,
@@ -8,9 +13,11 @@ import type {
 import { generateBoolean, generateEquals } from './primitives'
 
 function generateLimitArgOnErrorFunc(
+  rnd: Random,
   template: Template,
   argKeys: readonly string[],
 ): LimitArgOnError {
+  const result = randomBoolean(rnd)
   return function limitArgOnError(options: LimitArgOnErrorOptions): boolean {
     if (options == null || typeof options !== 'object') {
       throw new Error(
@@ -34,17 +41,6 @@ function generateLimitArgOnErrorFunc(
       throw new Error(`limitArgOnError: unknown arg name "${options.name}"`)
     }
 
-    if (!Number.isInteger(options.valueIndex)) {
-      throw new Error(
-        `limitArgOnError: valueIndex must be integer, got ${options.valueIndex}`,
-      )
-    }
-    if (options.valueIndex < 0) {
-      throw new Error(
-        `limitArgOnError: valueIndex must be non-negative, got ${options.valueIndex}`,
-      )
-    }
-
     if (!Array.isArray(options.values)) {
       throw new Error(
         `limitArgOnError: values must be array, got ${typeof options.values}`,
@@ -52,11 +48,6 @@ function generateLimitArgOnErrorFunc(
     }
     if (options.values.length === 0) {
       throw new Error(`limitArgOnError: values must be non-empty array`)
-    }
-    if (options.valueIndex >= options.values.length) {
-      throw new Error(
-        `limitArgOnError: valueIndex ${options.valueIndex} >= values.length ${options.values.length}`,
-      )
     }
 
     const templateValues = template[options.name]
@@ -98,8 +89,7 @@ function generateLimitArgOnErrorFunc(
       }
     }
 
-    // Limit only odd indices
-    return options.valueIndex % 2 === 1
+    return result
   }
 }
 
@@ -110,7 +100,7 @@ function generateLimitArgOnError(
   argKeys: readonly string[],
 ): boolean | LimitArgOnError {
   if (options.limitArgOnError === 'func') {
-    return generateLimitArgOnErrorFunc(template, argKeys)
+    return generateLimitArgOnErrorFunc(rnd, template, argKeys)
   }
   if (options.limitArgOnError != null) {
     return options.limitArgOnError
@@ -122,7 +112,7 @@ function generateLimitArgOnError(
   if (choice === 1) {
     return true
   }
-  return generateLimitArgOnErrorFunc(template, argKeys)
+  return generateLimitArgOnErrorFunc(rnd, template, argKeys)
 }
 
 export function generateFindBestErrorOptions(

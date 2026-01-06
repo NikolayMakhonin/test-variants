@@ -168,7 +168,6 @@ export function updateArgLimits<Args extends Obj>(
       // ArgName<Args> is string for Args extends Obj (Record<string, unknown>)
       const shouldLimit = limitArgOnError({
         name: keys[i] as string,
-        valueIndex,
         values: calcArgValues(templates, limitArgs, i),
         maxValueIndex: state.argLimits[i],
       })

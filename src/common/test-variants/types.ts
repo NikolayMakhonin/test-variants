@@ -81,8 +81,6 @@ export type GetSeedParams = {
 export type LimitArgOnErrorOptions = {
   /** Arg name */
   name: string
-  /** Arg value's index in template values array */
-  valueIndex: number
   /** Current template values array for this arg */
   values: readonly any[]
   /** Current max value index limit for this arg; null if no limit */

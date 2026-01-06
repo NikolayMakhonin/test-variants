@@ -97,10 +97,8 @@ export function getArgValueMaxIndex(
   let limitArgOnError = state.limitArgOnError
   if (typeof limitArgOnError === 'function') {
     const argName = state.argsNames[argIndex]
-    const valueIndex = state.indexes[argIndex]
     limitArgOnError = limitArgOnError({
       name: argName,
-      valueIndex,
       values: state.argValues[argIndex],
       maxValueIndex: argLimit,
     })

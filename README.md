@@ -178,7 +178,6 @@ const result = await testVariants({
     // Custom rule, whether to limit argument value
     limitArgOnError: ({
       name,          // argument name
-      valueIndex,    // argument value index in template for current error
       values,        // all possible argument values in template
       maxValueIndex, // current max value index limit for this arg; null if no limit
     }) => boolean,
