@@ -12,9 +12,12 @@ export function estimateCallCount(
     return [0, 0]
   }
 
+  if (errorVariantIndex != null) {
+    return [0, LIMIT_MAX]
+  }
+
   let sumSequentialTestsPerCompletion = 0
 
-  let minCompletionCount: number | null = null
   let countActiveSequentialModes = 0
   let hasSequentialMode = false
   let countActiveRandomModes = 0
@@ -45,9 +48,6 @@ export function estimateCallCount(
         }
         sumSequentialTestsPerCompletion += testsPerCompletion
         countActiveSequentialModes++
-        if (!runOptions.findBestError) {
-          minCompletionCount = max(minCompletionCount, testsPerCompletion)
-        }
         break
       }
       case 'random':
@@ -61,7 +61,7 @@ export function estimateCallCount(
   }
 
   if (hasSequentialMode) {
-    if (countActiveRandomModes) {
+    if (countActiveRandomModes > 0 && completionCount > 0) {
       return [countRandomTests, countRandomTests]
     }
     if (countActiveSequentialModes === 0) {
@@ -71,23 +71,16 @@ export function estimateCallCount(
     return [0, 0]
   }
 
-  let _min = min(minCompletionCount ?? 1, runOptions.limitTests)
-  let _max = min(
-    min(minCompletionCount ?? LIMIT_MAX, LIMIT_MAX),
-    runOptions.limitTests,
-  )
-
-  if (errorVariantIndex === 0) {
-    _max = min(_max, 1)
-  }
-  if (
-    errorVariantIndex != null &&
-    errorVariantIndex < variantsCount &&
-    !runOptions.findBestError
-  ) {
-    _max = min(_max, errorVariantIndex + 1)
-    _min = _max
-  }
+  let _min =
+    sumSequentialTestsPerCompletion > 0
+      ? sumSequentialTestsPerCompletion * completionCount
+      : 1
+  let _max =
+    sumSequentialTestsPerCompletion > 0
+      ? sumSequentialTestsPerCompletion * completionCount
+      : LIMIT_MAX
+  _min = min(min(_min, LIMIT_MAX), runOptions.limitTests)
+  _max = min(min(_max, LIMIT_MAX), runOptions.limitTests)
 
   return [_min, _max]
 }

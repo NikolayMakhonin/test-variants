@@ -417,7 +417,10 @@ export function createVariantsIterator<Args extends Obj>(
       totalTestsInLastRun += modeState.testsInLastRun
       if (isSequentialMode(modeConfig)) {
         hasSequentialModes = true
-        if (modeState.completedCount < minCompletedCount) {
+        if (
+          totalTestsInLastRun > 0 &&
+          modeState.completedCount < minCompletedCount
+        ) {
           minCompletedCount = modeState.completedCount
         }
       }
