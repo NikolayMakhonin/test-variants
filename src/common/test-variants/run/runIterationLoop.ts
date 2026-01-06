@@ -190,8 +190,6 @@ async function runCycleAsync<Args extends Obj>(
       }
     }
 
-    handleModeChangeIfNeeded(runContext)
-
     if (isGlobalLimitExceeded(runContext)) {
       state.globalLimitExceeded = true
       break
@@ -261,8 +259,6 @@ function runCycle<Args extends Obj>(
     if (currentArgs == null) {
       break
     }
-
-    handleModeChangeIfNeeded(runContext)
 
     if (isGlobalLimitExceeded(runContext)) {
       state.globalLimitExceeded = true
