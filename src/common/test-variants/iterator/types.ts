@@ -97,7 +97,7 @@ export type TestVariantsTemplates<Args extends Obj> = {
 }
 
 export type TestVariantsTemplatesExtra<Args extends Obj> = {
-  [key in ArgName<Args>]: Mutable<TestVariantsTemplateValues<Args[key]>>
+  [key in ArgName<Args>]?: Mutable<TestVariantsTemplateValues<Args[key]>>
 }
 
 export type TestVariantsTemplatesWithExtra<

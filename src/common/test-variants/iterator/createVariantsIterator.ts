@@ -4,6 +4,7 @@ import type {
   AddLimitOptions,
   ModeState,
   TestVariantsTemplatesWithExtra,
+  VariantNavigationState,
   VariantsIterator,
   VariantsIteratorLimit,
   VariantsIteratorOptions,
@@ -15,14 +16,13 @@ import type {
 } from 'src/common/test-variants/types'
 import {
   advanceVariantNavigation,
-  calcArgValues,
+  computeArgsIndices,
   createVariantNavigationState,
   randomVariantNavigation,
   resetVariantNavigation,
   retreatVariantNavigation,
 } from './variant-navigation/variantNavigation'
 import { isSequentialMode } from './helpers/mode'
-import { findValueIndex } from './helpers/findValueIndex'
 import { extendTemplatesForArgs } from './helpers/template'
 
 const DEFAULT_MODE_CONFIGS: ModeConfig[] = [{ mode: 'forward' }]
@@ -48,13 +48,16 @@ export function createVariantsIterator<Args extends Obj>(
   const timeCtrl = timeController ?? timeControllerDefault
 
   // Clone templates to allow mutation (extendTemplatesForArgs)
-  const templatesWithExtra: TestVariantsTemplatesWithExtra<Args, any> = {
+  const templates: TestVariantsTemplatesWithExtra<Args, any> = {
     templates: { ...argsTemplates },
-    extra: {} as any,
+    extra: {},
   }
 
   const modeConfigs: ModeConfig[] = iterationModes ?? DEFAULT_MODE_CONFIGS
   const modeStates: ModeState<Args>[] = []
+
+  // Dedicated navigation state for computing indices in addLimit
+  let computeState: VariantNavigationState<Args> | null = null
 
   let limit: VariantsIteratorLimit<Args> | null = null
   let modeIndex = 0
@@ -69,13 +72,11 @@ export function createVariantsIterator<Args extends Obj>(
 
   function createModeState(): ModeState<Args> {
     const navigationState = createVariantNavigationState(
-      templatesWithExtra.templates,
+      templates,
       equals ?? null,
       limitArgOnError ?? null,
       includeErrorVariant ?? null,
     )
-    // All modes share the same templatesWithExtra for addLimit to work
-    navigationState.templates = templatesWithExtra
     return {
       navigationState,
       cycleCount: 0,
@@ -149,6 +150,31 @@ export function createVariantsIterator<Args extends Obj>(
     // Ensure mode states exist before updating limits
     ensureInitialized()
 
+    const firstNavState = modeStates[0].navigationState
+    const argsNames = firstNavState.argsNames
+    const argsCount = argsNames.length
+
+    // Extend templates with values from args that may not be in templates
+    extendTemplatesForArgs(templates, args, argsNames, argsCount, equals)
+
+    // Create or reuse dedicated navigation state for computing indices
+    if (computeState == null) {
+      computeState = createVariantNavigationState(
+        templates,
+        equals ?? null,
+        // ignore limitArgOnError for correct lexicographic comparison of new limit
+        false,
+        // ignore includeErrorVariant for correct lexicographic comparison of new limit
+        false,
+      )
+    }
+
+    // Here we also check that the new limit is stricter than the old one
+    const argLimits = computeArgsIndices(computeState, args)
+    if (argLimits == null) {
+      return
+    }
+
     // Update limit property
     limit = {
       args,
@@ -156,49 +182,14 @@ export function createVariantsIterator<Args extends Obj>(
       tests: addLimitOptions?.tests ?? tests,
     }
 
-    const firstNavState = modeStates[0].navigationState
-    const argsNames = firstNavState.argsNames
-    const argsCount = argsNames.length
-
-    // Extend templates with values from args that may not be in templates
-    extendTemplatesForArgs(
-      templatesWithExtra,
-      args,
-      argsNames,
-      argsCount,
-      equals,
-    )
-
-    // Update argLimits in ALL modes' navigation states
+    // Replace argLimits in ALL modes' navigation states
     for (
       let modeIdx = 0, modesLen = modeStates.length;
       modeIdx < modesLen;
       modeIdx++
     ) {
       const navState = modeStates[modeIdx].navigationState
-
-      for (let argIndex = 0; argIndex < argsCount; argIndex++) {
-        const argName = argsNames[argIndex]
-        const argValue = args[argName]
-
-        if (argValue === void 0) {
-          continue
-        }
-
-        // Calculate arg values to find the index
-        const argValues = calcArgValues(navState, argName)
-        const valueIndex = findValueIndex(argValues, argValue, equals)
-
-        if (valueIndex < 0) {
-          continue
-        }
-
-        // Limit tightens (never loosens)
-        const currentLimit = navState.argLimits[argIndex]
-        if (currentLimit == null || valueIndex < currentLimit) {
-          navState.argLimits[argIndex] = valueIndex
-        }
-      }
+      navState.argLimits = argLimits
     }
   }
 

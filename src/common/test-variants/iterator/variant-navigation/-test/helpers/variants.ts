@@ -85,8 +85,8 @@ export function createComplexState(
   includeErrorVariant: boolean,
 ): VariantNavigationState<ComplexArgs> {
   const templates = createComplexTemplates(extraPattern)
-  const state = createVariantNavigationState<ComplexArgs>(
-    templates,
+  const state = createVariantNavigationState<ComplexArgs, ComplexArgs>(
+    { templates, extra: {} },
     null,
     limitArgOnError,
     includeErrorVariant,

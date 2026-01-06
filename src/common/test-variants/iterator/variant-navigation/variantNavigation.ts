@@ -1,7 +1,7 @@
 import type { Obj } from '@flemist/simple-utils'
 import {
   ArgName,
-  TestVariantsTemplates,
+  TestVariantsTemplatesWithExtra,
   VariantNavigationState,
 } from '../types'
 import { findValueIndex } from 'src/common/test-variants/iterator/helpers/findValueIndex'
@@ -9,8 +9,11 @@ import type { LimitArgOnError } from 'src/common'
 import type { Equals } from 'src/common/test-variants/types'
 
 /** Create initial variant navigation state for given templates */
-export function createVariantNavigationState<Args extends Obj>(
-  templates: TestVariantsTemplates<Args>,
+export function createVariantNavigationState<
+  Args extends Obj,
+  Extra extends Obj,
+>(
+  templates: TestVariantsTemplatesWithExtra<Args, Extra>,
   equals: null | Equals,
   limitArgOnError: null | boolean | LimitArgOnError,
   includeErrorVariant: null | boolean,
@@ -35,10 +38,7 @@ export function createVariantNavigationState<Args extends Obj>(
     argValues,
     argLimits,
     attemptIndex: 0,
-    templates: {
-      templates,
-      extra: {} as any,
-    },
+    templates,
     limitArgOnError,
     equals,
     includeErrorVariant: includeErrorVariant ?? false,
@@ -389,6 +389,47 @@ export function retreatVariantNavigation<Args extends Obj>(
 
   resetVariantNavigation(state)
   return false
+}
+
+/**
+ * Compute indices for all args
+ * @return null if any arg value not found or out of limits
+ */
+export function computeArgsIndices<Args extends Obj>(
+  state: VariantNavigationState<Args>,
+  targetArgs: Args,
+): number[] | null {
+  resetVariantNavigation(state)
+
+  const argsNames = state.argsNames
+  const argsCount = argsNames.length
+  const indices: number[] = []
+
+  for (let argIndex = 0; argIndex < argsCount; argIndex++) {
+    const argName = argsNames[argIndex]
+    const argValue = targetArgs[argName]
+
+    if (argValue === void 0) {
+      return null
+    }
+
+    const values = calcArgValues(state, argName)
+    const valueIndex = findValueIndex(values, argValue, state.equals)
+
+    if (valueIndex < 0) {
+      return null
+    }
+
+    const maxIndex = getArgValueMaxIndex(state, argIndex, true)
+    if (valueIndex > maxIndex) {
+      return null
+    }
+
+    indices.push(valueIndex)
+    state.args[argName] = argValue
+  }
+
+  return indices
 }
 
 /**

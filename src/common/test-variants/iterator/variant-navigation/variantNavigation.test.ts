@@ -409,9 +409,12 @@ describe('variantNavigation complex', () => {
   it('values as complex funcs', () => {
     const state = createVariantNavigationState(
       {
-        a: [1, 2],
-        b: ({ a }) => (a % 2 === 0 ? [] : [3, 4]),
-        c: ({ b }) => (b % 2 === 1 ? [5, 6] : [7, 8, 9]),
+        templates: {
+          a: [1, 2],
+          b: ({ a }) => (a % 2 === 0 ? [] : [3, 4]),
+          c: ({ b }) => (b % 2 === 1 ? [5, 6] : [7, 8, 9]),
+        },
+        extra: {},
       },
       null,
       null,

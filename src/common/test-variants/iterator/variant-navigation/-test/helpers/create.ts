@@ -37,17 +37,17 @@ export function _createVariantNavigationState(
   limitPattern: string,
   valuesAsFuncs?: boolean,
 ): VariantNavigationState<any> {
-  const templates = parseTemplates(argsPattern, valuesAsFuncs ?? false)
-  const templatesExtra = parseTemplatesExtra(extraPattern)
+  const templates = {
+    templates: parseTemplates(argsPattern, valuesAsFuncs ?? false),
+    extra: parseTemplatesExtra(extraPattern),
+  }
   deepFreezeJsonLike(templates)
-  deepFreezeJsonLike(templatesExtra)
   const state = createVariantNavigationState(
     templates,
     deepEqualJsonLike,
     null,
     false,
   )
-  state.templates.extra = templatesExtra
   const argLimits = parseLimits(limitPattern)
   assert.deepStrictEqual(
     state.argLimits,
@@ -79,7 +79,7 @@ export function _createVariantNavigationState(
   )
   assert.deepStrictEqual(
     state.args,
-    createArgs(state.indexes, templates),
+    createArgs(state.indexes, templates.templates),
     'state.args',
   )
   assert.deepStrictEqual(
@@ -88,14 +88,7 @@ export function _createVariantNavigationState(
     'state.argValues',
   )
   assert.strictEqual(state.attemptIndex, 0, 'state.attemptIndex')
-  assert.deepStrictEqual(
-    state.templates,
-    {
-      templates,
-      extra: templatesExtra,
-    },
-    'state.templates',
-  )
+  assert.deepStrictEqual(state.templates, templates, 'state.templates')
   assert.strictEqual(state.limitArgOnError, null, 'state.limitArgOnError')
   assert.strictEqual(state.equals, deepEqualJsonLike, 'state.equals')
   return state
