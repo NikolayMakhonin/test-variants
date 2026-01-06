@@ -18,7 +18,7 @@ import type {
 } from 'src/common/test-variants/types'
 import {
   advanceVariantNavigation,
-  computeArgsIndices,
+  calcArgsIndices,
   createVariantNavigationState,
   randomVariantNavigation,
   retreatVariantNavigation,
@@ -35,6 +35,8 @@ const DEFAULT_MODE_CONFIGS: ModeConfig[] = [{ mode: 'forward' }]
 export function createVariantsIterator<Args extends Obj>(
   options: VariantsIteratorOptions<Args>,
 ): VariantsIterator<Args> {
+  // region initialize
+
   const {
     argsTemplates,
     equals,
@@ -63,25 +65,13 @@ export function createVariantsIterator<Args extends Obj>(
   const modeStates: ModeState<Args>[] = []
 
   // Dedicated navigation state for computing indices in addLimit
-  let computeState: VariantNavigationState<Args> | null = null
+  let calcState: VariantNavigationState<Args> | null = null
 
   let limit: VariantsIteratorLimit<Args> | null = null
   let modeIndex = 0
   let tests = 0
   let initialized = false
   let startTime = 0
-
-  function invokeOnModeChange(): void {
-    if (onModeChange != null) {
-      onModeChange({
-        mode: modeConfigs[modeIndex],
-        modeIndex,
-        tests,
-      })
-    }
-  }
-
-  // region initialize
 
   function initialize(): void {
     if (!initialized) {
@@ -117,6 +107,22 @@ export function createVariantsIterator<Args extends Obj>(
 
   // endregion
 
+  // region onModeChange
+
+  function invokeOnModeChange(): void {
+    if (onModeChange != null) {
+      onModeChange({
+        mode: modeConfigs[modeIndex],
+        modeIndex,
+        tests,
+      })
+    }
+  }
+
+  // endregion
+
+  // region addLimit
+
   function addLimit(addLimitOptions?: null | AddLimitOptions<Args>): void {
     const args = addLimitOptions?.args
     if (args == null) {
@@ -136,8 +142,8 @@ export function createVariantsIterator<Args extends Obj>(
     extendTemplatesWithExtraArgs(templates, args, equals)
 
     // Create or reuse dedicated navigation state for computing indices
-    if (computeState == null) {
-      computeState = createVariantNavigationState(
+    if (calcState == null) {
+      calcState = createVariantNavigationState(
         templates,
         equals ?? null,
         // ignore limitArgOnError for correct lexicographic comparison of new limit
@@ -148,7 +154,7 @@ export function createVariantsIterator<Args extends Obj>(
     }
 
     // Here we also check that the new limit is stricter than the old one
-    const argLimits = computeArgsIndices(computeState, args)
+    const argLimits = calcArgsIndices(calcState, args)
     if (argLimits == null) {
       return
     }
@@ -171,19 +177,26 @@ export function createVariantsIterator<Args extends Obj>(
     }
   }
 
+  // endregion
+
   // region iterator
 
   function next(): ArgsWithSeed<Args> | null {
     initialize()
+    return modesPassIterate()
+  }
 
+  // region modes pass
+
+  function modesPassIterate(): ArgsWithSeed<Args> | null {
     while (true) {
-      if (!canModePassIterate()) {
+      if (!canModesPassIterate()) {
         // Stop iterator
         return null
       }
 
       while (true) {
-        const args = modeCycleIterate()
+        const args = modeIterate()
         if (args != null) {
           // Produce test args
           modeStates[modeIndex].testsInLastRun++
@@ -203,9 +216,7 @@ export function createVariantsIterator<Args extends Obj>(
     }
   }
 
-  // region modes pass
-
-  function canModePassIterate(): boolean {
+  function canModesPassIterate(): boolean {
     if (limitTests != null && tests >= limitTests) {
       return false
     }
@@ -227,6 +238,8 @@ export function createVariantsIterator<Args extends Obj>(
     invokeOnModeChange()
     return modesPassCompleted
   }
+
+  // region canNextModesPass
 
   function canNextModesPass() {
     if (!wasAnyTestInModesPass()) {
@@ -288,6 +301,8 @@ export function createVariantsIterator<Args extends Obj>(
     return minCompletedCount
   }
 
+  // endregion
+
   function nextModesPass(): void {
     modeIndex = 0
     for (let i = 0, len = modeStates.length; i < len; i++) {
@@ -299,17 +314,17 @@ export function createVariantsIterator<Args extends Obj>(
 
   // endregion
 
-  // region mode cycle
+  // region modeIterate
 
   /** @return args or null if mode completed all cycles or cannot be iterated */
-  function modeCycleIterate(): ArgsWithSeed<Args> | null {
+  function modeIterate(): ArgsWithSeed<Args> | null {
     while (true) {
       if (!canModeIterate()) {
         // Stop mode iterator
         return null
       }
 
-      const args = modeIterate()
+      const args = modeVariantsIterate()
       if (args != null) {
         // Produce test args
         return args
@@ -429,7 +444,7 @@ export function createVariantsIterator<Args extends Obj>(
 
   // region mode iterate
 
-  function modeIterate(): ArgsWithSeed<Args> | null {
+  function modeVariantsIterate(): ArgsWithSeed<Args> | null {
     // TODO: refactor this
     const modeConfig = modeConfigs[modeIndex]
     const modeState = modeStates[modeIndex]

@@ -393,7 +393,7 @@ export function retreatVariantNavigation<Args extends Obj>(
  * Compute indices for all args
  * @return null if any arg value not found or out of limits
  */
-export function computeArgsIndices<Args extends Obj>(
+export function calcArgsIndices<Args extends Obj>(
   state: VariantNavigationState<Args>,
   targetArgs: Args,
 ): number[] | null {
