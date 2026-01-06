@@ -468,6 +468,12 @@ export function createVariantsIterator<Args extends Obj>(
       return true
     }
 
+    if (isSequentialMode(modeConfig)) {
+      if (modeState.cycleCount >= (modeConfig.cycles ?? 1)) {
+        return true
+      }
+    }
+
     return false
   }
 
@@ -546,7 +552,6 @@ export function createVariantsIterator<Args extends Obj>(
       if (isSequentialMode(modeConfig)) {
         if (modeState.cycleCount >= (modeConfig.cycles ?? 1)) {
           modeState.completedCount++
-          return null
         }
       }
     }
@@ -562,9 +567,11 @@ export function createVariantsIterator<Args extends Obj>(
 
       if (modeCyclesCompleted) {
         modeIndex = 0
-        const modeState = modeStates[modeIndex]
-        modeState.testsInLastRun = 0
-        modeState.cycleCount = 0
+        for (let i = 0, len = modeStates.length; i < len; i++) {
+          const modeState = modeStates[i]
+          modeState.testsInLastRun = 0
+          modeState.cycleCount = 0
+        }
         modeCyclesCompleted = false
       }
 

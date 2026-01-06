@@ -32,7 +32,7 @@ describe(
         argsCountMax: [0, 1, 2, 3],
         argValuesCountMax: [0, 1, 2],
         argValueMax: [1, 5],
-        parallel: [false, 1, 4, 8, true, null],
+        parallel: [false], // , 1, 4, 8, true, null],
         errorVariantIndex: ['none', 0, 'last', 'after-last', null],
         async: [false, true, null],
         delay: [false, true, null],

@@ -2,6 +2,29 @@ import { deepEqualJsonLike } from '@flemist/simple-utils'
 import { TestArgs } from 'src/common/test-variants/-test/types'
 import { TestError } from 'src/common/test-variants/-test/helpers/TestError'
 
+function deepEqualJsonLikeWithoutSeed(a: any, b: any): boolean {
+  for (const key in a) {
+    if (Object.prototype.hasOwnProperty.call(a, key)) {
+      if (key === 'seed') {
+        continue
+      }
+      if (!deepEqualJsonLike(a[key], b[key])) {
+        return false
+      }
+    }
+  }
+  for (const key in b) {
+    if (
+      Object.prototype.hasOwnProperty.call(b, key) &&
+      key !== 'seed' &&
+      !Object.prototype.hasOwnProperty.call(a, key)
+    ) {
+      return false
+    }
+  }
+  return true
+}
+
 /**
  * Emulates error thrown for error variant after N retries
  */
@@ -21,7 +44,9 @@ export class ErrorVariantController {
 
   /** Use inside test func */
   onCall(args: TestArgs): void {
-    const isErrorVariant = deepEqualJsonLike(args, this.errorVariantArgs)
+    const isErrorVariant =
+      this.errorVariantArgs != null &&
+      deepEqualJsonLikeWithoutSeed(args, this.errorVariantArgs)
     if (isErrorVariant) {
       this._retries++
       if (this._retries > this._retriesToError) {
