@@ -18,7 +18,7 @@ export function createVariantNavigationState<
   limitArgOnError: null | boolean | LimitArgOnError,
   includeErrorVariant: null | boolean,
 ): VariantNavigationState<Args> {
-  const argsNames = Object.keys(templates) as ArgName<Args>[]
+  const argsNames = Object.keys(templates.templates) as ArgName<Args>[]
   const args: Args = {} as Args
   const indexes: number[] = []
   const argValues: (readonly any[])[] = []

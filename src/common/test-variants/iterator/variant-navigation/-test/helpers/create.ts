@@ -69,7 +69,7 @@ export function _createVariantNavigationState(
   Object.freeze(state.argsNames)
   assert.deepStrictEqual(
     state.argsNames,
-    Object.keys(templates),
+    Object.keys(templates.templates),
     'state.argsNames',
   )
   assert.deepStrictEqual(
