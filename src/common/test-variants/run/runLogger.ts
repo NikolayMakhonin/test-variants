@@ -127,21 +127,12 @@ function estimateCycleTime(
 
 /** Returns true if logging was performed */
 export function logProgress(runContext: RunContext<any>): boolean {
-  const { options, variantsIterator, state } = runContext
+  const { options, state } = runContext
   const { logOptions, timeController } = options
   const now = timeController.now()
 
   if (!logOptions.progress || now - state.prevLogTime < logOptions.progress) {
     return false
-  }
-
-  if (state.modeChanged) {
-    logModeChange(
-      logOptions,
-      variantsIterator.modeConfigs[variantsIterator.modeIndex],
-      variantsIterator.modeIndex,
-    )
-    state.modeChanged = false
   }
 
   const totalElapsed = now - state.startTime

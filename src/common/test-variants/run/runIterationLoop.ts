@@ -5,29 +5,8 @@ import type { ArgsWithSeed } from '../types'
 import { handleErrorParallel, handleErrorSequential } from './errorHandlers'
 import { shouldTriggerGC, triggerGC } from './gcManager'
 import type { RunContext } from './RunContext'
-import { logModeChange, logProgress } from './runLogger'
+import { logProgress } from './runLogger'
 import type { TestFuncResult } from './types'
-
-function isGlobalTimeLimitExceeded(runContext: RunContext<any>): boolean {
-  const { options, state } = runContext
-  const { limitTime, timeController } = options
-  return (
-    limitTime != null && timeController.now() - state.startTime >= limitTime
-  )
-}
-
-function isGlobalTestsLimitExceeded(runContext: RunContext<any>): boolean {
-  const { options, state } = runContext
-  const { limitTests } = options
-  return limitTests != null && state.tests >= limitTests
-}
-
-function isGlobalLimitExceeded(runContext: RunContext<any>): boolean {
-  return (
-    isGlobalTimeLimitExceeded(runContext) ||
-    isGlobalTestsLimitExceeded(runContext)
-  )
-}
 
 function updateIterationState(
   state: RunContext<any>['state'],
@@ -133,15 +112,6 @@ function handlePeriodicTasks(
   }
 }
 
-function updateCycleState(runContext: RunContext<any>): void {
-  const { options, variantsIterator, state } = runContext
-  const now = options.timeController.now()
-
-  // state.prevCycleVariantsCount = variantsIterator.index + 1
-  // state.prevCycleDuration = now - state.cycleStartTime
-  state.cycleStartTime = now
-}
-
 /** Check if external abort was requested (user cancellation) */
 function isExternalAborted(runContext: RunContext<any>): boolean {
   return !!runContext.options.abortSignalExternal?.aborted
@@ -190,11 +160,6 @@ async function runCycleAsync<Args extends Obj>(
       }
     }
 
-    if (isGlobalLimitExceeded(runContext)) {
-      state.globalLimitExceeded = true
-      break
-    }
-
     const periodicResult = handlePeriodicTasks(runContext)
     if (isPromiseLike(periodicResult)) {
       await periodicResult
@@ -236,10 +201,11 @@ async function runCycleAsync<Args extends Obj>(
 }
 
 /**
- * Runs cycle in sync mode when possible.
- * Only uses async when: test returns Promise, mode change callback is async, or GC triggers.
+ * Main iteration loop with sync mode optimization.
+ * Runs synchronously when all tests are sync and no async operations are triggered.
+ * Iterator handles all termination conditions internally via next() returning null.
  */
-function runCycle<Args extends Obj>(
+export function runIterationLoop<Args extends Obj>(
   runContext: RunContext<Args>,
 ): PromiseOrValue<void> {
   const { pool, state, options } = runContext
@@ -257,11 +223,6 @@ function runCycle<Args extends Obj>(
   while (!isExternalAborted(runContext)) {
     currentArgs = getNextArgs(runContext, currentArgs)
     if (currentArgs == null) {
-      break
-    }
-
-    if (isGlobalLimitExceeded(runContext)) {
-      state.globalLimitExceeded = true
       break
     }
 
@@ -288,105 +249,5 @@ function runCycle<Args extends Obj>(
       // Test was already run, continue async without this args
       return result.then(() => runCycleAsync(runContext))
     }
-  }
-}
-
-async function runIterationLoopAsync<Args extends Obj>(
-  runContext: RunContext<Args>,
-): Promise<void> {
-  const { options, variantsIterator, state } = runContext
-  const { logOptions, cycles } = options
-
-  while (
-    // (variantsIterator.minCompletedCount ?? Infinity) < cycles &&
-    // TODO: сделать хэлпер, который решает завершать ли общий цикл в зависимости от variantsIterator.modeStates
-    !state.globalLimitExceeded
-  ) {
-    if (isGlobalLimitExceeded(runContext)) {
-      state.globalLimitExceeded = true
-      break
-    }
-
-    const cycleResult = runCycle(runContext)
-    if (isPromiseLike(cycleResult)) {
-      await cycleResult
-    }
-    updateCycleState(runContext)
-
-    if (logOptions.debug) {
-      logOptions.func(
-        'debug',
-        `[test-variants] cycle ended: modeIndex=${variantsIterator.modeIndex}, tests=${state.tests}`,
-      )
-    }
-
-    if (state.globalLimitExceeded || isGlobalLimitExceeded(runContext)) {
-      state.globalLimitExceeded = true
-      break
-    }
-
-    // Iterator handles cycles internally, no need to call start()
-  }
-}
-
-/**
- * Main iteration loop with sync mode optimization.
- * Runs synchronously when all tests are sync and no async operations are triggered.
- */
-export function runIterationLoop<Args extends Obj>(
-  runContext: RunContext<Args>,
-): PromiseOrValue<void> {
-  const { options, variantsIterator, state } = runContext
-  const { logOptions, cycles } = options
-
-  // Iterator initializes on first next() call
-
-  if (logOptions.debug) {
-    logOptions.func(
-      'debug',
-      `[test-variants] start: modeIndex=${variantsIterator.modeIndex}, cycles=${cycles}`,
-    )
-  }
-
-  logModeChange(
-    logOptions,
-    variantsIterator.modeConfigs[variantsIterator.modeIndex],
-    variantsIterator.modeIndex,
-  )
-  state.prevModeIndex = variantsIterator.modeIndex
-
-  while (
-    // (variantsIterator.minCompletedCount ?? Infinity) < cycles &&
-    // TODO: сделать хэлпер, который решает завершать ли общий цикл в зависимости от variantsIterator.modeStates
-    !state.globalLimitExceeded
-  ) {
-    if (isGlobalLimitExceeded(runContext)) {
-      state.globalLimitExceeded = true
-      break
-    }
-
-    const cycleResult = runCycle(runContext)
-    if (isPromiseLike(cycleResult)) {
-      // Switch to async mode for remainder
-      return cycleResult.then(() => {
-        updateCycleState(runContext)
-        return runIterationLoopAsync(runContext)
-      })
-    }
-    updateCycleState(runContext)
-
-    if (logOptions.debug) {
-      logOptions.func(
-        'debug',
-        `[test-variants] cycle ended: modeIndex=${variantsIterator.modeIndex}, tests=${state.tests}`,
-      )
-    }
-
-    if (state.globalLimitExceeded || isGlobalLimitExceeded(runContext)) {
-      state.globalLimitExceeded = true
-      break
-    }
-
-    // Iterator handles cycles internally, no need to call start()
   }
 }

@@ -8,7 +8,6 @@ import { resolveLogOptions } from '../log/logOptions'
 import type {
   TestVariantsLogOptions,
   FindBestErrorOptions,
-  OnModeChangeCallback,
   ParallelOptions,
 } from '../types'
 import type {
@@ -65,16 +64,12 @@ export type RunOptionsResolved<Args extends Obj> = {
   logOptions: RequiredNonNullable<TestVariantsLogOptions>
   abortSignalExternal: IAbortSignalFast | null | undefined
   findBestError: FindBestErrorOptions | null | undefined
-  cycles: number
   dontThrowIfError: boolean | null | undefined
-  limitTime: number | null | undefined
   timeController: ITimeController
-  onModeChange: OnModeChangeCallback | null | undefined
   /** Maximum number of parallel threads */
   parallel: number
   /** Switch to sequential mode after first error in findBestError mode */
   sequentialOnError: boolean
-  limitTests: number | null | undefined
 }
 
 /** Resolve run options into normalized structure */
@@ -101,13 +96,9 @@ export function resolveRunOptions<Args extends Obj, SavedArgs = Args>(
     logOptions: resolveLogOptions(options?.log),
     abortSignalExternal: options?.abortSignal,
     findBestError,
-    cycles: options?.cycles ?? 1,
     dontThrowIfError: findBestError?.dontThrowIfError,
-    limitTime: options?.limitTime,
     timeController: options?.timeController ?? timeControllerDefault,
-    onModeChange: options?.onModeChange,
     parallel,
     sequentialOnError,
-    limitTests: options?.limitTests,
   }
 }

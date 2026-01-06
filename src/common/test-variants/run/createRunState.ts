@@ -2,11 +2,7 @@ import type { ITimeController } from '@flemist/time-controller'
 
 /** Runtime state for test variants run */
 export type RunState = {
-  // Cycle tracking
-  // prevCycleVariantsCount: number | null
-  // prevCycleDuration: number | null
   startTime: number
-  cycleStartTime: number
 
   // Memory tracking
   startMemory: number | null
@@ -28,13 +24,6 @@ export type RunState = {
   prevGcTime: number
   prevGcIterations: number
   prevGcIterationsAsync: number
-
-  // Mode tracking
-  prevModeIndex: number
-  modeChanged: boolean
-
-  // Global limit flag (limitTime or limitTests exceeded)
-  globalLimitExceeded: boolean
 }
 
 /** Create initial run state */
@@ -45,10 +34,7 @@ export function createRunState(
   const startTime = timeController.now()
 
   return {
-    // prevCycleVariantsCount: null,
-    // prevCycleDuration: null,
     startTime,
-    cycleStartTime: startTime,
     startMemory,
     debugMode: false,
     tests: 0,
@@ -59,8 +45,5 @@ export function createRunState(
     prevGcTime: startTime,
     prevGcIterations: 0,
     prevGcIterationsAsync: 0,
-    prevModeIndex: -1,
-    modeChanged: false,
-    globalLimitExceeded: false,
   }
 }
