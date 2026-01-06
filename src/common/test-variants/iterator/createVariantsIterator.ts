@@ -11,6 +11,8 @@ import type {
 } from './types'
 import type {
   ArgsWithSeed,
+  BackwardModeConfig,
+  ForwardModeConfig,
   ModeConfig,
   SequentialModeConfig,
 } from 'src/common/test-variants/types'
@@ -74,7 +76,7 @@ export function createVariantsIterator<Args extends Obj>(
   let anyTestInCurrentRound = false
   // Track if we've completed at least one full round
   let completedFirstRound = false
-  let modeCyclesCompleted = false
+  let allModesPassed = false
 
   function createModeState(): ModeState<Args> {
     const navigationState = createVariantNavigationState(
@@ -407,78 +409,19 @@ export function createVariantsIterator<Args extends Obj>(
   //   return null
   // }
 
-  function shouldCompleteIterator(): boolean {
-    let totalTestsInLastRun = 0
-    let hasSequentialModes = false
-    let minCompletedCount = Infinity
-    for (let i = 0, len = modeStates.length; i < len; i++) {
-      const modeState = modeStates[i]
-      const modeConfig = modeConfigs[i]
-      totalTestsInLastRun += modeState.testsInLastRun
-      if (isSequentialMode(modeConfig)) {
-        hasSequentialModes = true
-        if (
-          totalTestsInLastRun > 0 &&
-          modeState.completedCount < minCompletedCount
-        ) {
-          minCompletedCount = modeState.completedCount
-        }
-      }
-    }
-
-    if (modeCyclesCompleted && totalTestsInLastRun === 0) {
-      return true
-    }
-
+  function canModePassIterate(): boolean {
     if (limitTests != null && tests >= limitTests) {
-      return true
+      return false
     }
 
     if (limitTime != null && timeController.now() - startTime >= limitTime) {
-      return true
-    }
-
-    if (hasSequentialModes) {
-      if (
-        limitCompletionCount != null &&
-        minCompletedCount >= limitCompletionCount
-      ) {
-        return true
-      }
+      return false
     }
 
     return false
   }
 
   // region New
-
-  function shouldSwitchMode(): boolean {
-    const modeConfig = modeConfigs[modeIndex]
-    const modeState = modeStates[modeIndex]
-
-    if (
-      modeConfig.limitTests != null &&
-      modeState.testsInLastRun >= modeConfig.limitTests
-    ) {
-      return true
-    }
-
-    if (
-      modeConfig.limitTime != null &&
-      modeState.startTime > 0 &&
-      timeController.now() - modeState.startTime >= modeConfig.limitTime
-    ) {
-      return true
-    }
-
-    if (isSequentialMode(modeConfig)) {
-      if (modeState.cycleCount >= (modeConfig.cycles ?? 1)) {
-        return true
-      }
-    }
-
-    return false
-  }
 
   function modeIterate(): ArgsWithSeed<Args> | null {
     const modeConfig = modeConfigs[modeIndex]
@@ -517,6 +460,10 @@ export function createVariantsIterator<Args extends Obj>(
       return null
     }
 
+    if (modeState.startTime == null) {
+      modeState.startTime = timeController.now()
+    }
+
     if (isSequential) {
       navState.attempts = 1
     }
@@ -530,31 +477,95 @@ export function createVariantsIterator<Args extends Obj>(
     return injectSeed(navState.args)
   }
 
+  function hasModeReachedLimitTests(): boolean {
+    const modeConfig = modeConfigs[modeIndex]
+    const modeState = modeStates[modeIndex]
+
+    if (
+      modeConfig.limitTests != null &&
+      modeState.testsInLastRun >= modeConfig.limitTests
+    ) {
+      return true
+    }
+
+    return false
+  }
+
+  function hasModeReachedLimitTime(): boolean {
+    const modeConfig = modeConfigs[modeIndex]
+    const modeState = modeStates[modeIndex]
+
+    if (
+      modeConfig.limitTime != null &&
+      modeState.startTime != null &&
+      modeState.startTime > 0 &&
+      timeController.now() - modeState.startTime >= modeConfig.limitTime
+    ) {
+      return true
+    }
+
+    return false
+  }
+
+  function hasModeAnyCyclesToRun(): boolean {
+    const modeConfig = modeConfigs[modeIndex]
+    const modeState = modeStates[modeIndex]
+
+    if (!isModeSupportedCycles(modeConfig)) {
+      throw new Error('Unexpected behavior')
+    }
+
+    if (modeState.cycleCount < (modeConfig.cycles ?? 1)) {
+      return true
+    }
+
+    return false
+  }
+
+  function canModeIterate(): boolean {
+    const modeConfig = modeConfigs[modeIndex]
+
+    if (hasModeReachedLimitTests()) {
+      return false
+    }
+
+    if (hasModeReachedLimitTime()) {
+      return false
+    }
+
+    if (isModeSupportedCycles(modeConfig)) {
+      if (!hasModeAnyCyclesToRun()) {
+        return false
+      }
+    }
+
+    return false
+  }
+
+  /** @return args or null if mode completed all cycles or cannot be iterated */
   function modeIterateCycle(): ArgsWithSeed<Args> | null {
     while (true) {
-      if (shouldSwitchMode()) {
+      if (!canModeIterate()) {
+        // Stop mode iterator
         return null
       }
+
       const args = modeIterate()
       if (args != null) {
+        // Produce test args
         return args
       }
 
-      const modeConfig = modeConfigs[modeIndex]
-      const modeState = modeStates[modeIndex]
-
-      // Additional condition for switching mode
-      // If there were no tests in last run, switch mode
-      if (modeState.testsInLastRun === 0) {
+      if (!wasAnyTestInMode(modeStates[modeIndex])) {
+        // Stop mode iterator
         return null
       }
 
-      // Otherwise next cycle
-      modeState.cycleCount++
-
-      if (isSequentialMode(modeConfig)) {
-        if (modeState.cycleCount >= (modeConfig.cycles ?? 1)) {
-          modeState.completedCount++
+      if (isModeSupportedCycles(modeConfigs[modeIndex])) {
+        const modeCycleCompleted = nextModeCycle()
+        if (modeCycleCompleted) {
+          // Stop mode iterator
+          return null
         }
       }
     }
@@ -564,33 +575,150 @@ export function createVariantsIterator<Args extends Obj>(
     initialize()
 
     while (true) {
-      if (shouldCompleteIterator()) {
+      if (!canModePassIterate()) {
+        // Stop iterator
         return null
       }
 
-      if (modeCyclesCompleted) {
+      if (allModesPassed) {
         modeIndex = 0
         for (let i = 0, len = modeStates.length; i < len; i++) {
           const modeState = modeStates[i]
           modeState.testsInLastRun = 0
-          modeState.cycleCount = 0
         }
-        modeCyclesCompleted = false
+        allModesPassed = false
       }
 
       while (true) {
         const args = modeIterateCycle()
         if (args != null) {
+          // Produce test args
           tests++
           return args
         }
-        modeIndex++
-        if (modeIndex >= modeConfigs.length) {
-          modeCyclesCompleted = true
+        if (nextMode()) {
+          if (!canNextModesPass()) {
+            // Stop iterator
+            return null
+          }
+          nextModesPass()
           break
         }
       }
     }
+  }
+
+  /** @return true if all modes passed */
+  function nextMode(): boolean {
+    modeIndex++
+    if (modeIndex >= modeConfigs.length) {
+      modeIndex = 0
+      return true
+    }
+    return false
+  }
+
+  function nextModesPass(): void {
+    modeIndex = 0
+    for (let i = 0, len = modeStates.length; i < len; i++) {
+      const modeState = modeStates[i]
+      modeState.testsInLastRun = 0
+      modeState.startTime = null
+    }
+  }
+
+  function hasSequentialModes(): boolean {
+    for (let i = 0, len = modeConfigs.length; i < len; i++) {
+      if (isSequentialMode(modeConfigs[i])) {
+        return true
+      }
+    }
+    return false
+  }
+
+  function wasAnyTestInModesPass(): boolean {
+    for (let i = 0, len = modeStates.length; i < len; i++) {
+      const modeState = modeStates[i]
+      if (wasAnyTestInMode(modeState)) {
+        return true
+      }
+    }
+    return false
+  }
+
+  function calcMinCompletedCount(): number {
+    let minCompletedCount: number | null = null
+    for (let i = 0, len = modeStates.length; i < len; i++) {
+      const modeState = modeStates[i]
+      const modeConfig = modeConfigs[i]
+      if (isSequentialMode(modeConfig)) {
+        if (minCompletedCount == null) {
+          if (modeState.testsInLastRun <= 0) {
+            minCompletedCount = Infinity
+          } else {
+            minCompletedCount = modeState.completedCount
+          }
+        } else if (modeState.completedCount < minCompletedCount) {
+          minCompletedCount = modeState.completedCount
+        }
+      }
+    }
+
+    if (minCompletedCount == null) {
+      throw new Error('Unexpected behavior')
+    }
+
+    return minCompletedCount
+  }
+
+  function canNextModesPass() {
+    if (!wasAnyTestInModesPass()) {
+      return false
+    }
+
+    if (hasSequentialModes()) {
+      const minCompletedCount = calcMinCompletedCount()
+      if (
+        limitCompletionCount != null &&
+        minCompletedCount >= limitCompletionCount
+      ) {
+        return false
+      }
+    }
+  }
+
+  // endregion
+
+  // region New 2
+
+  /** Выполнил ли режим хотя бы один тест до смены режима */
+  function wasAnyTestInMode(modeState: ModeState<Args>): boolean {
+    return modeState.testsInLastRun > 0
+  }
+
+  function isModeSupportedCycles(
+    modeConfig: ModeConfig,
+  ): modeConfig is ForwardModeConfig | BackwardModeConfig {
+    return isSequentialMode(modeConfig)
+  }
+
+  /** @return true if mode completed a full cycle */
+  function nextModeCycle(): boolean {
+    const modeConfig = modeConfigs[modeIndex]
+    const modeState = modeStates[modeIndex]
+
+    if (!isModeSupportedCycles(modeConfig)) {
+      throw new Error('Unexpected behavior')
+    }
+
+    modeState.cycleCount++
+    if (modeState.cycleCount >= (modeConfig.cycles ?? 1)) {
+      modeState.cycleCount = 0
+      modeState.completedCount++
+      return true
+    }
+
+    return false
   }
 
   // endregion

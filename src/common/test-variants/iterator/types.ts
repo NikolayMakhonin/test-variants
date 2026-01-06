@@ -61,7 +61,7 @@ export type ModeState<Args extends Obj> = {
   /** Tests since last switch to this mode; for "did nothing" check */
   testsInLastRun: number
   /** Set on first iteration after switching to mode; for per-mode limitTime check */
-  startTime: number
+  startTime: number | null
 }
 
 /** Test variants iterator with limiting capabilities */
