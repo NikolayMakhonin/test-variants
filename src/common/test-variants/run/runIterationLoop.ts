@@ -388,10 +388,7 @@ async function runIterationLoopAsync<Args extends Obj>(
     }
 
     if (logOptions.debug) {
-      logOptions.func(
-        'debug',
-        `[test-variants] calling start(): cycleIndex=${variantsIterator.cycleIndex}, minCompletedCount before start=${variantsIterator.minCompletedCount}`,
-      )
+      logOptions.func('debug', `[test-variants] calling start()`)
     }
     variantsIterator.start()
     if (logOptions.debug) {
