@@ -1,4 +1,4 @@
-import type { Mutable, Obj, RequiredNonNullable } from '@flemist/simple-utils'
+import type { Mutable, Obj } from '@flemist/simple-utils'
 import type { ITimeController } from '@flemist/time-controller'
 import type {
   ArgsWithSeed,
@@ -6,7 +6,7 @@ import type {
   GetSeedParams,
   LimitArgOnError,
   ModeConfig,
-  TestVariantsLogOptions,
+  OnModeChangeCallback,
 } from 'src/common/test-variants/types'
 
 /** Limit information with args and optional error */
@@ -40,12 +40,28 @@ export type VariantsIteratorOptions<Args extends Obj> = {
   iterationModes?: null | ModeConfig[]
   /** Time controller for testable time-dependent operations; null uses timeControllerDefault */
   timeController?: null | ITimeController
-  /** Resolved logging options */
-  log: RequiredNonNullable<TestVariantsLogOptions>
+  /** Callback invoked when iteration mode changes */
+  onModeChange?: null | OnModeChangeCallback
+  /** Global completion count limit; default 1 */
+  limitCompletionCount?: null | number
+  /** Global tests limit */
+  limitTests?: null | number
+  /** Global time limit in ms */
+  limitTime?: null | number
 }
 
-export type ModeState = {
-  // TODO
+/** State for each iteration mode */
+export type ModeState<Args extends Obj> = {
+  /** Position and arg state, independent per mode */
+  navigationState: VariantNavigationState<Args>
+  /** Full passes through all variants; resets to 0 when completedCount increments */
+  cycleCount: number
+  /** Times mode reached its cycles config limit; only grows */
+  completedCount: number
+  /** Tests since last switch to this mode; for "did nothing" check */
+  testsInLastRun: number
+  /** Set on first iteration after switching to mode; for per-mode limitTime check */
+  startTime: number
 }
 
 /** Test variants iterator with limiting capabilities */
@@ -55,11 +71,11 @@ export type VariantsIterator<Args extends Obj> = {
   /** Current mode index in modes array */
   readonly modeIndex: number
   readonly modeConfigs: ModeConfig[]
-  readonly modeStates: ModeState[]
+  readonly modeStates: ModeState<Args>[]
+  /** Total tests count; for external logging, events, etc */
+  readonly tests: number
   /** Add or tighten limit */
   addLimit(options?: null | AddLimitOptions<Args>): void
-  /** Reset to beginning of iteration for next cycle */
-  start(): void
   /** Get next variant or null when done */
   next(): ArgsWithSeed<Args> | null
 }

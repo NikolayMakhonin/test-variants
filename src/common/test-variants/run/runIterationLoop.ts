@@ -115,50 +115,6 @@ function runParallelTest<Args extends Obj>(
   })()
 }
 
-function callOnModeChange(runContext: RunContext<any>): PromiseOrValue<void> {
-  const { options, variantsIterator, state } = runContext
-  const { onModeChange } = options
-  const { modeConfig } = variantsIterator
-
-  if (!onModeChange || !modeConfig) {
-    return
-  }
-
-  return onModeChange({
-    mode: modeConfig,
-    modeIndex: variantsIterator.modeIndex,
-    tests: state.tests,
-  })
-}
-
-function handleModeChangeIfNeeded(
-  runContext: RunContext<any>,
-): PromiseOrValue<void> {
-  const { options, variantsIterator, state } = runContext
-  const { logOptions } = options
-
-  if (variantsIterator.modeIndex === state.prevModeIndex) {
-    return
-  }
-
-  if (logOptions.debug) {
-    logOptions.func(
-      'debug',
-      `[test-variants] mode switch: modeIndex=${variantsIterator.modeIndex}, tests=${state.tests}`,
-    )
-  }
-
-  state.modeChanged = true
-  state.prevModeIndex = variantsIterator.modeIndex
-
-  logModeChange(
-    logOptions,
-    variantsIterator.modeConfig,
-    variantsIterator.modeIndex,
-  )
-  return callOnModeChange(runContext)
-}
-
 function handlePeriodicTasks(
   runContext: RunContext<any>,
 ): PromiseOrValue<void> {
@@ -234,10 +190,7 @@ async function runCycleAsync<Args extends Obj>(
       }
     }
 
-    const modeChangeResult = handleModeChangeIfNeeded(runContext)
-    if (isPromiseLike(modeChangeResult)) {
-      await modeChangeResult
-    }
+    handleModeChangeIfNeeded(runContext)
 
     if (isGlobalLimitExceeded(runContext)) {
       state.globalLimitExceeded = true
@@ -309,12 +262,7 @@ function runCycle<Args extends Obj>(
       break
     }
 
-    const modeChangeResult = handleModeChangeIfNeeded(runContext)
-    if (isPromiseLike(modeChangeResult)) {
-      // Switch to async mode, pass current args to continue from this point
-      const args = currentArgs
-      return modeChangeResult.then(() => runCycleAsync(runContext, args))
-    }
+    handleModeChangeIfNeeded(runContext)
 
     if (isGlobalLimitExceeded(runContext)) {
       state.globalLimitExceeded = true
@@ -381,16 +329,7 @@ async function runIterationLoopAsync<Args extends Obj>(
       break
     }
 
-    if (logOptions.debug) {
-      logOptions.func('debug', `[test-variants] calling start()`)
-    }
-    variantsIterator.start()
-    if (logOptions.debug) {
-      logOptions.func(
-        'debug',
-        `[test-variants] after start(): modeIndex=${variantsIterator.modeIndex}`,
-      )
-    }
+    // Iterator handles cycles internally, no need to call start()
   }
 }
 
@@ -404,7 +343,7 @@ export function runIterationLoop<Args extends Obj>(
   const { options, variantsIterator, state } = runContext
   const { logOptions, cycles } = options
 
-  variantsIterator.start()
+  // Iterator initializes on first next() call
 
   if (logOptions.debug) {
     logOptions.func(
@@ -415,15 +354,10 @@ export function runIterationLoop<Args extends Obj>(
 
   logModeChange(
     logOptions,
-    variantsIterator.modeConfig,
+    variantsIterator.modeConfigs[variantsIterator.modeIndex],
     variantsIterator.modeIndex,
   )
   state.prevModeIndex = variantsIterator.modeIndex
-
-  const modeChangeResult = callOnModeChange(runContext)
-  if (isPromiseLike(modeChangeResult)) {
-    return modeChangeResult.then(() => runIterationLoopAsync(runContext))
-  }
 
   while (
     // (variantsIterator.minCompletedCount ?? Infinity) < cycles &&
@@ -457,15 +391,6 @@ export function runIterationLoop<Args extends Obj>(
       break
     }
 
-    if (logOptions.debug) {
-      logOptions.func('debug', `[test-variants] calling start()`)
-    }
-    variantsIterator.start()
-    if (logOptions.debug) {
-      logOptions.func(
-        'debug',
-        `[test-variants] after start(): modeIndex=${variantsIterator.modeIndex}`,
-      )
-    }
+    // Iterator handles cycles internally, no need to call start()
   }
 }

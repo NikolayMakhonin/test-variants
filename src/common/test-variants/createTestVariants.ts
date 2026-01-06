@@ -1,11 +1,12 @@
 import type { Obj } from '@flemist/simple-utils'
 import type { TestVariantsTemplates } from './iterator/types'
+import { formatModeConfig } from './log/format'
 import { resolveLogOptions } from './log/logOptions'
 import type { TestVariantsTest } from './run/types'
 import { createTestRun } from './createTestRun'
 import { createVariantsIterator } from './iterator/createVariantsIterator'
 import { testVariantsRun } from './testVariantsRun'
-import type { TestVariantsSetArgs } from './types'
+import type { ModeChangeEvent, TestVariantsSetArgs } from './types'
 
 export function createTestVariants<Args extends Obj>(
   test: TestVariantsTest<Args>,
@@ -18,6 +19,19 @@ export function createTestVariants<Args extends Obj>(
         log: logOptions,
       })
 
+      const userOnModeChange = options?.onModeChange
+      function onModeChange(event: ModeChangeEvent): void {
+        if (logOptions.modeChange) {
+          logOptions.func(
+            'modeChange',
+            `[test-variants] ${formatModeConfig(event.mode, event.modeIndex)}`,
+          )
+        }
+        if (userOnModeChange != null) {
+          userOnModeChange(event)
+        }
+      }
+
       // Extended templates include extra args beyond Args; iterator accepts base Args structure
       const variantsIterator = createVariantsIterator<Args>({
         argsTemplates: args as TestVariantsTemplates<Args>,
@@ -27,7 +41,7 @@ export function createTestVariants<Args extends Obj>(
         limitArgOnError: options?.findBestError?.limitArgOnError,
         includeErrorVariant: options?.findBestError?.includeErrorVariant,
         timeController: options?.timeController,
-        log: logOptions,
+        onModeChange,
       })
 
       return testVariantsRun(testRun, variantsIterator, options)

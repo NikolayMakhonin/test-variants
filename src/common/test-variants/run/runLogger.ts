@@ -138,7 +138,7 @@ export function logProgress(runContext: RunContext<any>): boolean {
   if (state.modeChanged) {
     logModeChange(
       logOptions,
-      variantsIterator.modeConfig,
+      variantsIterator.modeConfigs[variantsIterator.modeIndex],
       variantsIterator.modeIndex,
     )
     state.modeChanged = false

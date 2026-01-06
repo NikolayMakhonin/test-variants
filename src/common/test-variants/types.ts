@@ -226,9 +226,7 @@ export type ModeChangeEvent = {
 }
 
 /** Callback invoked when iteration mode changes */
-export type OnModeChangeCallback = (
-  event: ModeChangeEvent,
-) => PromiseOrValue<void>
+export type OnModeChangeCallback = (event: ModeChangeEvent) => void
 
 // endregion
 
