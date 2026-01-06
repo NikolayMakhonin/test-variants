@@ -6,7 +6,7 @@ import {
   retreatVariantNavigation,
 } from './variantNavigation'
 import type { LimitArgOnError } from 'src/common'
-import { createTestVariants } from '@flemist/test-variants'
+import { createTestVariants } from '#this'
 import { parseLimits } from './-test/helpers/parse'
 import { formatIndexes, formatTemplatesValues } from './-test/helpers/format'
 import { _createVariantNavigationState } from './-test/helpers/create'
