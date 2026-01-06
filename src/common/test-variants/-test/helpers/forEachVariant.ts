@@ -12,7 +12,7 @@ export function forEachVariant(
   callback?: null | ForEachVariantCallback,
 ): number {
   const keysLen = argKeys.length
-  let index = 0
+  const index = 0
   let stop = false
 
   function iterate(keyIndex: number, args: TestArgs): void {
@@ -25,7 +25,6 @@ export function forEachVariant(
         stop = true
         return
       }
-      index++
       return
     }
     const key = argKeys[keyIndex]
