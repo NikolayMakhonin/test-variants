@@ -13,7 +13,7 @@ export function createVariantNavigationState<Args extends Obj>(
   templates: TestVariantsTemplates<Args>,
   equals: null | Equals,
   limitArgOnError: null | boolean | LimitArgOnError,
-  includeErrorVariant: boolean,
+  includeErrorVariant: null | boolean,
 ): VariantNavigationState<Args> {
   const argsNames = Object.keys(templates) as ArgName<Args>[]
   const args: Args = {} as Args
@@ -41,7 +41,7 @@ export function createVariantNavigationState<Args extends Obj>(
     },
     limitArgOnError,
     equals,
-    includeErrorVariant,
+    includeErrorVariant: includeErrorVariant ?? false,
   }
 }
 

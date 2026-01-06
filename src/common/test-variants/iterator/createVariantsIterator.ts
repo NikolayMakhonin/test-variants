@@ -33,16 +33,16 @@ export function createVariantsIterator<Args extends Obj>(
 ): VariantsIterator<Args> {
   const {
     argsTemplates,
-    equals = null,
-    limitArgOnError = null,
-    includeErrorVariant = false,
-    getSeed = null,
-    iterationModes = null,
-    timeController = null,
-    onModeChange = null,
-    limitCompletionCount = null,
-    limitTests = null,
-    limitTime = null,
+    equals,
+    limitArgOnError,
+    includeErrorVariant,
+    getSeed,
+    iterationModes,
+    timeController,
+    onModeChange,
+    limitCompletionCount,
+    limitTests,
+    limitTime,
   } = options
 
   const timeCtrl = timeController ?? timeControllerDefault
@@ -70,9 +70,9 @@ export function createVariantsIterator<Args extends Obj>(
   function createModeState(): ModeState<Args> {
     const navigationState = createVariantNavigationState(
       templatesWithExtra.templates,
-      equals,
-      limitArgOnError,
-      !!includeErrorVariant,
+      equals ?? null,
+      limitArgOnError ?? null,
+      includeErrorVariant ?? null,
     )
     // All modes share the same templatesWithExtra for addLimit to work
     navigationState.templates = templatesWithExtra

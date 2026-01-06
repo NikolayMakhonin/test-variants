@@ -114,7 +114,7 @@ function handlePeriodicTasks(
 
 /** Check if external abort was requested (user cancellation) */
 function isExternalAborted(runContext: RunContext<any>): boolean {
-  return !!runContext.options.abortSignalExternal?.aborted
+  return runContext.options.abortSignalExternal?.aborted ?? false
 }
 
 /** Check if parallel execution was aborted (error in findBestError mode) */
