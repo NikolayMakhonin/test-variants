@@ -10,7 +10,12 @@ import {
   generateBoundaryInt,
   generateLimit,
 } from './primitives'
-import { PARALLEL_MAX, TIME_MAX } from '../constants'
+import {
+  LIMIT_RANDOM_MODE_DEFAULT,
+  MODES_DEFAULT,
+  PARALLEL_MAX,
+  TIME_MAX,
+} from '../constants'
 import { StressTestArgs, Template, TestArgs } from '../types'
 import { isLogEnabled } from '../log'
 import { generateFindBestErrorOptions } from './findBestError'
@@ -114,7 +119,7 @@ function generateModes(
   rnd: Random,
   options: StressTestArgs,
   variantsCount: number,
-): ModeConfig[] {
+): readonly ModeConfig[] {
   const count = generateBoundaryInt(rnd, options.modesCountMax)
   const modes: ModeConfig[] = []
   for (let i = 0; i < count; i++) {
@@ -133,16 +138,27 @@ export function generateRunOptions(
   onError: (event: { error: unknown; args: TestArgs; tests: number }) => void,
   onModeChange: (event: ModeChangeEvent) => void,
 ): TestVariantsRunOptions<TestArgs> {
-  const limitTests = generateLimit(rnd, variantsCount)
+  let iterationModes = generateModes(rnd, options, variantsCount)
+  if (iterationModes.length === 0) {
+    iterationModes = MODES_DEFAULT
+  }
+
+  let limitTests = generateLimit(rnd, variantsCount)
   const limitTime = generateBoundaryInt(rnd, TIME_MAX)
+
+  const randomModesOnly = iterationModes.every(o => o.mode === 'random')
+  if (randomModesOnly && limitTests <= 0) {
+    limitTests = LIMIT_RANDOM_MODE_DEFAULT
+  }
+
   return Object.freeze({
     onError,
     onModeChange,
     log: generateLogOptions(rnd, options, logFunc),
     parallel: generateParallel(rnd, options),
-    cycles: generateBoundaryInt(rnd, options.cyclesMax),
+    cycles: generateBoundaryInt(rnd, options.completionCounts),
     getSeed: generateSeedFunc(rnd, options),
-    iterationModes: generateModes(rnd, options, variantsCount),
+    iterationModes,
     findBestError: generateFindBestErrorOptions(
       rnd,
       options,

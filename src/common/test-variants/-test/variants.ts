@@ -56,7 +56,8 @@
  * Write all code, comments, and logs in English following all project text writing rules
  */
 
-import { createTestVariants } from '#this'
+import { createTestVariants as createTestVariantsOld } from '#this'
+import { createTestVariants } from 'src/common/test-variants/createTestVariants'
 import { Random } from '@flemist/simple-utils'
 import type { ModeChangeEvent, TestVariantsLogType } from '../types'
 import { isLogEnabled, runWithLogs } from './log'
@@ -118,7 +119,11 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
 
   // endregion
 
-  const callCountRange = estimateCallCount(variantsCount, runOptions)
+  const callCountRange = estimateCallCount(
+    runOptions,
+    variantsCount,
+    errorVariantIndex,
+  )
   // const _iterationModes = runOptions.iterationModes ?? MODES_DEFAULT
   // const modeChangesRange = estimateModeChanges(
   //   iterationModes,
@@ -265,7 +270,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   callController.finalize()
 }
 
-export const testVariants = createTestVariants(
+export const testVariants = createTestVariantsOld(
   async (options: StressTestArgs) => {
     try {
       await executeStressTest(options)

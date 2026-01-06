@@ -26,7 +26,7 @@ describe(
           findBestError !== false ? [false, true, 'func', null] : [false],
         dontThrowIfError: ({ findBestError }) =>
           findBestError !== false ? [false, true, null] : [true],
-        cyclesMax: [0, 1, 2],
+        completionCounts: [0, 1, 2],
         withSeed: [false, true, null],
         attemptsPerVariantMax: [0, 1, 2],
         argsCountMax: [0, 1, 2, 3],

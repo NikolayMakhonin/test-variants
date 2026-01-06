@@ -41,14 +41,13 @@ export function createVariantsIterator<Args extends Obj>(
     includeErrorVariant,
     getSeed,
     iterationModes,
-    timeController,
     onModeChange,
     limitCompletionCount,
     limitTests,
     limitTime,
   } = options
 
-  const timeCtrl = timeController ?? timeControllerDefault
+  const timeController = options.timeController ?? timeControllerDefault
 
   // Clone templates to allow mutation (extendTemplatesForArgs)
   const templates: TestVariantsTemplatesWithExtra<Args, any> = {
@@ -56,7 +55,10 @@ export function createVariantsIterator<Args extends Obj>(
     extra: {},
   }
 
-  const modeConfigs: ModeConfig[] = iterationModes ?? DEFAULT_MODE_CONFIGS
+  const modeConfigs: readonly ModeConfig[] =
+    iterationModes == null || iterationModes.length === 0
+      ? DEFAULT_MODE_CONFIGS
+      : iterationModes
   const modeStates: ModeState<Args>[] = []
 
   // Dedicated navigation state for computing indices in addLimit
@@ -72,6 +74,7 @@ export function createVariantsIterator<Args extends Obj>(
   let anyTestInCurrentRound = false
   // Track if we've completed at least one full round
   let completedFirstRound = false
+  let modeCyclesCompleted = false
 
   function createModeState(): ModeState<Args> {
     const navigationState = createVariantNavigationState(
@@ -89,14 +92,14 @@ export function createVariantsIterator<Args extends Obj>(
     }
   }
 
-  function initializeModeStates(): void {
+  function createModeStates(): void {
     for (let i = 0, len = modeConfigs.length; i < len; i++) {
       modeStates.push(createModeState())
     }
   }
 
   function getMinCompletedCountForSequentialModes(): number {
-    let minCompletedCount = Infinity
+    let minCompletedCount: number = Infinity
     for (let i = 0, len = modeConfigs.length; i < len; i++) {
       if (isSequentialMode(modeConfigs[i])) {
         const completedCount = modeStates[i].completedCount
@@ -115,14 +118,35 @@ export function createVariantsIterator<Args extends Obj>(
     }
 
     // 2. Global elapsed time >= limitTime
-    if (limitTime != null && timeCtrl.now() - startTime >= limitTime) {
+    if (limitTime != null && timeController.now() - startTime >= limitTime) {
       return true
     }
 
+    const hasSequentialModes = modeConfigs.some(isSequentialMode)
+    if (
+      hasSequentialModes &&
+      limitCompletionCount != null &&
+      limitCompletionCount <= 0
+    ) {
+      return true
+    }
+
+    const totalTestsInLastRun = modeStates.reduce(
+      (sum, modeState) => sum + modeState.testsInLastRun,
+      0,
+    )
+    // If no tests were run at all, do not terminate yet
+    if (totalTestsInLastRun === 0) {
+      return true
+    }
+    // If no sequential modes, do not check completion count
+    if (!hasSequentialModes) {
+      return false
+    }
+
     // 3. min(completedCount across sequential modes) >= limitCompletionCount
-    const globalCycles = limitCompletionCount ?? 1
     const minCompleted = getMinCompletedCountForSequentialModes()
-    if (minCompleted !== Infinity && minCompleted >= globalCycles) {
+    if (minCompleted >= (limitCompletionCount ?? 1)) {
       return true
     }
 
@@ -135,11 +159,11 @@ export function createVariantsIterator<Args extends Obj>(
     return false
   }
 
-  function ensureInitialized(): void {
+  function initialize(): void {
     if (!initialized) {
       initialized = true
-      startTime = timeCtrl.now()
-      initializeModeStates()
+      startTime = timeController.now()
+      createModeStates()
       modeIndex = 0
     }
   }
@@ -151,7 +175,7 @@ export function createVariantsIterator<Args extends Obj>(
     }
 
     // Ensure mode states exist before updating limits
-    ensureInitialized()
+    initialize()
 
     // Validate args
     if (!isArgsKeysInTemplate(templates.templates, args)) {
@@ -214,7 +238,7 @@ export function createVariantsIterator<Args extends Obj>(
     if (
       modeConfig.limitTime != null &&
       modeState.startTime > 0 &&
-      timeCtrl.now() - modeState.startTime >= modeConfig.limitTime
+      timeController.now() - modeState.startTime >= modeConfig.limitTime
     ) {
       return true
     }
@@ -257,16 +281,23 @@ export function createVariantsIterator<Args extends Obj>(
 
     // Handle attemptsPerVariant for sequential modes
     if (isSequentialMode(modeConfig)) {
+      if (modeConfig.cycles != null && modeConfig.cycles <= 0) {
+        return false
+      }
+
       const attemptsPerVariant =
         (modeConfig as SequentialModeConfig).attemptsPerVariant ?? 1
+      if (attemptsPerVariant <= 0) {
+        return false
+      }
+
       if (
-        navState.attemptIndex > 0 &&
-        navState.attemptIndex < attemptsPerVariant
+        navState.attempts >= 0 &&
+        navState.attempts + 1 < attemptsPerVariant
       ) {
-        navState.attemptIndex++
+        navState.attempts++
         return true
       }
-      navState.attemptIndex = 1
     }
 
     let success: boolean
@@ -280,6 +311,12 @@ export function createVariantsIterator<Args extends Obj>(
       case 'random':
         success = randomVariantNavigation(navState)
         break
+    }
+
+    if (success) {
+      navState.attempts = 0
+    } else {
+      navState.attempts = -1
     }
 
     return success
@@ -306,69 +343,247 @@ export function createVariantsIterator<Args extends Obj>(
   }
 
   function injectSeed(args: Args): ArgsWithSeed<Args> {
-    const argsWithSeed = args as ArgsWithSeed<Args>
+    const argsWithSeed = { ...args } as ArgsWithSeed<Args>
     if (getSeed != null) {
       argsWithSeed.seed = getSeed({ tests })
     }
     return argsWithSeed
   }
 
-  function next(): ArgsWithSeed<Args> | null {
-    ensureInitialized()
+  // function next(): ArgsWithSeed<Args> | null {
+  //   ensureInitialized()
+  //
+  //   // Main iteration loop - may switch modes multiple times before returning args
+  //   const maxModeAttempts = modeConfigs.length * 2 // Prevent infinite loops
+  //   let modeAttempts = 0
+  //
+  //   while (modeAttempts < maxModeAttempts) {
+  //     modeAttempts++
+  //
+  //     // 1. Check global termination conditions
+  //     if (checkGlobalTermination()) {
+  //       return null
+  //     }
+  //
+  //     // 2. Check mode switching conditions
+  //     if (checkModeSwitchConditions()) {
+  //       switchToNextMode()
+  //       continue
+  //     }
+  //
+  //     const modeState = modeStates[modeIndex]
+  //
+  //     // 3. If first iteration in mode after switch, set startTime
+  //     if (modeState.startTime === 0) {
+  //       modeState.startTime = timeCtrl.now()
+  //     }
+  //
+  //     // 4. Advance navigation
+  //     const success = advanceNavigation()
+  //
+  //     if (!success) {
+  //       // 5. Navigation exhausted
+  //       const shouldSwitchMode = handleNavigationExhausted()
+  //       if (shouldSwitchMode) {
+  //         switchToNextMode()
+  //       }
+  //       continue
+  //     }
+  //
+  //     // 6. Increment counters
+  //     modeState.testsInLastRun++
+  //     tests++
+  //     anyTestInCurrentRound = true
+  //
+  //     // 7. Invoke onModeChange if mode changed during this call
+  //     invokeOnModeChangeIfNeeded()
+  //
+  //     // 8. Inject seed and return args
+  //     const args = injectSeed(modeState.navigationState.args)
+  //     return args
+  //   }
+  //
+  //   // Safety: should not reach here
+  //   return null
+  // }
 
-    // Main iteration loop - may switch modes multiple times before returning args
-    const maxModeAttempts = modeConfigs.length * 2 // Prevent infinite loops
-    let modeAttempts = 0
+  function shouldCompleteIterator(): boolean {
+    let totalTestsInLastRun = 0
+    let hasSequentialModes = false
+    let minCompletedCount = Infinity
+    for (let i = 0, len = modeStates.length; i < len; i++) {
+      const modeState = modeStates[i]
+      const modeConfig = modeConfigs[i]
+      totalTestsInLastRun += modeState.testsInLastRun
+      if (isSequentialMode(modeConfig)) {
+        hasSequentialModes = true
+        if (modeState.completedCount < minCompletedCount) {
+          minCompletedCount = modeState.completedCount
+        }
+      }
+    }
 
-    while (modeAttempts < maxModeAttempts) {
-      modeAttempts++
+    if (modeCyclesCompleted && totalTestsInLastRun === 0) {
+      return true
+    }
 
-      // 1. Check global termination conditions
-      if (checkGlobalTermination()) {
+    if (limitTests != null && tests >= limitTests) {
+      return true
+    }
+
+    if (limitTime != null && timeController.now() - startTime >= limitTime) {
+      return true
+    }
+
+    if (hasSequentialModes) {
+      if (
+        limitCompletionCount != null &&
+        minCompletedCount >= limitCompletionCount
+      ) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  // region New
+
+  function shouldSwitchMode(): boolean {
+    const modeConfig = modeConfigs[modeIndex]
+    const modeState = modeStates[modeIndex]
+
+    if (
+      modeConfig.limitTests != null &&
+      modeState.testsInLastRun >= modeConfig.limitTests
+    ) {
+      return true
+    }
+
+    if (
+      modeConfig.limitTime != null &&
+      modeState.startTime > 0 &&
+      timeController.now() - modeState.startTime >= modeConfig.limitTime
+    ) {
+      return true
+    }
+
+    return false
+  }
+
+  function modeIterate(): ArgsWithSeed<Args> | null {
+    const modeConfig = modeConfigs[modeIndex]
+    const modeState = modeStates[modeIndex]
+    const navState = modeState.navigationState
+    const isSequential = isSequentialMode(modeConfig)
+
+    if (isSequential) {
+      const attemptsPerVariant =
+        (modeConfig as SequentialModeConfig).attemptsPerVariant ?? 1
+      if (attemptsPerVariant <= 0) {
+        return null
+      }
+      if (navState.attempts > 0 && navState.attempts < attemptsPerVariant) {
+        navState.attempts++
+        return injectSeed(navState.args)
+      }
+    }
+
+    let success: boolean
+    switch (modeConfig.mode) {
+      case 'forward':
+        success = advanceVariantNavigation(navState)
+        break
+      case 'backward':
+        success = retreatVariantNavigation(navState)
+        break
+      case 'random':
+        success = randomVariantNavigation(navState)
+        break
+      default:
+        throw new Error(`Unknown mode: ${(modeConfig as any).mode}`)
+    }
+
+    if (!success) {
+      return null
+    }
+
+    if (isSequential) {
+      navState.attempts = 1
+    }
+
+    if (modeState.testsInLastRun === 0) {
+      modeState.startTime = timeController.now()
+    }
+
+    modeState.testsInLastRun++
+
+    return injectSeed(navState.args)
+  }
+
+  function modeIterateCycle(): ArgsWithSeed<Args> | null {
+    while (true) {
+      if (shouldSwitchMode()) {
+        return null
+      }
+      const args = modeIterate()
+      if (args != null) {
+        return args
+      }
+
+      const modeConfig = modeConfigs[modeIndex]
+      const modeState = modeStates[modeIndex]
+
+      // Additional condition for switching mode
+      // If there were no tests in last run, switch mode
+      if (modeState.testsInLastRun === 0) {
         return null
       }
 
-      // 2. Check mode switching conditions
-      if (checkModeSwitchConditions()) {
-        switchToNextMode()
-        continue
-      }
+      // Otherwise next cycle
+      modeState.cycleCount++
 
-      const modeState = modeStates[modeIndex]
-
-      // 3. If first iteration in mode after switch, set startTime
-      if (modeState.startTime === 0) {
-        modeState.startTime = timeCtrl.now()
-      }
-
-      // 4. Advance navigation
-      const success = advanceNavigation()
-
-      if (!success) {
-        // 5. Navigation exhausted
-        const shouldSwitchMode = handleNavigationExhausted()
-        if (shouldSwitchMode) {
-          switchToNextMode()
+      if (isSequentialMode(modeConfig)) {
+        if (modeState.cycleCount >= (modeConfig.cycles ?? 1)) {
+          modeState.completedCount++
+          return null
         }
-        continue
+      }
+    }
+  }
+
+  function next(): ArgsWithSeed<Args> | null {
+    initialize()
+
+    while (true) {
+      if (shouldCompleteIterator()) {
+        return null
       }
 
-      // 6. Increment counters
-      modeState.testsInLastRun++
-      tests++
-      anyTestInCurrentRound = true
+      if (modeCyclesCompleted) {
+        modeIndex = 0
+        const modeState = modeStates[modeIndex]
+        modeState.testsInLastRun = 0
+        modeState.cycleCount = 0
+        modeCyclesCompleted = false
+      }
 
-      // 7. Invoke onModeChange if mode changed during this call
-      invokeOnModeChangeIfNeeded()
-
-      // 8. Inject seed and return args
-      const args = injectSeed({ ...modeState.navigationState.args })
-      return args
+      while (true) {
+        const args = modeIterateCycle()
+        if (args != null) {
+          tests++
+          return args
+        }
+        modeIndex++
+        if (modeIndex >= modeConfigs.length) {
+          modeCyclesCompleted = true
+          break
+        }
+      }
     }
-
-    // Safety: should not reach here
-    return null
   }
+
+  // endregion
 
   const iterator: VariantsIterator<Args> = {
     get limit() {

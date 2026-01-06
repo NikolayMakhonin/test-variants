@@ -37,7 +37,7 @@ export type VariantsIteratorOptions<Args extends Obj> = {
   /** Generates seed for reproducible randomized testing; seed is added to args */
   getSeed?: null | ((params: GetSeedParams) => any)
   /** Iteration modes (variant traversal methods); each mode runs until its limits are reached */
-  iterationModes?: null | ModeConfig[]
+  iterationModes?: null | readonly ModeConfig[]
   /** Time controller for testable time-dependent operations; null uses timeControllerDefault */
   timeController?: null | ITimeController
   /** Callback invoked when iteration mode changes */
@@ -70,7 +70,7 @@ export type VariantsIterator<Args extends Obj> = {
   readonly limit: VariantsIteratorLimit<Args> | null
   /** Current mode index in modes array */
   readonly modeIndex: number
-  readonly modeConfigs: ModeConfig[]
+  readonly modeConfigs: readonly ModeConfig[]
   readonly modeStates: ModeState<Args>[]
   /** Total tests count; for external logging, events, etc */
   readonly tests: number
@@ -121,7 +121,7 @@ export type VariantNavigationState<Args extends Obj> = {
   // Max value index by arg index
   argLimits: (number | null)[]
   // Repeat index for the same variant if attemptsPerVariant > 1
-  attemptIndex: number
+  attempts: number
   templates: TestVariantsTemplatesWithExtra<Args, any>
   limitArgOnError: null | boolean | LimitArgOnError
   equals: null | Equals

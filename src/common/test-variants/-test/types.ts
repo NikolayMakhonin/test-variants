@@ -20,7 +20,7 @@ export type StressTestArgs = {
   dontThrowIfError: boolean | null
   withSeed: boolean | null
   attemptsPerVariantMax: number
-  cyclesMax: number
+  completionCounts: number
   modeType: 'forward' | 'backward' | 'random' | null
   modeCyclesMax: number
   modeAttemptsMax: number

@@ -17,7 +17,7 @@
       },
       "node": {
         "types": "./build/node/index.d.ts",
-        "import": "./node_modules/@flemist/test-variants/dist/lib/index.mjs",
+        "import": "./build/node/index.mjs",
         "require": "./build/node/index.cjs"
       },
       "import": "./build/common/index.mjs",
@@ -38,7 +38,7 @@
     "#this": {
       "types": "./src/common/index.ts",
       "browser": "./src/browser/index.ts",
-      "node": "./src/node/index.ts",
+      "node": "./dist/lib/index.mjs",
       "default": "./src/common/index.ts"
     }
   },

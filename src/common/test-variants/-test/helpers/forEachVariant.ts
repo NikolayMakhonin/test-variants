@@ -12,7 +12,10 @@ export function forEachVariant(
   callback?: null | ForEachVariantCallback,
 ): number {
   const keysLen = argKeys.length
-  const index = 0
+  if (keysLen === 0) {
+    return 0
+  }
+  let index = 0
   let stop = false
 
   function iterate(keyIndex: number, args: TestArgs): void {
@@ -25,6 +28,7 @@ export function forEachVariant(
         stop = true
         return
       }
+      index++
       return
     }
     const key = argKeys[keyIndex]
@@ -35,7 +39,8 @@ export function forEachVariant(
       args[key] = values[i]
       iterate(keyIndex + 1, args)
     }
-    delete args[key]
+    // high performance alternative to delete property
+    args[key] = void 0 as any
   }
 
   iterate(0, {})

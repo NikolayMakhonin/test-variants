@@ -265,7 +265,7 @@ export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
   /** Generates seed for reproducible randomized testing; seed is added to args */
   getSeed?: null | ((params: GetSeedParams) => any)
   /** Iteration modes (variant traversal methods); each mode runs until its limits are reached */
-  iterationModes?: null | ModeConfig[]
+  iterationModes?: null | readonly ModeConfig[]
   findBestError?: null | FindBestErrorOptions
   /** Save error-causing args to files and replay them before normal iteration */
   saveErrorVariants?: null | SaveErrorVariantsOptions<Args, SavedArgs>

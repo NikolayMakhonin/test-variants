@@ -17,6 +17,9 @@ describe('advanceVariantNavigation', () => {
     checkVariantNavigationState(state, '', '', '')
     assert.isFalse(advanceVariantNavigation(state))
     checkVariantNavigationState(state, '', '', '')
+    state.includeErrorVariant = true
+    assert.isFalse(advanceVariantNavigation(state))
+    checkVariantNavigationState(state, '', '', '')
   })
 
   it('1 arg, 1 value', () => {
@@ -170,6 +173,9 @@ describe('retreatVariantNavigation', () => {
   it('empty', () => {
     const state = _createVariantNavigationState('', '', '')
     checkVariantNavigationState(state, '', '', '')
+    assert.isFalse(retreatVariantNavigation(state))
+    checkVariantNavigationState(state, '', '', '')
+    state.includeErrorVariant = true
     assert.isFalse(retreatVariantNavigation(state))
     checkVariantNavigationState(state, '', '', '')
   })
@@ -332,6 +338,9 @@ describe('randomVariantNavigation', () => {
   it('empty', () => {
     const state = _createVariantNavigationState('', '', '')
     checkVariantNavigationState(state, '', '', '')
+    assert.isFalse(randomVariantNavigation(state))
+    checkVariantNavigationState(state, '', '', '')
+    state.includeErrorVariant = true
     assert.isFalse(randomVariantNavigation(state))
     checkVariantNavigationState(state, '', '', '')
   })

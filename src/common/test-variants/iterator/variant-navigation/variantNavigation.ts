@@ -37,7 +37,7 @@ export function createVariantNavigationState<
     indexes,
     argValues,
     argLimits,
-    attemptIndex: 0,
+    attempts: 0,
     templates,
     limitArgOnError,
     equals,
@@ -278,12 +278,12 @@ export function retreatVariantNavigation<Args extends Obj>(
 
   let isInitial = false
   let initComplete = true
-  // First initialize argValues to last values if not yet done
   const argsCount = state.indexes.length
   // Arguments after belowMaxIndex can use full range since we're lexicographically below the limit.
   let belowMaxIndex = argsCount
   let resetSubsequent = false
   let argIndex = 0
+  // First initialize argValues to last values if not yet done
   for (; argIndex < argsCount; argIndex++) {
     // Recalculate argValues if null or if previous args changed (resetSubsequent)
     const argValuesIsNull = state.argValues[argIndex] == null
@@ -413,20 +413,29 @@ export function computeArgsIndices<Args extends Obj>(
       return null
     }
 
-    const values = calcArgValues(state, argName)
-    const valueIndex = findValueIndex(values, argValue, state.equals)
+    state.argValues[argIndex] = calcArgValues(state, argName)
 
-    if (valueIndex < 0) {
+    const maxIndex = getArgValueMaxIndex(state, argIndex, true)
+    if (maxIndex < 0) {
       return null
     }
 
-    const maxIndex = getArgValueMaxIndex(state, argIndex, true)
+    const valueIndex = findValueIndex(
+      state.argValues[argIndex],
+      argValue,
+      state.equals,
+    )
+    if (valueIndex < 0) {
+      return null
+    }
     if (valueIndex > maxIndex) {
       return null
     }
 
     indices.push(valueIndex)
-    state.args[argName] = argValue
+
+    state.indexes[argIndex] = valueIndex
+    state.args[state.argsNames[argIndex]] = state.argValues[argIndex][0]
   }
 
   return indices
@@ -442,6 +451,9 @@ export function randomVariantNavigation<Args extends Obj>(
   state: VariantNavigationState<Args>,
 ): boolean {
   const argsCount = state.indexes.length
+  if (argsCount === 0) {
+    return false
+  }
   let belowMax = false
   for (let argIndex = 0; argIndex < argsCount; argIndex++) {
     // Always recalculate argValues since random picks different previous arg values each time
