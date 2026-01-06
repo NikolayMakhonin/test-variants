@@ -117,15 +117,12 @@ const result = await testVariants({
   limitTests: number,         // default: null - unlimited
   // Maximum total runtime of testVariants
   limitTime: number,          // default: null - unlimited, (milliseconds)
-  // Test terminates if the following conditions are met for all iteration modes:
-  // 1) for `forward` and `backward` - number of full passes of all variants reached cycles
-  // 2) for `random` - number of picked variants reached cycles (without counting attemptsPerVariant)
-  // Until these conditions are met, iteration modes will switch in a circle
-  // If in the last pass any mode executed zero tests,
-  // it is not counted in termination condition check
-  // If none of the modes executed any test in the last pass,
-  // the cycle terminates
-  cycles: 3,
+  // Test terminates when min(completedCount) across sequential modes (forward/backward) >= cycles
+  // Random mode is excluded from this calculation - it is limited only by global limits
+  // (limitTests, limitTime) or when no valid variants exist within current constraints
+  // Until termination conditions are met, iteration modes switch in a circle
+  // If all modes executed zero tests in their last round, the cycle terminates (stuck)
+  cycles: 3,                  // default: 1
 
   // Iteration modes (variant traversal), default: forward
   // All modes preserve their current positions between mode switches,
@@ -204,10 +201,6 @@ const result = await testVariants({
   getSeed: ({ // default: null - seed disabled, not set in test arguments
     // total number of tests run
     tests,
-    // number of full passes of all variants
-    cycles,
-    // number of repeats of current variant
-    repeats,
   }) => any,
   getSeed: () => Math.random() * 0xFFFFFFFF, // example - random numeric seed
 
