@@ -72,7 +72,7 @@ import { estimateCallCount } from './estimations/estimateCallCount'
 // import { ITERATIONS_SYNC, ITERATIONS_ASYNC } from './constants'
 // import { estimateModeChanges } from './estimations/estimateModeChanges'
 // import { LogInvariant } from './invariants/LogInvariant'
-// import { ErrorBehaviorInvariant } from './invariants/ErrorBehaviorInvariant'
+import { ErrorBehaviorInvariant } from './invariants/ErrorBehaviorInvariant'
 // import { IterationsInvariant } from './invariants/IterationsInvariant'
 // import { ParallelInvariant } from './invariants/ParallelInvariant'
 import { CallCountInvariant } from './invariants/CallCountInvariant'
@@ -171,11 +171,11 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   //   iterationModes,
   //   modeChangesRange,
   // )
-  // const errorBehaviorInvariant = new ErrorBehaviorInvariant(
-  //   runOptions.findBestError,
-  //   errorVariantIndex,
-  //   retriesToError,
-  // )
+  const errorBehaviorInvariant = new ErrorBehaviorInvariant(
+    runOptions.findBestError,
+    errorVariantIndex,
+    retriesToError,
+  )
   // const iterationsInvariant = new IterationsInvariant(
   //   ITERATIONS_SYNC,
   //   ITERATIONS_ASYNC,
@@ -260,7 +260,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
 
   // Validate using invariants
   const callCount = callController.callCount
-  // const lastError = errorVariantController.lastError
+  const lastError = errorVariantController.lastError
 
   // errorBehaviorInvariant.validate(callCount, thrownError, lastError, result)
   // iterationsInvariant.validate(callCount, result)

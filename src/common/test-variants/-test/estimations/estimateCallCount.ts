@@ -100,7 +100,9 @@ export function estimateCallCount(
     )
     _min = min(
       _min,
-      testsPerModesPass * (maxTurnsPerCompletion - 1) * completionCount,
+      testsPerModesPass *
+        Math.floor(maxTurnsPerCompletion / 2) *
+        completionCount,
     )
     _max = min(
       _max,
