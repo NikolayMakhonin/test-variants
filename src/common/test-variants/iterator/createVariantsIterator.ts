@@ -172,8 +172,8 @@ export function createVariantsIterator<Args extends Obj>(
       modeIdx < modesLen;
       modeIdx++
     ) {
-      const navState = modeStates[modeIdx].navigationState
-      navState.argLimits = argLimits
+      const navigationState = modeStates[modeIdx].navigationState
+      navigationState.argLimits = argLimits
     }
   }
 
@@ -448,7 +448,7 @@ export function createVariantsIterator<Args extends Obj>(
     // TODO: refactor this
     const modeConfig = modeConfigs[modeIndex]
     const modeState = modeStates[modeIndex]
-    const navState = modeState.navigationState
+    const navigationState = modeState.navigationState
 
     if (isModeSupportedAttempts(modeConfig)) {
       if (hasModeZeroAttemptsAllowed()) {
@@ -475,7 +475,7 @@ export function createVariantsIterator<Args extends Obj>(
       modeState.startTime = timeController.now()
     }
 
-    return injectSeed(navState.args)
+    return injectSeed(navigationState.args)
   }
 
   // region mode attempts per variant
@@ -483,7 +483,7 @@ export function createVariantsIterator<Args extends Obj>(
   function nextModeAttempt() {
     const modeConfig = modeConfigs[modeIndex]
     const modeState = modeStates[modeIndex]
-    const navState = modeState.navigationState
+    const navigationState = modeState.navigationState
 
     if (!isModeSupportedAttempts(modeConfig)) {
       throw new Error('Unexpected behavior')
@@ -495,9 +495,12 @@ export function createVariantsIterator<Args extends Obj>(
 
     const attemptsPerVariant =
       (modeConfig as SequentialModeConfig).attemptsPerVariant ?? 1
-    if (navState.attempts > 0 && navState.attempts < attemptsPerVariant) {
-      navState.attempts++
-      return injectSeed(navState.args)
+    if (
+      navigationState.attempts > 0 &&
+      navigationState.attempts < attemptsPerVariant
+    ) {
+      navigationState.attempts++
+      return injectSeed(navigationState.args)
     }
 
     return null
@@ -506,7 +509,7 @@ export function createVariantsIterator<Args extends Obj>(
   function firstModeAttempt() {
     const modeConfig = modeConfigs[modeIndex]
     const modeState = modeStates[modeIndex]
-    const navState = modeState.navigationState
+    const navigationState = modeState.navigationState
 
     if (!isModeSupportedAttempts(modeConfig)) {
       throw new Error('Unexpected behavior')
@@ -516,7 +519,7 @@ export function createVariantsIterator<Args extends Obj>(
       throw new Error('Unexpected behavior')
     }
 
-    navState.attempts = 1
+    navigationState.attempts = 1
   }
 
   function isModeSupportedAttempts(
@@ -540,15 +543,15 @@ export function createVariantsIterator<Args extends Obj>(
   function nextVariant(): boolean {
     const modeConfig = modeConfigs[modeIndex]
     const modeState = modeStates[modeIndex]
-    const navState = modeState.navigationState
+    const navigationState = modeState.navigationState
 
     switch (modeConfig.mode) {
       case 'forward':
-        return advanceVariantNavigation(navState)
+        return advanceVariantNavigation(navigationState)
       case 'backward':
-        return retreatVariantNavigation(navState)
+        return retreatVariantNavigation(navigationState)
       case 'random':
-        return randomVariantNavigation(navState)
+        return randomVariantNavigation(navigationState)
       default:
         throw new Error(`Unknown mode: ${(modeConfig as any).mode}`)
     }
