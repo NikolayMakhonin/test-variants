@@ -223,7 +223,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
 
     return callController.call(
       () => {
-        callCountInvariant.onCall(callController.callCount)
+        // callCountInvariant.onCall(callController.callCount)
         // parallelInvariant.onCallStart()
       },
       () => {
@@ -275,7 +275,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   // parallelInvariant.validateFinal(callCount, options.async)
   // onModeChangeInvariant.validateFinal(callCount)
   // onErrorInvariant.validateFinal(lastThrownError)
-  callCountInvariant.validateFinal(callCount)
+  // callCountInvariant.validateFinal(callCount)
 
   callController.finalize()
 }

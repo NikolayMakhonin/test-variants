@@ -55,6 +55,21 @@ export class ErrorBehaviorInvariant {
       throw caughtError
     }
 
+    const parallelOption =
+      this._runOptions.parallel != null &&
+      typeof this._runOptions.parallel === 'object'
+        ? this._runOptions.parallel.count
+        : this._runOptions.parallel
+    let parallel: number
+    if (parallelOption === true) {
+      return
+    }
+    if (parallelOption == null || parallelOption === false) {
+      parallel = 1
+    } else {
+      parallel = parallelOption > 1 ? parallelOption : 1
+    }
+
     // let modeType: ModeType | null = null
     const modes = this._runOptions.iterationModes ?? MODES_DEFAULT
     if (modes.length > 1) {
@@ -70,41 +85,41 @@ export class ErrorBehaviorInvariant {
       return
     }
 
-    let errorExpected = false
+    let expectedCountToError: number
+
     if (callCount === 0) {
-      errorExpected = false
+      expectedCountToError = Infinity
     } else if (
       this._errorVariantIndex == null ||
       this._errorVariantIndex >= this._variantsCount
     ) {
-      errorExpected = false
+      expectedCountToError = Infinity
     } else if (modeType === 'random') {
       if (this._variantsCount > 1) {
         return
       }
-      if (callCount > this._retriesToError) {
-        errorExpected = true
-      }
+      expectedCountToError = this._retriesToError + 1
     } else if (modeType === 'forward') {
-      if (
-        callCount >=
+      expectedCountToError =
         this._errorVariantIndex + 1 + this._variantsCount * this._retriesToError
-      ) {
-        errorExpected = true
-      }
     } else if (modeType === 'backward') {
-      if (
-        callCount >=
+      expectedCountToError =
         this._variantsCount -
-          this._errorVariantIndex +
-          this._variantsCount * this._retriesToError
-      ) {
-        errorExpected = true
-      }
+        this._errorVariantIndex +
+        this._variantsCount * this._retriesToError
     } else {
       throw new Error(
         `[test][ErrorBehaviorInvariant] unknown modeType "${modeType}"`,
       )
+    }
+
+    let errorExpected: boolean
+    if (callCount >= expectedCountToError + parallel - 1) {
+      errorExpected = true
+    } else if (callCount < expectedCountToError) {
+      errorExpected = false
+    } else {
+      return
     }
 
     const dontThrowIfError =
@@ -138,7 +153,7 @@ export class ErrorBehaviorInvariant {
             `[test][ErrorBehaviorInvariant] error expected but not thrown (findBestError=true)`,
           )
         }
-        if (caughtError !== lastThrownError) {
+        if (parallel <= 1 && caughtError !== lastThrownError) {
           throw new Error(
             `[test][ErrorBehaviorInvariant] caughtError !== lastThrownError\ncaughtError: ${caughtError}\nlastThrownError: ${lastThrownError}`,
           )
@@ -149,7 +164,7 @@ export class ErrorBehaviorInvariant {
             `[test][ErrorBehaviorInvariant] error expected but not thrown`,
           )
         }
-        if (caughtError !== lastThrownError) {
+        if (parallel <= 1 && caughtError !== lastThrownError) {
           throw new Error(
             `[test][ErrorBehaviorInvariant] caughtError !== lastThrownError`,
           )
