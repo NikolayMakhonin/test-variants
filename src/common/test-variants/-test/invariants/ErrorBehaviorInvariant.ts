@@ -49,14 +49,18 @@ export class ErrorBehaviorInvariant {
     lastThrownError: TestError | null,
     result: TestVariantsResult<TestArgs> | null,
   ): void {
+    if (caughtError != null && !(caughtError instanceof TestError)) {
+      throw caughtError
+    }
+
     let errorExpected: boolean | null = null
     if (
       this._errorVariantIndex == null ||
       this._errorVariantIndex >= this._variantsCount
     ) {
       errorExpected = false
-    } else if (this._variantsCount > 1 && this._options.argType !== 'static') {
-      errorExpected = null
+    } else if (this._variantsCount > 1 && this._options.modeType === 'random') {
+      return
     } else {
       if (
         callCount >=
@@ -64,6 +68,7 @@ export class ErrorBehaviorInvariant {
       ) {
         errorExpected = true
       }
+      // TODO: add here: errorExpected = false
     }
 
     const dontThrowIfError = this._findBestError?.dontThrowIfError ?? false
