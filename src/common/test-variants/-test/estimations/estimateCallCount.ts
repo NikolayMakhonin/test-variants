@@ -80,7 +80,7 @@ export function estimateCallCount(
     return [0, 0]
   } else if (countActiveRandomModes > 0 && completionCount > 0) {
     _min = min(_min, countRandomTests)
-    _max = min(_max, countRandomTests * 2)
+    _max = min(_max, countActiveSequentialModes + countRandomTests * 2)
   } else {
     _min = min(
       _min,
