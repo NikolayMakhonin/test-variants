@@ -39,15 +39,15 @@ export class IterationsInvariant {
 
     if (result.iterations < 0) {
       throw new Error(
-        `[test][IterationsInvariant] iterations ${result.iterations} < 0`,
+        `[test][IterationsInvariant] iterations (${result.iterations}) < 0`,
       )
     }
 
-    const iterationsExpected = this._calculateExpectedIterations(completedCount)
+    const expected = this._calculateExpectedIterations(completedCount)
 
-    if (result.iterations !== iterationsExpected) {
+    if (result.iterations !== expected) {
       throw new Error(
-        `[test][IterationsInvariant] iterations ${result.iterations} !== expected ${iterationsExpected} (completedCount=${completedCount})`,
+        `[test][IterationsInvariant] iterations (${result.iterations}) !== expected (${expected}), completedCount (${completedCount})`,
       )
     }
   }

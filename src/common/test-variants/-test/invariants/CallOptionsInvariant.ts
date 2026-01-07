@@ -31,10 +31,12 @@ export class CallOptionsInvariant {
     timeController?: ITimeController
   }): void {
     if (callOptions.abortSignal == null) {
-      throw new Error(`[test][CallOptionsInvariant] abortSignal is null`)
+      throw new Error(`[test][CallOptionsInvariant] abortSignal == null`)
     }
     if (callOptions.timeController !== this._timeController) {
-      throw new Error(`[test][CallOptionsInvariant] timeController mismatch`)
+      throw new Error(
+        `[test][CallOptionsInvariant] timeController !== expected`,
+      )
     }
 
     this._lastAbortSignal = callOptions.abortSignal
@@ -52,7 +54,7 @@ export class CallOptionsInvariant {
 
     if (abortSignalShouldBeAborted && !this._lastAbortSignal.aborted) {
       throw new Error(
-        `[test][CallOptionsInvariant] abortSignal not aborted after CallController.finalize()`,
+        `[test][CallOptionsInvariant] abortSignal.aborted == false (${this._lastAbortSignal.aborted})`,
       )
     }
   }
