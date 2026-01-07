@@ -54,7 +54,7 @@ export class CallOptionsInvariant {
 
     if (abortSignalShouldBeAborted && !this._lastAbortSignal.aborted) {
       throw new Error(
-        `[test][CallOptionsInvariant] abortSignal.aborted == false (${this._lastAbortSignal.aborted})`,
+        `[test][CallOptionsInvariant] abortSignal.aborted == false`,
       )
     }
   }
