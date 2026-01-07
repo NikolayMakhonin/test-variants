@@ -1,5 +1,5 @@
 import type { TestVariantsRunOptions } from 'src/common'
-import { min, NumberRange } from '@flemist/simple-utils'
+import { max, min, NumberRange } from '@flemist/simple-utils'
 import { StressTestArgs, TestArgs } from '../types'
 import { LIMIT_MAX, MODES_DEFAULT } from '../constants'
 
@@ -20,11 +20,16 @@ export function estimateCallCount(
 
   let sumSequentialTestsPerCompletion = 0
 
-  let countActiveSequentialModes = 0
   let hasSequentialMode = false
-  let countActiveRandomModes = 0
-  let countRandomTests = 0
+  let hasActiveSequentialMode = false
+  let hasRandomMode = false
+  let hasActiveRandomMode = false
+
+  let sumRandomTests = 0
   let hasTimeLimits = runOptions.limitTime != null
+  let minTestsPerTurn: number | null = null
+  const testsPerTurnList: number[] = []
+  let maxTurnsPerCompletion: number | null = null
 
   const completionCount = runOptions.cycles ?? 1
   const modes = runOptions.iterationModes ?? MODES_DEFAULT
@@ -33,6 +38,8 @@ export function estimateCallCount(
     const mode = modes[i]
     if (mode.mode === 'forward' || mode.mode === 'backward') {
       hasSequentialMode = true
+    } else if (mode.mode === 'random') {
+      hasRandomMode = true
     }
     if (
       (mode.limitTests != null && mode.limitTests <= 0) ||
@@ -46,23 +53,37 @@ export function estimateCallCount(
         const modeCycles = mode.cycles ?? 1
         const attempts = mode.attemptsPerVariant ?? 1
         const testsPerCompletion = variantsCount * modeCycles * attempts
+        const testsPerTurn = min(
+          testsPerCompletion,
+          mode.limitTests ?? LIMIT_MAX,
+        )
+        minTestsPerTurn = min(minTestsPerTurn, testsPerTurn)
+        testsPerTurnList.push(testsPerTurn)
+        maxTurnsPerCompletion = max(
+          maxTurnsPerCompletion,
+          Math.ceil(testsPerCompletion / testsPerTurn),
+        )
         if (testsPerCompletion <= 0) {
           continue
         }
         sumSequentialTestsPerCompletion += testsPerCompletion
-        countActiveSequentialModes++
+        hasActiveSequentialMode = true
         if (mode.limitTime != null) {
           hasTimeLimits = true
         }
         break
       }
-      case 'random':
-        countActiveRandomModes++
-        countRandomTests += mode.limitTests ?? LIMIT_MAX
+      case 'random': {
+        hasActiveRandomMode = true
+        const testsPerTurn = mode.limitTests ?? LIMIT_MAX
+        minTestsPerTurn = min(minTestsPerTurn, testsPerTurn)
+        testsPerTurnList.push(testsPerTurn)
+        sumRandomTests += testsPerTurn
         if (mode.limitTime != null) {
           hasTimeLimits = true
         }
         break
+      }
       default: {
         throw new Error(`Unknown mode type: ${(mode as any).mode}`)
       }
@@ -72,31 +93,54 @@ export function estimateCallCount(
   let _min = LIMIT_MAX
   let _max = LIMIT_MAX
 
-  if (!hasSequentialMode) {
-    if (countActiveRandomModes === 0) {
-      return [0, 0]
-    }
-  } else if (countActiveSequentialModes === 0) {
+  if (!hasActiveSequentialMode && !hasActiveRandomMode) {
     return [0, 0]
-  } else if (countActiveRandomModes > 0 && completionCount > 0) {
-    _min = min(_min, countRandomTests)
-    _max = min(_max, countActiveSequentialModes + countRandomTests * 2)
-  } else {
+  }
+
+  if (hasSequentialMode && !hasActiveSequentialMode) {
+    return [0, 0]
+  }
+
+  if (testsPerTurnList.length > 0 && maxTurnsPerCompletion != null) {
+    const testsPerModesPass = testsPerTurnList.reduce(
+      (sum, testsPerTurn) => sum + testsPerTurn,
+      0,
+    )
     _min = min(
       _min,
-      sumSequentialTestsPerCompletion > 0
-        ? sumSequentialTestsPerCompletion * completionCount
-        : hasSequentialMode
-          ? 1
-          : (runOptions.limitTests ?? 1),
+      testsPerModesPass * (maxTurnsPerCompletion - 1) * completionCount,
     )
     _max = min(
       _max,
-      sumSequentialTestsPerCompletion > 0
-        ? sumSequentialTestsPerCompletion * (completionCount + 1) // TODO: убрать +1
-        : LIMIT_MAX,
+      testsPerModesPass * maxTurnsPerCompletion * (completionCount + 1),
     )
   }
+
+  // if (!hasSequentialMode) {
+  //   if (countActiveRandomModes === 0) {
+  //     return [0, 0]
+  //   }
+  // } else if (countActiveSequentialModes === 0) {
+  //   return [0, 0]
+  // } else if (countActiveRandomModes > 0 && completionCount > 0) {
+  //   _min = min(_min, sumRandomTests)
+  //   _max = min(_max, sumSequentialTestsPerCompletion + sumRandomTests * 2)
+  // } else {
+  //   _min = min(
+  //     _min,
+  //     sumSequentialTestsPerCompletion > 0
+  //       ? sumSequentialTestsPerCompletion * completionCount
+  //       : hasSequentialMode
+  //         ? 1
+  //         : (runOptions.limitTests ?? 1),
+  //   )
+  //   _max = min(
+  //     _max,
+  //     sumSequentialTestsPerCompletion > 0
+  //       ? sumSequentialTestsPerCompletion * (completionCount + 1) // TODO: убрать +1
+  //       : LIMIT_MAX,
+  //   )
+  // }
 
   _min = min(min(_min, LIMIT_MAX), runOptions.limitTests)
   _max = min(min(_max, LIMIT_MAX), runOptions.limitTests)
@@ -111,7 +155,7 @@ export function estimateCallCount(
     _min = 0
   }
 
-  if (options.argType !== 'static' && countActiveRandomModes > 0) {
+  if (options.argType !== 'static' && hasActiveRandomMode) {
     _min = 0
   }
 
