@@ -3,6 +3,7 @@ import { TestError } from 'src/common/test-variants/-test/helpers/TestError'
 import { StressTestArgs, TestArgs } from 'src/common/test-variants/-test/types'
 import { MODES_DEFAULT } from 'src/common/test-variants/-test/constants'
 import { isModeSequential } from 'src/common/test-variants/iterator/helpers/mode'
+import { getParallelLimit } from 'src/common/test-variants/-test/helpers/getParallelLimit'
 
 /**
  * Validates error handling behavior
@@ -55,19 +56,9 @@ export class ErrorBehaviorInvariant {
       throw caughtError
     }
 
-    const parallelOption =
-      this._runOptions.parallel != null &&
-      typeof this._runOptions.parallel === 'object'
-        ? this._runOptions.parallel.count
-        : this._runOptions.parallel
-    let parallel: number
-    if (parallelOption === true) {
+    const parallel = getParallelLimit(this._runOptions.parallel)
+    if (parallel === Infinity) {
       return
-    }
-    if (parallelOption == null || parallelOption === false) {
-      parallel = 1
-    } else {
-      parallel = parallelOption > 1 ? parallelOption : 1
     }
 
     // let modeType: ModeType | null = null
