@@ -121,6 +121,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   // endregion
 
   const callCountRange = estimateCallCount(
+    options,
     runOptions,
     variantsCount,
     errorVariantIndex,

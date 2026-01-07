@@ -1,9 +1,10 @@
 import type { TestVariantsRunOptions } from 'src/common'
 import { min, NumberRange } from '@flemist/simple-utils'
-import { TestArgs } from '../types'
+import { StressTestArgs, TestArgs } from '../types'
 import { LIMIT_MAX, MODES_DEFAULT } from '../constants'
 
 export function estimateCallCount(
+  options: StressTestArgs,
   runOptions: TestVariantsRunOptions<TestArgs>,
   variantsCount: number,
   errorVariantIndex: number | null,
@@ -87,7 +88,7 @@ export function estimateCallCount(
         : (runOptions.limitTests ?? 1)
   let _max =
     sumSequentialTestsPerCompletion > 0
-      ? sumSequentialTestsPerCompletion * (completionCount + 1)
+      ? sumSequentialTestsPerCompletion * (completionCount + 1) // TODO: убрать +1
       : LIMIT_MAX
   _min = min(min(_min, LIMIT_MAX), runOptions.limitTests)
   _max = min(min(_max, LIMIT_MAX), runOptions.limitTests)
@@ -99,6 +100,10 @@ export function estimateCallCount(
   }
 
   if (withDelay && hasTimeLimits) {
+    _min = 0
+  }
+
+  if (options.argType !== 'static' && countActiveRandomModes > 0) {
     _min = 0
   }
 

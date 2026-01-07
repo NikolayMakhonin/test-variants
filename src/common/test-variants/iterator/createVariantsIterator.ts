@@ -186,8 +186,7 @@ export function createVariantsIterator<Args extends Obj>(
   // region modes pass
 
   function modesPassIterate(): ArgsWithSeed<Args> | null {
-    let tryCount = 0
-    while (tryCount < 2) {
+    while (true) {
       if (!canModesPassIterate()) {
         // Stop iterator
         return null
@@ -211,12 +210,7 @@ export function createVariantsIterator<Args extends Obj>(
           break
         }
       }
-
-      tryCount++
     }
-
-    // No variants left to iterate
-    return null
   }
 
   function canModesPassIterate(): boolean {
@@ -368,6 +362,12 @@ export function createVariantsIterator<Args extends Obj>(
 
     if (isModeCyclesSupported(modeConfig)) {
       if (modeConfig.cycles != null && modeConfig.cycles <= 0) {
+        return false
+      }
+      if (
+        modeConfig.attemptsPerVariant != null &&
+        modeConfig.attemptsPerVariant <= 0
+      ) {
         return false
       }
     }
