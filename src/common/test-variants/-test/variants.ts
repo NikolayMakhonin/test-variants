@@ -76,7 +76,7 @@ import { ErrorBehaviorInvariant } from './invariants/ErrorBehaviorInvariant'
 // import { IterationsInvariant } from './invariants/IterationsInvariant'
 import { ParallelInvariant } from './invariants/ParallelInvariant'
 import { CallCountInvariant } from './invariants/CallCountInvariant'
-// import { OnErrorInvariant } from './invariants/OnErrorInvariant'
+import { OnErrorInvariant } from './invariants/OnErrorInvariant'
 // import { OnModeChangeInvariant } from './invariants/OnModeChangeInvariant'
 // import { CallOptionsInvariant } from './invariants/CallOptionsInvariant'
 import { ErrorVariantController } from './helpers/ErrorVariantController'
@@ -177,7 +177,12 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   //   modeChangesRange,
   //   () => callController.callCount,
   // )
-  // const onErrorInvariant = new OnErrorInvariant(!!runOptions.findBestError)
+  const onErrorInvariant = new OnErrorInvariant(
+    !!runOptions.findBestError,
+    errorVariantController.errorVariantArgs,
+    parallelLimit,
+    sequentialOnError,
+  )
   // const onModeChangeInvariant = new OnModeChangeInvariant(
   //   iterationModes,
   //   modeChangesRange,
@@ -207,17 +212,16 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     // logInvariant.onLog(type, message)
   }
 
-  function onError(_event: {
+  function onError(event: {
     error: unknown
     args: TestArgs
     tests: number
   }): void {
-    // onErrorInvariant.onError(
-    //   event,
-    //   errorVariantController.errorVariantArgs,
-    //   callController.callCount,
-    //   errorVariantController.lastThrownError,
-    // )
+    onErrorInvariant.onError(
+      event,
+      callController.callCount,
+      errorVariantController.lastThrownError,
+    )
   }
 
   function onModeChange(_event: ModeChangeEvent): void {
@@ -284,7 +288,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   // logInvariant.validateFinal(callCount, timeController.now(), lastThrownError)
   parallelInvariant.validateFinal()
   // onModeChangeInvariant.validateFinal(callCount)
-  // onErrorInvariant.validateFinal(lastThrownError)
+  onErrorInvariant.validateFinal(lastThrownError)
   callCountInvariant.validateFinal(callCount)
 
   callController.finalize()
