@@ -221,8 +221,10 @@ export function createVariantsIterator<Args extends Obj>(
       return false
     }
 
-    if (isGlobalLimitCompletionCountZero()) {
-      return false
+    if (hasSequentialModes()) {
+      if (isGlobalLimitCompletionCountZero()) {
+        return false
+      }
     }
 
     return true
@@ -243,6 +245,9 @@ export function createVariantsIterator<Args extends Obj>(
   }
 
   function isGlobalLimitCompletionCountZero(): boolean {
+    if (!hasSequentialModes()) {
+      throw new Error('Unexpected behavior')
+    }
     return limitCompletionCount != null && limitCompletionCount <= 0
   }
 

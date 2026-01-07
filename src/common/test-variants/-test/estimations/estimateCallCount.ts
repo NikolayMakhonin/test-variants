@@ -74,13 +74,21 @@ export function estimateCallCount(
   let _min =
     sumSequentialTestsPerCompletion > 0
       ? sumSequentialTestsPerCompletion * completionCount
-      : 1
+      : hasSequentialMode
+        ? 1
+        : (runOptions.limitTests ?? 1)
   let _max =
     sumSequentialTestsPerCompletion > 0
       ? sumSequentialTestsPerCompletion * completionCount
       : LIMIT_MAX
   _min = min(min(_min, LIMIT_MAX), runOptions.limitTests)
   _max = min(min(_max, LIMIT_MAX), runOptions.limitTests)
+
+  if (_min > _max) {
+    throw new Error(
+      `Inconsistent estimation results: min (${_min}) > max (${_max})`,
+    )
+  }
 
   return [_min, _max]
 }
