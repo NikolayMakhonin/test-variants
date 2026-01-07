@@ -167,12 +167,8 @@ export function createVariantsIterator<Args extends Obj>(
     }
 
     // Replace argLimits in ALL modes' navigation states
-    for (
-      let modeIdx = 0, modesLen = modeStates.length;
-      modeIdx < modesLen;
-      modeIdx++
-    ) {
-      const navigationState = modeStates[modeIdx].navigationState
+    for (let i = 0, len = modeStates.length; i < len; i++) {
+      const navigationState = modeStates[i].navigationState
       navigationState.argLimits = argLimits
     }
   }
