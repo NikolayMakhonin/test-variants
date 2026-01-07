@@ -66,7 +66,11 @@ export class ErrorBehaviorInvariant {
       ? (mode.attemptsPerVariant ?? 1)
       : 1
 
-    let errorExpected: boolean | null = null
+    if (this._retriesToError > 0 || attemptsPerVariant > 1) {
+      return
+    }
+
+    let errorExpected = false
     if (callCount === 0) {
       errorExpected = false
     } else if (
@@ -81,18 +85,13 @@ export class ErrorBehaviorInvariant {
       if (callCount > this._retriesToError) {
         errorExpected = true
       }
-      // TODO: add here: errorExpected = false
     } else if (modeType === 'forward') {
       if (
         callCount >=
-        this._errorVariantIndex +
-          1 +
-          this._variantsCount *
-            (Math.ceil((this._retriesToError + 1) / attemptsPerVariant) - 1)
+        this._errorVariantIndex + 1 + this._variantsCount * this._retriesToError
       ) {
         errorExpected = true
       }
-      // TODO: add here: errorExpected = false
     } else if (modeType === 'backward') {
       if (
         callCount >=
@@ -102,7 +101,6 @@ export class ErrorBehaviorInvariant {
       ) {
         errorExpected = true
       }
-      // TODO: add here: errorExpected = false
     } else {
       throw new Error(
         `[test][ErrorBehaviorInvariant] unknown modeType "${modeType}"`,
