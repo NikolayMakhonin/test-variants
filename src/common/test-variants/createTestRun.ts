@@ -64,8 +64,8 @@ export function createTestRun<Args extends Obj>(
     }
 
     const beforeDebugger = Date.now()
-    // eslint-disable-next-line no-debugger
-    debugger
+
+    // debugger
     const pauseDuration = Date.now() - beforeDebugger
 
     // Debugger was attached and user stepped through - repeat variant for debugging

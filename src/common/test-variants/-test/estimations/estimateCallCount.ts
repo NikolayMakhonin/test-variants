@@ -1,5 +1,5 @@
 import type { TestVariantsRunOptions } from 'src/common'
-import { max, min, NumberRange } from '@flemist/simple-utils'
+import { min, NumberRange } from '@flemist/simple-utils'
 import { TestArgs } from '../types'
 import { LIMIT_MAX, MODES_DEFAULT } from '../constants'
 
@@ -7,6 +7,7 @@ export function estimateCallCount(
   runOptions: TestVariantsRunOptions<TestArgs>,
   variantsCount: number,
   errorVariantIndex: number | null,
+  withDelay: boolean,
 ): NumberRange {
   if (variantsCount === 0) {
     return [0, 0]
@@ -22,6 +23,7 @@ export function estimateCallCount(
   let hasSequentialMode = false
   let countActiveRandomModes = 0
   let countRandomTests = 0
+  let hasTimeLimits = runOptions.limitTime != null
 
   const completionCount = runOptions.cycles ?? 1
   const modes = runOptions.iterationModes ?? MODES_DEFAULT
@@ -48,11 +50,17 @@ export function estimateCallCount(
         }
         sumSequentialTestsPerCompletion += testsPerCompletion
         countActiveSequentialModes++
+        if (mode.limitTime != null) {
+          hasTimeLimits = true
+        }
         break
       }
       case 'random':
         countActiveRandomModes++
         countRandomTests += mode.limitTests ?? LIMIT_MAX
+        if (mode.limitTime != null) {
+          hasTimeLimits = true
+        }
         break
       default: {
         throw new Error(`Unknown mode type: ${(mode as any).mode}`)
@@ -88,6 +96,10 @@ export function estimateCallCount(
     throw new Error(
       `Inconsistent estimation results: min (${_min}) > max (${_max})`,
     )
+  }
+
+  if (withDelay && hasTimeLimits) {
+    _min = 0
   }
 
   return [_min, _max]

@@ -40,7 +40,7 @@ describe(
         parallel: [false, 1, 4, 8, true, null],
         errorVariantIndex: ['none', 0, 'last', 'after-last', null],
         async: [false, true, null],
-        delay: [false, true, null],
+        withDelay: [false, true, null],
         withLog: [false, true, null],
       })({
         limitTime,

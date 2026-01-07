@@ -18,13 +18,13 @@ import { TestError } from '../helpers/TestError'
 export class CallController {
   private _callCount = 0
   private readonly _isAsync: boolean | null
-  private readonly _shouldDelay: boolean | null
+  private readonly _withDelay: boolean
   private readonly _abortController: IAbortControllerFast
   private readonly _timeController: TimeControllerMock
 
-  constructor(isAsync: boolean | null, shouldDelay: boolean | null) {
+  constructor(isAsync: boolean | null, withDelay: boolean) {
     this._isAsync = isAsync
-    this._shouldDelay = shouldDelay
+    this._withDelay = withDelay
     this._abortController = new AbortControllerFast()
     this._timeController = new TimeControllerMock()
   }
@@ -69,7 +69,7 @@ export class CallController {
     }
 
     if (shouldBeAsync) {
-      if (this._shouldDelay) {
+      if (this._withDelay) {
         return delay(
           1,
           this._abortController.signal,

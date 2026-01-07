@@ -1,4 +1,4 @@
-import type { Obj } from '@flemist/simple-utils'
+import { deepCloneJsonLike, Obj } from '@flemist/simple-utils'
 import { timeControllerDefault } from '@flemist/time-controller'
 import type {
   AddLimitOptions,
@@ -54,7 +54,7 @@ export function createVariantsIterator<Args extends Obj>(
 
   // Clone templates to allow mutation (extendTemplatesWithExtraArgs)
   const templates: TestVariantsTemplatesWithExtra<Args, any> = {
-    templates: { ...argsTemplates },
+    templates: deepCloneJsonLike(argsTemplates),
     extra: {},
   }
 
@@ -414,7 +414,6 @@ export function createVariantsIterator<Args extends Obj>(
     if (
       modeConfig.limitTime != null &&
       modeState.startTime != null &&
-      modeState.startTime > 0 &&
       timeController.now() - modeState.startTime >= modeConfig.limitTime
     ) {
       return true

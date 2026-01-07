@@ -64,7 +64,7 @@ import { isLogEnabled, runWithLogs } from './log'
 import { StressTestArgs, TestArgs } from './types'
 import { deepFreezeJsonLike } from './helpers/deepFreezeJsonLike'
 import { forEachVariant } from './helpers/forEachVariant'
-import { generateBoundaryInt } from './generators/primitives'
+import { generateBoolean, generateBoundaryInt } from './generators/primitives'
 import { generateTemplate } from './generators/template'
 import { generateRunOptions } from './generators/run'
 import { generateErrorVariantIndex } from './generators/testFunc'
@@ -105,6 +105,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     errorVariantIndex,
   )
   const retriesToError = generateBoundaryInt(rnd, options.retriesToErrorMax)
+  const withDelay = generateBoolean(rnd, options.withDelay)
 
   const runOptions = generateRunOptions(
     rnd,
@@ -123,6 +124,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     runOptions,
     variantsCount,
     errorVariantIndex,
+    withDelay,
   )
   // const _iterationModes = runOptions.iterationModes ?? MODES_DEFAULT
   // const modeChangesRange = estimateModeChanges(
@@ -149,7 +151,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   }
 
   // Initialize controllers
-  const callController = new CallController(options.async, options.delay)
+  const callController = new CallController(options.async, withDelay)
   const errorVariantController = new ErrorVariantController(
     variants.error?.args,
     retriesToError,

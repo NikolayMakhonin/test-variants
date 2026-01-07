@@ -28,7 +28,7 @@ export type StressTestArgs = {
   withEquals: boolean | null
   parallel: number | boolean | null
   async: boolean | null
-  delay: boolean | null
+  withDelay: boolean | null
   withLog: boolean | null
   seed: number
 }
