@@ -55,6 +55,10 @@ export class ParallelInvariant {
     }
 
     const callCount = this._callController.callCount
+    if (callCount === 0) {
+      return
+    }
+
     const maxConcurrent = this._callController.maxConcurrent
 
     // If sync-only, no parallelism expected
