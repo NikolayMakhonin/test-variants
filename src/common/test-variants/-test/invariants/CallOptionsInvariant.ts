@@ -5,23 +5,17 @@ import type { ITimeController } from '@flemist/time-controller'
  * Validates callOptions passed to test function
  *
  * ## Applicability
- * Active for every test function call and after test completion.
+ * Active for every test function call and after test completion
  *
  * ## Validated Rules
- * - abortSignal is provided and is an object
- * - abortSignal is NOT aborted during test execution
- * - abortSignal IS aborted after test completion (CallController.finalize aborts it)
+ * - abortSignal exists (not null or undefined)
+ * - abortSignal is not aborted before first call
+ * - abortSignal is aborted after CallController.finalize
  * - timeController matches expected controller (identity check)
  *
- * ## Why abortSignal identity is NOT checked
- * The library creates a NEW combined signal (combineAbortSignals) which is different
- * from our mock's abortController.signal. Checking identity would always fail.
- *
- * ## sequentialOnError exception
- * When sequentialOnError triggers (findBestError switches from parallel to sequential),
- * the library aborts the parallel controller, which aborts the combined signal.
- * Subsequent sequential tests are still called with this aborted signal.
- * This is valid library behavior, so we track when this happens and allow it.
+ * ## Skipped Cases
+ * - abortSignal identity check (library combines signals internally via combineAbortSignals)
+ * - abortSignal.aborted check after first error with sequentialOnError (library aborts parallel controller)
  */
 export class CallOptionsInvariant {
   private readonly _timeController: ITimeController
@@ -50,14 +44,15 @@ export class CallOptionsInvariant {
     }
   }
 
-  validateFinal(): void {
+  validateFinal(abortSignalShouldBeAborted: boolean): void {
     if (this._lastAbortSignal == null) {
       return
     }
 
-    if (!this._lastAbortSignal.aborted) {
+    // Only check if we explicitly expect it to be aborted (after finalize() was called)
+    if (abortSignalShouldBeAborted && !this._lastAbortSignal.aborted) {
       throw new Error(
-        `[test][CallOptionsInvariant] abortSignal not aborted after completion`,
+        `[test][CallOptionsInvariant] abortSignal not aborted after CallController.finalize()`,
       )
     }
   }
