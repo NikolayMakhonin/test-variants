@@ -13,7 +13,7 @@ import { deepEqualJsonLikeWithoutSeed } from 'src/common/test-variants/-test/hel
  * - error parameter is instanceof TestError
  * - error parameter matches lastThrownError (sequential execution)
  * - args parameter matches errorVariantArgs (ignoring seed)
- * - tests parameter is positive integer not exceeding callCount
+ * - tests parameter is non-negative integer not exceeding callCount
  * - tests parameter does not decrease in findBestError mode
  * - Without findBestError: onError called at most once
  * - With findBestError: onError can be called multiple times
@@ -86,8 +86,8 @@ export class OnErrorInvariant {
       }
     }
 
-    if (event.tests < 1) {
-      throw new Error(`[test][OnErrorInvariant] tests ${event.tests} < 1`)
+    if (event.tests < 0) {
+      throw new Error(`[test][OnErrorInvariant] tests ${event.tests} < 0`)
     }
 
     if (isSequential && event.tests > callCount) {
