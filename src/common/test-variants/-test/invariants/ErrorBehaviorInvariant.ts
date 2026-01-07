@@ -1,8 +1,8 @@
 import type { TestVariantsResult, TestVariantsRunOptions } from 'src/common'
 import { TestError } from 'src/common/test-variants/-test/helpers/TestError'
 import { StressTestArgs, TestArgs } from 'src/common/test-variants/-test/types'
-import { ModeType } from 'src/common/test-variants/types'
 import { MODES_DEFAULT } from 'src/common/test-variants/-test/constants'
+import { isModeSequential } from 'src/common/test-variants/iterator/helpers/mode'
 
 /**
  * Validates error handling behavior
@@ -55,21 +55,16 @@ export class ErrorBehaviorInvariant {
       throw caughtError
     }
 
-    let modeType: ModeType | null = null
+    // let modeType: ModeType | null = null
     const modes = this._runOptions.iterationModes ?? MODES_DEFAULT
-    for (let i = 0, len = modes.length; i < len; i++) {
-      const mode = modes[i]
-      if (modeType == null) {
-        modeType = mode.mode
-      } else if (modeType !== mode.mode) {
-        modeType = null
-        break
-      }
-    }
-
-    if (modeType == null) {
+    if (modes.length > 1) {
       return
     }
+    const mode = modes[0]
+    const modeType = mode.mode
+    const attemptsPerVariant = isModeSequential(mode)
+      ? (mode.attemptsPerVariant ?? 1)
+      : 1
 
     let errorExpected: boolean | null = null
     if (callCount === 0) {
@@ -90,7 +85,10 @@ export class ErrorBehaviorInvariant {
     } else if (modeType === 'forward') {
       if (
         callCount >=
-        this._errorVariantIndex + 1 + this._variantsCount * this._retriesToError
+        this._errorVariantIndex +
+          1 +
+          this._variantsCount *
+            (Math.ceil((this._retriesToError + 1) / attemptsPerVariant) - 1)
       ) {
         errorExpected = true
       }
