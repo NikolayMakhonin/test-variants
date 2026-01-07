@@ -59,7 +59,7 @@ export type ModeState<Args extends Obj> = {
   /** Times mode reached its cycles config limit; only grows */
   completedCount: number
   /** Tests since last switch to this mode; for "did nothing" check */
-  testsInLastRun: number
+  testsInLastTurn: number
   /** Set on first iteration after switching to mode; for per-mode limitTime check */
   startTime: number | null
 }

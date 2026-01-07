@@ -100,7 +100,7 @@ export function createVariantsIterator<Args extends Obj>(
       navigationState,
       cycleCount: 0,
       completedCount: 0,
-      testsInLastRun: 0,
+      testsInLastTurn: 0,
       startTime: null,
     }
   }
@@ -195,7 +195,7 @@ export function createVariantsIterator<Args extends Obj>(
         const args = modeIterate()
         if (args != null) {
           // Produce test args
-          modeStates[modeIndex].testsInLastRun++
+          modeStates[modeIndex].testsInLastTurn++
           tests++
           return args
         }
@@ -213,15 +213,37 @@ export function createVariantsIterator<Args extends Obj>(
   }
 
   function canModesPassIterate(): boolean {
-    if (limitTests != null && tests >= limitTests) {
+    if (isGlobalLimitTestsReached()) {
       return false
     }
 
-    if (limitTime != null && timeController.now() - startTime >= limitTime) {
+    if (isGlobalLimitTimeReached()) {
+      return false
+    }
+
+    if (isGlobalLimitCompletionCountZero()) {
       return false
     }
 
     return true
+  }
+
+  function isGlobalLimitTestsReached(): boolean {
+    if (limitTests != null && tests >= limitTests) {
+      return true
+    }
+    return false
+  }
+
+  function isGlobalLimitTimeReached(): boolean {
+    if (limitTime != null && timeController.now() - startTime >= limitTime) {
+      return true
+    }
+    return false
+  }
+
+  function isGlobalLimitCompletionCountZero(): boolean {
+    return limitCompletionCount != null && limitCompletionCount <= 0
   }
 
   /** @return true if all modes passed */
@@ -242,6 +264,10 @@ export function createVariantsIterator<Args extends Obj>(
       return false
     }
 
+    // When sequential modes exist alongside random modes,
+    // iteration terminates when sequential modes reach their completion count limit
+    // When only random modes exist,
+    // iteration terminates based exclusively on global limits
     if (hasSequentialModes()) {
       const minCompletedCount = calcMinCompletedCount()
       if (
@@ -283,7 +309,7 @@ export function createVariantsIterator<Args extends Obj>(
       if (isModeSequential(modeConfig)) {
         hasSequentialModes = true
         if (
-          modeState.testsInLastRun > 0 &&
+          modeState.testsInLastTurn > 0 &&
           modeState.completedCount < minCompletedCount
         ) {
           minCompletedCount = modeState.completedCount
@@ -304,7 +330,7 @@ export function createVariantsIterator<Args extends Obj>(
     modeIndex = 0
     for (let i = 0, len = modeStates.length; i < len; i++) {
       const modeState = modeStates[i]
-      modeState.testsInLastRun = 0
+      modeState.testsInLastTurn = 0
       modeState.startTime = null
     }
   }
@@ -368,7 +394,7 @@ export function createVariantsIterator<Args extends Obj>(
 
     if (
       modeConfig.limitTests != null &&
-      modeState.testsInLastRun >= modeConfig.limitTests
+      modeState.testsInLastTurn >= modeConfig.limitTests
     ) {
       return true
     }
@@ -415,7 +441,7 @@ export function createVariantsIterator<Args extends Obj>(
 
   /** Checks whether the mode executed at least one test in its last run */
   function didModeRunAnyTests(modeState: ModeState<Args>): boolean {
-    return modeState.testsInLastRun > 0
+    return modeState.testsInLastTurn > 0
   }
 
   /** @return true if mode completed a full cycle */
@@ -467,7 +493,7 @@ export function createVariantsIterator<Args extends Obj>(
     }
 
     if (modeState.startTime == null) {
-      // Alternative condition is modeState.testsInLastRun === 0
+      // Alternative condition is modeState.testsInLastTurn === 0
       modeState.startTime = timeController.now()
     }
 
