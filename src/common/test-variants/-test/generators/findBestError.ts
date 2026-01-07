@@ -83,9 +83,11 @@ function generateLimitArgOnErrorFunc(
         )
       }
       if (options.maxValueIndex >= options.values.length) {
-        throw new Error(
-          `limitArgOnError: maxValueIndex ${options.maxValueIndex} >= values.length ${options.values.length}`,
-        )
+        // Если аргумент динамический, то это допустимо,
+        // когда лимит больше текущего количества значений
+        // throw new Error(
+        //   `limitArgOnError: maxValueIndex ${options.maxValueIndex} >= values.length ${options.values.length}`,
+        // )
       }
     }
 
