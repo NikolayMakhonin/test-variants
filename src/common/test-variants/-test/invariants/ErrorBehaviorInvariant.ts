@@ -1,6 +1,6 @@
 import type { FindBestErrorOptions, TestVariantsResult } from 'src/common'
 import { TestError } from 'src/common/test-variants/-test/helpers/TestError'
-import { TestArgs } from 'src/common/test-variants/-test/types'
+import { StressTestArgs, TestArgs } from 'src/common/test-variants/-test/types'
 
 /**
  * Validates error handling behavior
@@ -15,17 +15,20 @@ import { TestArgs } from 'src/common/test-variants/-test/types'
  * - When no error expected: no error thrown, bestError is null
  */
 export class ErrorBehaviorInvariant {
+  private readonly _options: StressTestArgs
   private readonly _findBestError: FindBestErrorOptions | undefined | null
   private readonly _variantsCount: number
   private readonly _errorVariantIndex: number | null
   private readonly _retriesToError: number
 
   constructor(
+    options: StressTestArgs,
     findBestError: FindBestErrorOptions | undefined | null,
     variantsCount: number,
     errorVariantIndex: number | null,
     retriesToError: number,
   ) {
+    this._options = options
     this._findBestError = findBestError
     this._variantsCount = variantsCount
     this._errorVariantIndex = errorVariantIndex
@@ -52,8 +55,13 @@ export class ErrorBehaviorInvariant {
       this._errorVariantIndex >= this._variantsCount
     ) {
       errorExpected = false
+    } else if (this._variantsCount > 1 && this._options.argType !== 'static') {
+      errorExpected = null
     } else {
-      if (callCount >= this._variantsCount * (this._retriesToError + 1)) {
+      if (
+        callCount >=
+        (this._errorVariantIndex + 1) * (this._retriesToError + 1)
+      ) {
         errorExpected = true
       }
     }
@@ -90,7 +98,7 @@ export class ErrorBehaviorInvariant {
         }
         if (caughtError !== lastThrownError) {
           throw new Error(
-            `[test][ErrorBehaviorInvariant] caughtError !== lastThrownError`,
+            `[test][ErrorBehaviorInvariant] caughtError !== lastThrownError\ncaughtError: ${caughtError}\nlastThrownError: ${lastThrownError}`,
           )
         }
       } else {

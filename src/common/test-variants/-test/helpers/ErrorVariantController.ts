@@ -33,6 +33,7 @@ export class ErrorVariantController {
   private _lastThrownError: TestError | null = null
   private readonly _errorVariantArgs: TestArgs | undefined | null
   private readonly _retriesToError: number
+  private _nextErrorId: number = 0
 
   constructor(
     errorVariantArgs: TestArgs | null | undefined,
@@ -51,7 +52,10 @@ export class ErrorVariantController {
       this._retries++
       if (this._retries > this._retriesToError) {
         this._retries = 0
-        this._lastThrownError = new TestError('TEST ERROR')
+        this._lastThrownError = new TestError(
+          `TEST ERROR: ${this._nextErrorId}`,
+        )
+        this._nextErrorId++
         throw this.lastThrownError
       }
     }

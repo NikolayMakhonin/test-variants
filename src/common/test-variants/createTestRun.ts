@@ -39,7 +39,10 @@ export function createTestRun<Args extends Obj>(
 ): TestVariantsTestRun<Args> {
   const logOptions = options.log
 
-  let firstError: ErrorEvent<Args> | null = null
+  // Смысл в том чтобы после итераций отладки, вернуть оригинальную ошибку
+  // А если отладки не было, то вернуть последнюю ошибку,
+  // т.е. отладка не должна никак влиять на другой функционал
+  let firstErrorEvent: ErrorEvent<Args> | null = null
   let debugIterations = 0
 
   /**
@@ -52,8 +55,8 @@ export function createTestRun<Args extends Obj>(
    * Otherwise throws the error.
    */
   function handleTestError(error: unknown, args: Args, tests: number): void {
-    if (firstError == null) {
-      firstError = { error, args, tests }
+    if (firstErrorEvent == null) {
+      firstErrorEvent = { error, args, tests }
 
       if (logOptions.error) {
         logOptions.func(
@@ -82,11 +85,14 @@ export function createTestRun<Args extends Obj>(
       return
     }
 
+    const errorEvent = firstErrorEvent
+    firstErrorEvent = null
+
     if (options.onError) {
-      options.onError(firstError)
+      options.onError(errorEvent)
     }
 
-    throw firstError.error
+    throw errorEvent.error
   }
 
   return function testRun(
