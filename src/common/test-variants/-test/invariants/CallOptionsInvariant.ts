@@ -2,20 +2,19 @@ import type { IAbortSignalFast } from '@flemist/abort-controller-fast'
 import type { ITimeController } from '@flemist/time-controller'
 
 /**
- * Validates callOptions passed to test function
+ * Validates TestOptions passed to test function
  *
  * ## Applicability
- * Active for every test function call and after test completion
+ * Every test function call
  *
- * ## Validated Rules
- * - abortSignal exists (not null or undefined)
- * - abortSignal is not aborted before first call
+ * ## Invariants
+ * - abortSignal exists
+ * - timeController matches expected instance
  * - abortSignal is aborted after CallController.finalize
- * - timeController matches expected controller (identity check)
  *
- * ## Skipped Cases
- * - abortSignal identity check (library combines signals internally via combineAbortSignals)
- * - abortSignal.aborted check after first error with sequentialOnError (library aborts parallel controller)
+ * ## Skipped Validations
+ * - abortSignal identity (library combines signals via combineAbortSignals)
+ * - abortSignal.aborted after first error with sequentialOnError (library aborts internal controller)
  */
 export class CallOptionsInvariant {
   private readonly _timeController: ITimeController
@@ -26,6 +25,7 @@ export class CallOptionsInvariant {
     this._timeController = timeController
   }
 
+  /** Use inside test func */
   onCall(callOptions: {
     abortSignal?: IAbortSignalFast
     timeController?: ITimeController
@@ -44,12 +44,12 @@ export class CallOptionsInvariant {
     }
   }
 
+  /** Run after test variants completion */
   validateFinal(abortSignalShouldBeAborted: boolean): void {
     if (this._lastAbortSignal == null) {
       return
     }
 
-    // Only check if we explicitly expect it to be aborted (after finalize() was called)
     if (abortSignalShouldBeAborted && !this._lastAbortSignal.aborted) {
       throw new Error(
         `[test][CallOptionsInvariant] abortSignal not aborted after CallController.finalize()`,
