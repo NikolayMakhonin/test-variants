@@ -60,6 +60,8 @@ export type ModeState<Args extends Obj> = {
   completedCount: number
   /** Tests since last switch to this mode; for "did nothing" check */
   testsInLastTurn: number
+  /** Count of attempts to get next variant in current mode */
+  tryNextVariantAttempts: number
   /** Set on first iteration after switching to mode; for per-mode limitTime check */
   startTime: number | null
 }

@@ -69,11 +69,11 @@ export function estimateCallCount(
   }
 
   if (hasSequentialMode) {
-    if (countActiveRandomModes > 0 && completionCount > 0) {
-      return [countRandomTests, countRandomTests]
-    }
     if (countActiveSequentialModes === 0) {
       return [0, 0]
+    }
+    if (countActiveRandomModes > 0 && completionCount > 0) {
+      return [countRandomTests, countRandomTests]
     }
   } else if (countActiveRandomModes === 0) {
     return [0, 0]
@@ -87,7 +87,7 @@ export function estimateCallCount(
         : (runOptions.limitTests ?? 1)
   let _max =
     sumSequentialTestsPerCompletion > 0
-      ? sumSequentialTestsPerCompletion * completionCount
+      ? sumSequentialTestsPerCompletion * (completionCount + 1)
       : LIMIT_MAX
   _min = min(min(_min, LIMIT_MAX), runOptions.limitTests)
   _max = min(min(_max, LIMIT_MAX), runOptions.limitTests)

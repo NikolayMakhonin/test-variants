@@ -101,6 +101,7 @@ export function createVariantsIterator<Args extends Obj>(
       cycleCount: 0,
       completedCount: 0,
       testsInLastTurn: 0,
+      tryNextVariantAttempts: 0,
       startTime: null,
     }
   }
@@ -185,7 +186,8 @@ export function createVariantsIterator<Args extends Obj>(
   // region modes pass
 
   function modesPassIterate(): ArgsWithSeed<Args> | null {
-    while (true) {
+    let tryCount = 0
+    while (tryCount < 2) {
       if (!canModesPassIterate()) {
         // Stop iterator
         return null
@@ -209,7 +211,12 @@ export function createVariantsIterator<Args extends Obj>(
           break
         }
       }
+
+      tryCount++
     }
+
+    // No variants left to iterate
+    return null
   }
 
   function canModesPassIterate(): boolean {
@@ -225,6 +232,13 @@ export function createVariantsIterator<Args extends Obj>(
       if (isGlobalLimitCompletionCountZero()) {
         return false
       }
+      if (!isAnySequentialModeAlive()) {
+        return false
+      }
+    }
+
+    if (!isAnyModeAlive()) {
+      return false
     }
 
     return true
@@ -251,6 +265,28 @@ export function createVariantsIterator<Args extends Obj>(
     return limitCompletionCount != null && limitCompletionCount <= 0
   }
 
+  function isAnySequentialModeAlive(): boolean {
+    if (!hasSequentialModes()) {
+      throw new Error('Unexpected behavior')
+    }
+
+    for (let i = 0, len = modeConfigs.length; i < len; i++) {
+      if (isModeCyclesSupported(modeConfigs[i]) && isModeAlive(i)) {
+        return true
+      }
+    }
+    return false
+  }
+
+  function isAnyModeAlive(): boolean {
+    for (let i = 0, len = modeConfigs.length; i < len; i++) {
+      if (isModeAlive(i)) {
+        return true
+      }
+    }
+    return false
+  }
+
   /** @return true if all modes passed */
   function nextMode(): boolean {
     modeIndex++
@@ -265,10 +301,6 @@ export function createVariantsIterator<Args extends Obj>(
   // region canNextModesPass
 
   function canNextModesPass() {
-    if (!didModesPassRunAnyTests()) {
-      return false
-    }
-
     // When sequential modes exist alongside random modes,
     // iteration terminates when sequential modes reach their completion count limit
     // When only random modes exist,
@@ -313,10 +345,7 @@ export function createVariantsIterator<Args extends Obj>(
       const modeConfig = modeConfigs[i]
       if (isModeSequential(modeConfig)) {
         hasSequentialModes = true
-        if (
-          modeState.testsInLastTurn > 0 &&
-          modeState.completedCount < minCompletedCount
-        ) {
+        if (isModeAlive(i) && modeState.completedCount < minCompletedCount) {
           minCompletedCount = modeState.completedCount
         }
       }
@@ -327,6 +356,23 @@ export function createVariantsIterator<Args extends Obj>(
     }
 
     return minCompletedCount
+  }
+
+  function isModeAlive(modeIndex: number): boolean {
+    const modeConfig = modeConfigs[modeIndex]
+    const modeState = modeStates[modeIndex]
+
+    if (modeConfig.limitTests != null && modeConfig.limitTests <= 0) {
+      return false
+    }
+
+    if (isModeCyclesSupported(modeConfig)) {
+      if (modeConfig.cycles != null && modeConfig.cycles <= 0) {
+        return false
+      }
+    }
+
+    return modeState.tryNextVariantAttempts < 2
   }
 
   // endregion
@@ -346,7 +392,8 @@ export function createVariantsIterator<Args extends Obj>(
 
   /** @return args or null if mode completed all cycles or cannot be iterated */
   function modeIterate(): ArgsWithSeed<Args> | null {
-    while (true) {
+    let tryCount = 0
+    while (tryCount < 2) {
       if (!canModeIterate()) {
         // Stop mode iterator
         return null
@@ -358,11 +405,6 @@ export function createVariantsIterator<Args extends Obj>(
         return args
       }
 
-      if (!didModeRunAnyTests(modeStates[modeIndex])) {
-        // Stop mode iterator
-        return null
-      }
-
       if (isModeCyclesSupported(modeConfigs[modeIndex])) {
         const modeCycleCompleted = nextModeCycle()
         if (modeCycleCompleted) {
@@ -370,7 +412,12 @@ export function createVariantsIterator<Args extends Obj>(
           return null
         }
       }
+
+      tryCount++
     }
+
+    // No variants left to iterate in this mode
+    return null
   }
 
   function canModeIterate(): boolean {
@@ -385,7 +432,7 @@ export function createVariantsIterator<Args extends Obj>(
     }
 
     if (isModeCyclesSupported(modeConfig)) {
-      if (!hasModeAnyCyclesToRun()) {
+      if (!hasModeAnyCyclesToRun(modeIndex)) {
         return false
       }
     }
@@ -428,7 +475,7 @@ export function createVariantsIterator<Args extends Obj>(
     return isModeSequential(modeConfig)
   }
 
-  function hasModeAnyCyclesToRun(): boolean {
+  function hasModeAnyCyclesToRun(modeIndex: number): boolean {
     const modeConfig = modeConfigs[modeIndex]
     const modeState = modeStates[modeIndex]
 
@@ -489,8 +536,11 @@ export function createVariantsIterator<Args extends Obj>(
     }
 
     if (!nextVariant()) {
+      modeState.tryNextVariantAttempts++
       return null
     }
+
+    modeState.tryNextVariantAttempts = 0
 
     if (isModeAttemptsSupported(modeConfig)) {
       resetModeAttempts()
