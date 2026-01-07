@@ -390,10 +390,10 @@ export function retreatVariantNavigation<Args extends Obj>(
 }
 
 /**
- * Compute indices for all args
+ * Compute indexes for all args
  * @return null if any arg value not found or out of limits
  */
-export function calcArgsIndices<Args extends Obj>(
+export function calcArgsIndexes<Args extends Obj>(
   state: VariantNavigationState<Args>,
   targetArgs: Args,
 ): number[] | null {
@@ -401,7 +401,7 @@ export function calcArgsIndices<Args extends Obj>(
 
   const argsNames = state.argsNames
   const argsCount = argsNames.length
-  const indices: number[] = []
+  const indexes: number[] = []
 
   for (let argIndex = 0; argIndex < argsCount; argIndex++) {
     const argName = argsNames[argIndex]
@@ -430,13 +430,13 @@ export function calcArgsIndices<Args extends Obj>(
       return null
     }
 
-    indices.push(valueIndex)
+    indexes.push(valueIndex)
 
     state.indexes[argIndex] = valueIndex
     state.args[state.argsNames[argIndex]] = state.argValues[argIndex][0]
   }
 
-  return indices
+  return indexes
 }
 
 /**

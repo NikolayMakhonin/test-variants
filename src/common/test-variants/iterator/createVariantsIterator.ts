@@ -18,12 +18,12 @@ import type {
 } from 'src/common/test-variants/types'
 import {
   advanceVariantNavigation,
-  calcArgsIndices,
+  calcArgsIndexes,
   createVariantNavigationState,
   randomVariantNavigation,
   retreatVariantNavigation,
 } from './variant-navigation/variantNavigation'
-import { isSequentialMode } from './helpers/mode'
+import { isModeSequential } from './helpers/mode'
 import {
   extendTemplatesWithExtraArgs,
   isArgsKeysInTemplate,
@@ -64,7 +64,7 @@ export function createVariantsIterator<Args extends Obj>(
       : iterationModes
   const modeStates: ModeState<Args>[] = []
 
-  // Dedicated navigation state for computing indices in addLimit
+  // Dedicated navigation state for computing indexes in addLimit
   let calcState: VariantNavigationState<Args> | null = null
 
   let limit: VariantsIteratorLimit<Args> | null = null
@@ -141,7 +141,7 @@ export function createVariantsIterator<Args extends Obj>(
     // Extend templates with values from args that may not be in templates
     extendTemplatesWithExtraArgs(templates, args, equals)
 
-    // Create or reuse dedicated navigation state for computing indices
+    // Create or reuse dedicated navigation state for computing indexes
     if (calcState == null) {
       calcState = createVariantNavigationState(
         templates,
@@ -154,7 +154,7 @@ export function createVariantsIterator<Args extends Obj>(
     }
 
     // Here we also check that the new limit is stricter than the old one
-    const argLimits = calcArgsIndices(calcState, args)
+    const argLimits = calcArgsIndexes(calcState, args)
     if (argLimits == null) {
       return
     }
@@ -238,7 +238,7 @@ export function createVariantsIterator<Args extends Obj>(
   // region canNextModesPass
 
   function canNextModesPass() {
-    if (!wasAnyTestInModesPass()) {
+    if (!didModesPassRunAnyTests()) {
       return false
     }
 
@@ -253,10 +253,10 @@ export function createVariantsIterator<Args extends Obj>(
     }
   }
 
-  function wasAnyTestInModesPass(): boolean {
+  function didModesPassRunAnyTests(): boolean {
     for (let i = 0, len = modeStates.length; i < len; i++) {
       const modeState = modeStates[i]
-      if (wasAnyTestInMode(modeState)) {
+      if (didModeRunAnyTests(modeState)) {
         return true
       }
     }
@@ -265,7 +265,7 @@ export function createVariantsIterator<Args extends Obj>(
 
   function hasSequentialModes(): boolean {
     for (let i = 0, len = modeConfigs.length; i < len; i++) {
-      if (isSequentialMode(modeConfigs[i])) {
+      if (isModeSequential(modeConfigs[i])) {
         return true
       }
     }
@@ -277,7 +277,7 @@ export function createVariantsIterator<Args extends Obj>(
     for (let i = 0, len = modeStates.length; i < len; i++) {
       const modeState = modeStates[i]
       const modeConfig = modeConfigs[i]
-      if (isSequentialMode(modeConfig)) {
+      if (isModeSequential(modeConfig)) {
         if (minCompletedCount == null) {
           if (modeState.testsInLastRun <= 0) {
             minCompletedCount = Infinity
@@ -326,12 +326,12 @@ export function createVariantsIterator<Args extends Obj>(
         return args
       }
 
-      if (!wasAnyTestInMode(modeStates[modeIndex])) {
+      if (!didModeRunAnyTests(modeStates[modeIndex])) {
         // Stop mode iterator
         return null
       }
 
-      if (isModeSupportedCycles(modeConfigs[modeIndex])) {
+      if (isModeCyclesSupported(modeConfigs[modeIndex])) {
         const modeCycleCompleted = nextModeCycle()
         if (modeCycleCompleted) {
           // Stop mode iterator
@@ -344,15 +344,15 @@ export function createVariantsIterator<Args extends Obj>(
   function canModeIterate(): boolean {
     const modeConfig = modeConfigs[modeIndex]
 
-    if (hasModeReachedLimitTests()) {
+    if (isModeLimitTestsReached()) {
       return false
     }
 
-    if (hasModeReachedLimitTime()) {
+    if (isModeLimitTimeReached()) {
       return false
     }
 
-    if (isModeSupportedCycles(modeConfig)) {
+    if (isModeCyclesSupported(modeConfig)) {
       if (!hasModeAnyCyclesToRun()) {
         return false
       }
@@ -361,7 +361,7 @@ export function createVariantsIterator<Args extends Obj>(
     return false
   }
 
-  function hasModeReachedLimitTests(): boolean {
+  function isModeLimitTestsReached(): boolean {
     const modeConfig = modeConfigs[modeIndex]
     const modeState = modeStates[modeIndex]
 
@@ -375,7 +375,7 @@ export function createVariantsIterator<Args extends Obj>(
     return false
   }
 
-  function hasModeReachedLimitTime(): boolean {
+  function isModeLimitTimeReached(): boolean {
     const modeConfig = modeConfigs[modeIndex]
     const modeState = modeStates[modeIndex]
 
@@ -391,17 +391,17 @@ export function createVariantsIterator<Args extends Obj>(
     return false
   }
 
-  function isModeSupportedCycles(
+  function isModeCyclesSupported(
     modeConfig: ModeConfig,
   ): modeConfig is ForwardModeConfig | BackwardModeConfig {
-    return isSequentialMode(modeConfig)
+    return isModeSequential(modeConfig)
   }
 
   function hasModeAnyCyclesToRun(): boolean {
     const modeConfig = modeConfigs[modeIndex]
     const modeState = modeStates[modeIndex]
 
-    if (!isModeSupportedCycles(modeConfig)) {
+    if (!isModeCyclesSupported(modeConfig)) {
       throw new Error('Unexpected behavior')
     }
 
@@ -412,8 +412,8 @@ export function createVariantsIterator<Args extends Obj>(
     return false
   }
 
-  /** Выполнил ли режим хотя бы один тест до смены режима */
-  function wasAnyTestInMode(modeState: ModeState<Args>): boolean {
+  /** Checks whether the mode executed at least one test in its last run */
+  function didModeRunAnyTests(modeState: ModeState<Args>): boolean {
     return modeState.testsInLastRun > 0
   }
 
@@ -422,7 +422,7 @@ export function createVariantsIterator<Args extends Obj>(
     const modeConfig = modeConfigs[modeIndex]
     const modeState = modeStates[modeIndex]
 
-    if (!isModeSupportedCycles(modeConfig)) {
+    if (!isModeCyclesSupported(modeConfig)) {
       throw new Error('Unexpected behavior')
     }
 
@@ -446,8 +446,8 @@ export function createVariantsIterator<Args extends Obj>(
     const modeState = modeStates[modeIndex]
     const navigationState = modeState.navigationState
 
-    if (isModeSupportedAttempts(modeConfig)) {
-      if (hasModeZeroAttemptsAllowed()) {
+    if (isModeAttemptsSupported(modeConfig)) {
+      if (isAttemptsPerVariantZero()) {
         // Stop mode iterator
         return null
       }
@@ -462,12 +462,12 @@ export function createVariantsIterator<Args extends Obj>(
       return null
     }
 
-    if (isModeSupportedAttempts(modeConfig)) {
+    if (isModeAttemptsSupported(modeConfig)) {
       firstModeAttempt()
     }
 
     if (modeState.startTime == null) {
-      // Так же можно проверять по modeState.testsInLastRun === 0
+      // Alternative condition is modeState.testsInLastRun === 0
       modeState.startTime = timeController.now()
     }
 
@@ -481,11 +481,11 @@ export function createVariantsIterator<Args extends Obj>(
     const modeState = modeStates[modeIndex]
     const navigationState = modeState.navigationState
 
-    if (!isModeSupportedAttempts(modeConfig)) {
+    if (!isModeAttemptsSupported(modeConfig)) {
       throw new Error('Unexpected behavior')
     }
 
-    if (hasModeZeroAttemptsAllowed()) {
+    if (isAttemptsPerVariantZero()) {
       throw new Error('Unexpected behavior')
     }
 
@@ -507,26 +507,26 @@ export function createVariantsIterator<Args extends Obj>(
     const modeState = modeStates[modeIndex]
     const navigationState = modeState.navigationState
 
-    if (!isModeSupportedAttempts(modeConfig)) {
+    if (!isModeAttemptsSupported(modeConfig)) {
       throw new Error('Unexpected behavior')
     }
 
-    if (hasModeZeroAttemptsAllowed()) {
+    if (isAttemptsPerVariantZero()) {
       throw new Error('Unexpected behavior')
     }
 
     navigationState.attempts = 1
   }
 
-  function isModeSupportedAttempts(
+  function isModeAttemptsSupported(
     modeConfig: ModeConfig,
   ): modeConfig is ForwardModeConfig | BackwardModeConfig {
-    return isSequentialMode(modeConfig)
+    return isModeSequential(modeConfig)
   }
 
-  function hasModeZeroAttemptsAllowed(): boolean {
+  function isAttemptsPerVariantZero(): boolean {
     const modeConfig = modeConfigs[modeIndex]
-    if (!isModeSupportedAttempts(modeConfig)) {
+    if (!isModeAttemptsSupported(modeConfig)) {
       throw new Error('Unexpected behavior')
     }
     const attemptsPerVariant =
