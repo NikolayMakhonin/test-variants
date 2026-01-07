@@ -52,7 +52,7 @@ export function createVariantsIterator<Args extends Obj>(
 
   const timeController = options.timeController ?? timeControllerDefault
 
-  // Clone templates to allow mutation (extendTemplatesForArgs)
+  // Clone templates to allow mutation (extendTemplatesWithExtraArgs)
   const templates: TestVariantsTemplatesWithExtra<Args, any> = {
     templates: { ...argsTemplates },
     extra: {},
@@ -79,7 +79,7 @@ export function createVariantsIterator<Args extends Obj>(
       startTime = timeController.now()
       createModeStates()
       modeIndex = 0
-      invokeOnModeChange()
+      callOnModeChange()
     }
   }
 
@@ -109,7 +109,7 @@ export function createVariantsIterator<Args extends Obj>(
 
   // region onModeChange
 
-  function invokeOnModeChange(): void {
+  function callOnModeChange(): void {
     if (onModeChange != null) {
       onModeChange({
         mode: modeConfigs[modeIndex],
@@ -231,7 +231,7 @@ export function createVariantsIterator<Args extends Obj>(
     if (modesPassCompleted) {
       modeIndex = 0
     }
-    invokeOnModeChange()
+    callOnModeChange()
     return modesPassCompleted
   }
 
