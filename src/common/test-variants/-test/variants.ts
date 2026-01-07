@@ -74,13 +74,14 @@ import { estimateCallCount } from './estimations/estimateCallCount'
 // import { LogInvariant } from './invariants/LogInvariant'
 import { ErrorBehaviorInvariant } from './invariants/ErrorBehaviorInvariant'
 // import { IterationsInvariant } from './invariants/IterationsInvariant'
-// import { ParallelInvariant } from './invariants/ParallelInvariant'
+import { ParallelInvariant } from './invariants/ParallelInvariant'
 import { CallCountInvariant } from './invariants/CallCountInvariant'
 // import { OnErrorInvariant } from './invariants/OnErrorInvariant'
 // import { OnModeChangeInvariant } from './invariants/OnModeChangeInvariant'
 // import { CallOptionsInvariant } from './invariants/CallOptionsInvariant'
 import { ErrorVariantController } from './helpers/ErrorVariantController'
 import { CallController } from './helpers/CallController'
+import { getParallelLimit } from './helpers/getParallelLimit'
 import { runWithTimeController } from './helpers/runWithTimeController'
 import { log } from 'src/common/helpers/log'
 import { getVariantArgs } from 'src/common/test-variants/-test/helpers/getVariantArgs'
@@ -160,7 +161,17 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
 
   // Initialize invariants
   const callCountInvariant = new CallCountInvariant(callCountRange)
-  // const parallelInvariant = new ParallelInvariant(runOptions.parallel)
+  const parallelLimit = getParallelLimit(runOptions.parallel)
+  const sequentialOnError =
+    runOptions.parallel != null && typeof runOptions.parallel === 'object'
+      ? (runOptions.parallel.sequentialOnError ?? false)
+      : false
+  const parallelInvariant = new ParallelInvariant(
+    parallelLimit,
+    options.async,
+    sequentialOnError,
+    callController,
+  )
   // const logInvariant = new LogInvariant(
   //   runOptions.log,
   //   modeChangesRange,
@@ -224,10 +235,9 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     return callController.call(
       () => {
         callCountInvariant.onCall(callController.callCount)
-        // parallelInvariant.onCallStart()
+        parallelInvariant.onCall()
       },
       () => {
-        // parallelInvariant.onCallEnd()
         errorVariantController.onCall(args)
       },
     )
@@ -272,7 +282,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   )
   // iterationsInvariant.validate(callCount, result)
   // logInvariant.validateFinal(callCount, timeController.now(), lastThrownError)
-  // parallelInvariant.validateFinal(callCount, options.async)
+  parallelInvariant.validateFinal()
   // onModeChangeInvariant.validateFinal(callCount)
   // onErrorInvariant.validateFinal(lastThrownError)
   callCountInvariant.validateFinal(callCount)

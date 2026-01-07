@@ -17,6 +17,8 @@ import { TestError } from '../helpers/TestError'
  */
 export class CallController {
   private _callCount = 0
+  private _currentConcurrent = 0
+  private _maxConcurrent = 0
   private readonly _isAsync: boolean | null
   private readonly _withDelay: boolean
   private readonly _abortController: IAbortControllerFast
@@ -32,6 +34,10 @@ export class CallController {
   /** Use inside test func */
   call(start: () => void, end: () => void): PromiseOrValue<TestFuncResult> {
     this._callCount++
+    this._currentConcurrent++
+    if (this._currentConcurrent > this._maxConcurrent) {
+      this._maxConcurrent = this._currentConcurrent
+    }
 
     start()
 
@@ -41,11 +47,22 @@ export class CallController {
     if (isLogEnabled()) {
       log('[test][CallController][execute]', {
         callCount: this._callCount,
+        currentConcurrent: this._currentConcurrent,
+        maxConcurrent: this._maxConcurrent,
         shouldBeAsync,
       })
     }
 
-    function complete(): TestFuncResult {
+    let decremented = false
+    const decrementConcurrent = () => {
+      if (!decremented) {
+        decremented = true
+        this._currentConcurrent--
+      }
+    }
+
+    const complete = (): TestFuncResult => {
+      decrementConcurrent()
       end()
 
       if (shouldBeAsync) {
@@ -62,6 +79,7 @@ export class CallController {
     }
 
     const onError = (err: any): never => {
+      decrementConcurrent()
       if (!(err instanceof TestError)) {
         this._abortController.abort()
       }
@@ -88,6 +106,14 @@ export class CallController {
 
   get callCount(): number {
     return this._callCount
+  }
+
+  get currentConcurrent(): number {
+    return this._currentConcurrent
+  }
+
+  get maxConcurrent(): number {
+    return this._maxConcurrent
   }
 
   get abortSignal(): IAbortSignalFast {

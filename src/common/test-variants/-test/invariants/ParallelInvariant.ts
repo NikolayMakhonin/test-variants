@@ -1,66 +1,78 @@
+import type { CallController } from '../helpers/CallController'
+
 /**
  * Validates parallel execution behavior
  *
  * ## Applicability
- * Active when callCount >= 2. Validates concurrency matches configuration.
+ * Active when parallel execution is configured. Validates concurrency.
  *
  * ## Validated Rules
  * - Concurrent calls never exceed parallelLimit
- * - All calls complete (concurrentCalls === 0) after test execution
- * - Sync-only tests (isAsync=false) never have parallel execution
- * - With parallel > 1 and async calls, actual parallelism occurs
+ * - All calls complete (currentConcurrent === 0) after test execution
+ * - Sync-only tests (isAsync=false) have maxConcurrent === 1
+ * - With parallelLimit > 1 and enough calls, maxConcurrent === parallelLimit
  */
 export class ParallelInvariant {
-  private concurrentCalls = 0
-  private maxConcurrentCalls = 0
-  private readonly parallelLimit: number
+  private readonly _parallelLimit: number
+  private readonly _isAsync: boolean | null
+  private readonly _sequentialOnError: boolean
+  private readonly _callController: CallController
 
-  constructor(parallel: number | boolean | undefined | null) {
-    this.parallelLimit =
-      parallel === true ? Infinity : typeof parallel === 'number' ? parallel : 1
+  constructor(
+    parallelLimit: number,
+    isAsync: boolean | null,
+    sequentialOnError: boolean,
+    callController: CallController,
+  ) {
+    this._parallelLimit = parallelLimit
+    this._isAsync = isAsync
+    this._sequentialOnError = sequentialOnError
+    this._callController = callController
   }
 
-  onCallStart(): void {
-    this.concurrentCalls++
-    if (this.concurrentCalls > this.maxConcurrentCalls) {
-      this.maxConcurrentCalls = this.concurrentCalls
-    }
-    if (this.concurrentCalls > this.parallelLimit) {
+  /** Call inside test func after call starts */
+  onCall(): void {
+    const currentConcurrent = this._callController.currentConcurrent
+    if (currentConcurrent > this._parallelLimit) {
       throw new Error(
-        `[test][ParallelInvariant] concurrentCalls ${this.concurrentCalls} exceeded limit ${this.parallelLimit}`,
+        `[test][ParallelInvariant] currentConcurrent ${currentConcurrent} > parallelLimit ${this._parallelLimit}`,
       )
     }
   }
 
-  onCallEnd(): void {
-    this.concurrentCalls--
-  }
-
-  /**
-   * Validates parallel execution after test completion
-   *
-   * @param callCount - Total number of test function calls
-   * @param isAsync - Whether async execution was used (null = mixed)
-   */
-  validateFinal(callCount: number, isAsync: boolean | null): void {
-    if (this.concurrentCalls !== 0) {
+  /** Run after test variants completion */
+  validateFinal(): void {
+    const currentConcurrent = this._callController.currentConcurrent
+    if (currentConcurrent !== 0) {
       throw new Error(
-        `[test][ParallelInvariant] concurrentCalls ${this.concurrentCalls} !== 0 after completion`,
+        `[test][ParallelInvariant] currentConcurrent ${currentConcurrent} !== 0 after completion`,
       )
     }
-    if (callCount >= 2) {
-      if (isAsync === false) {
-        if (this.maxConcurrentCalls > 1) {
-          throw new Error(
-            `[test][ParallelInvariant] sync tests should not have parallel but maxConcurrentCalls=${this.maxConcurrentCalls}`,
-          )
-        }
-      } else if (this.parallelLimit > 1) {
-        if (this.maxConcurrentCalls < 2) {
-          throw new Error(
-            `[test][ParallelInvariant] parallel expected (limit=${this.parallelLimit}, calls=${callCount}) but maxConcurrentCalls=${this.maxConcurrentCalls}`,
-          )
-        }
+
+    // Skip complex cases (like ErrorBehaviorInvariant approach)
+    if (this._sequentialOnError) {
+      return
+    }
+
+    const callCount = this._callController.callCount
+    const maxConcurrent = this._callController.maxConcurrent
+
+    // If sync-only, no parallelism expected
+    if (this._isAsync === false) {
+      if (maxConcurrent !== 1) {
+        throw new Error(
+          `[test][ParallelInvariant] sync tests should have maxConcurrent=1 but got ${maxConcurrent}`,
+        )
+      }
+      return
+    }
+
+    // If parallel > 1 and enough calls, expect full parallelism
+    if (this._parallelLimit > 1 && callCount >= this._parallelLimit) {
+      if (maxConcurrent !== this._parallelLimit) {
+        throw new Error(
+          `[test][ParallelInvariant] maxConcurrent ${maxConcurrent} !== parallelLimit ${this._parallelLimit} (callCount=${callCount})`,
+        )
       }
     }
   }
