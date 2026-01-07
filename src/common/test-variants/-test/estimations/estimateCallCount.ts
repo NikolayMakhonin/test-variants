@@ -22,12 +22,9 @@ export function estimateCallCount(
 
   let hasSequentialMode = false
   let hasActiveSequentialMode = false
-  let hasRandomMode = false
   let hasActiveRandomMode = false
 
-  let sumRandomTests = 0
   let hasTimeLimits = runOptions.limitTime != null
-  let minTestsPerTurn: number | null = null
   const testsPerTurnList: number[] = []
   let maxTurnsPerCompletion: number | null = null
 
@@ -38,8 +35,6 @@ export function estimateCallCount(
     const mode = modes[i]
     if (mode.mode === 'forward' || mode.mode === 'backward') {
       hasSequentialMode = true
-    } else if (mode.mode === 'random') {
-      hasRandomMode = true
     }
     if (
       (mode.limitTests != null && mode.limitTests <= 0) ||
@@ -57,7 +52,6 @@ export function estimateCallCount(
           testsPerCompletion,
           mode.limitTests ?? LIMIT_MAX,
         )
-        minTestsPerTurn = min(minTestsPerTurn, testsPerTurn)
         testsPerTurnList.push(testsPerTurn)
         maxTurnsPerCompletion = max(
           maxTurnsPerCompletion,
@@ -76,9 +70,7 @@ export function estimateCallCount(
       case 'random': {
         hasActiveRandomMode = true
         const testsPerTurn = mode.limitTests ?? LIMIT_MAX
-        minTestsPerTurn = min(minTestsPerTurn, testsPerTurn)
         testsPerTurnList.push(testsPerTurn)
-        sumRandomTests += testsPerTurn
         if (mode.limitTime != null) {
           hasTimeLimits = true
         }
@@ -112,35 +104,9 @@ export function estimateCallCount(
     )
     _max = min(
       _max,
-      testsPerModesPass * maxTurnsPerCompletion * (completionCount + 1),
+      testsPerModesPass * maxTurnsPerCompletion * (completionCount + 2),
     )
   }
-
-  // if (!hasSequentialMode) {
-  //   if (countActiveRandomModes === 0) {
-  //     return [0, 0]
-  //   }
-  // } else if (countActiveSequentialModes === 0) {
-  //   return [0, 0]
-  // } else if (countActiveRandomModes > 0 && completionCount > 0) {
-  //   _min = min(_min, sumRandomTests)
-  //   _max = min(_max, sumSequentialTestsPerCompletion + sumRandomTests * 2)
-  // } else {
-  //   _min = min(
-  //     _min,
-  //     sumSequentialTestsPerCompletion > 0
-  //       ? sumSequentialTestsPerCompletion * completionCount
-  //       : hasSequentialMode
-  //         ? 1
-  //         : (runOptions.limitTests ?? 1),
-  //   )
-  //   _max = min(
-  //     _max,
-  //     sumSequentialTestsPerCompletion > 0
-  //       ? sumSequentialTestsPerCompletion * (completionCount + 1) // TODO: убрать +1
-  //       : LIMIT_MAX,
-  //   )
-  // }
 
   _min = min(min(_min, LIMIT_MAX), runOptions.limitTests)
   _max = min(min(_max, LIMIT_MAX), runOptions.limitTests)

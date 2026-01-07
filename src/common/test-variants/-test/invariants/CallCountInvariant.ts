@@ -20,7 +20,7 @@ export class CallCountInvariant {
   onCall(callCount: number): void {
     if (callCount > this._callCountRange[1]) {
       throw new Error(
-        `[test][CallCountInvariant] callCount ${callCount} exceeded max ${this._callCountRange[1]}`,
+        `[test][CallCountInvariant] callCount ${callCount} > max ${this._callCountRange[1]}`,
       )
     }
   }
