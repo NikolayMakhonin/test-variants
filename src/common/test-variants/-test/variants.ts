@@ -173,6 +173,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   // )
   const errorBehaviorInvariant = new ErrorBehaviorInvariant(
     runOptions.findBestError,
+    variantsCount,
     errorVariantIndex,
     retriesToError,
   )
@@ -203,7 +204,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     //   event,
     //   errorVariantController.errorVariantArgs,
     //   callController.callCount,
-    //   errorVariantController.lastError,
+    //   errorVariantController.lastThrownError,
     // )
   }
 
@@ -231,7 +232,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     )
   })
 
-  const { result, thrownError } = await runWithTimeController(
+  const { result, caughtError } = await runWithTimeController(
     callController.timeController,
     () =>
       testFunc(template)({
@@ -249,10 +250,10 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     } else {
       log('<noResult/>')
     }
-    if (thrownError) {
-      log('<thrownError>')
-      log(thrownError)
-      log('</thrownError>')
+    if (caughtError) {
+      log('<caughtError>')
+      log(caughtError)
+      log('</caughtError>')
     } else {
       log('<noThrownError/>')
     }
@@ -260,14 +261,19 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
 
   // Validate using invariants
   const callCount = callController.callCount
-  const lastError = errorVariantController.lastError
+  const lastThrownError = errorVariantController.lastThrownError
 
-  // errorBehaviorInvariant.validate(callCount, thrownError, lastError, result)
+  errorBehaviorInvariant.validate(
+    callCount,
+    caughtError,
+    lastThrownError,
+    result,
+  )
   // iterationsInvariant.validate(callCount, result)
-  // logInvariant.validateFinal(callCount, timeController.now(), lastError)
+  // logInvariant.validateFinal(callCount, timeController.now(), lastThrownError)
   // parallelInvariant.validateFinal(callCount, options.async)
   // onModeChangeInvariant.validateFinal(callCount)
-  // onErrorInvariant.validateFinal(lastError)
+  // onErrorInvariant.validateFinal(lastThrownError)
   callCountInvariant.validateFinal(callCount)
 
   callController.finalize()

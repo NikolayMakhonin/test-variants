@@ -4,7 +4,7 @@ import { TestError } from './TestError'
 
 export type AwaitResult<T> = {
   result: T | null
-  thrownError: TestError | null
+  caughtError: TestError | null
 }
 
 export async function runWithTimeController<T>(
@@ -12,7 +12,7 @@ export async function runWithTimeController<T>(
   func: () => T | Promise<T>,
 ): Promise<AwaitResult<T>> {
   let result: T | null = null
-  let thrownError: TestError | null = null
+  let caughtError: TestError | null = null
   try {
     const resultPromise = func()
     if (isPromiseLike(resultPromise)) {
@@ -24,7 +24,7 @@ export async function runWithTimeController<T>(
     if (!(err instanceof TestError)) {
       throw err
     }
-    thrownError = err
+    caughtError = err
   }
-  return { result, thrownError }
+  return { result, caughtError }
 }

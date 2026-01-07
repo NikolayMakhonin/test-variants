@@ -11,53 +11,63 @@ import { TestArgs } from 'src/common/test-variants/-test/types'
  *
  * ## Validated Rules
  * - When error expected and dontThrowIfError=true: no error thrown, bestError populated
- * - When error expected and dontThrowIfError=false: error thrown, matches lastError
+ * - When error expected and dontThrowIfError=false: error thrown, matches lastThrownError
  * - When no error expected: no error thrown, bestError is null
  */
 export class ErrorBehaviorInvariant {
-  private readonly findBestError: FindBestErrorOptions | undefined | null
-  private readonly errorVariantIndex: number | null
-  private readonly retriesToError: number
+  private readonly _findBestError: FindBestErrorOptions | undefined | null
+  private readonly _variantsCount: number
+  private readonly _errorVariantIndex: number | null
+  private readonly _retriesToError: number
 
   constructor(
     findBestError: FindBestErrorOptions | undefined | null,
+    variantsCount: number,
     errorVariantIndex: number | null,
     retriesToError: number,
   ) {
-    this.findBestError = findBestError
-    this.errorVariantIndex = errorVariantIndex
-    this.retriesToError = retriesToError
+    this._findBestError = findBestError
+    this._variantsCount = variantsCount
+    this._errorVariantIndex = errorVariantIndex
+    this._retriesToError = retriesToError
   }
 
   /**
    * Validates error behavior after test execution
    *
    * @param callCount - Number of test function calls
-   * @param thrownError - The error that was thrown (or null)
-   * @param lastError - The last TestError that occurred (or null)
+   * @param caughtError - The error that was thrown (or null)
+   * @param lastThrownError - The last TestError that occurred (or null)
    * @param result - The test result (may be null if error thrown)
    */
   validate(
     callCount: number,
-    thrownError: unknown,
-    lastError: TestError | null,
+    caughtError: unknown,
+    lastThrownError: TestError | null,
     result: TestVariantsResult<TestArgs> | null,
   ): void {
-    const errorExpected =
-      (this.errorVariantIndex != null &&
-        this.retriesToError === 0 &&
-        callCount > this.errorVariantIndex) ||
-      !!lastError
-    const dontThrowIfError = this.findBestError?.dontThrowIfError ?? false
+    let errorExpected: boolean | null = null
+    if (
+      this._errorVariantIndex == null ||
+      this._errorVariantIndex >= this._variantsCount
+    ) {
+      errorExpected = false
+    } else {
+      if (callCount >= this._variantsCount * (this._retriesToError + 1)) {
+        errorExpected = true
+      }
+    }
+
+    const dontThrowIfError = this._findBestError?.dontThrowIfError ?? false
 
     if (errorExpected) {
-      if (lastError == null) {
+      if (lastThrownError == null) {
         throw new Error(
-          `[test][ErrorBehaviorInvariant] error expected but lastError is null`,
+          `[test][ErrorBehaviorInvariant] error expected but lastThrownError is null`,
         )
       }
-      if (this.findBestError && dontThrowIfError) {
-        if (thrownError != null) {
+      if (this._findBestError && dontThrowIfError) {
+        if (caughtError != null) {
           throw new Error(
             `[test][ErrorBehaviorInvariant] error thrown but dontThrowIfError=true`,
           )
@@ -67,36 +77,36 @@ export class ErrorBehaviorInvariant {
             `[test][ErrorBehaviorInvariant] bestError is null but error expected`,
           )
         }
-        if (result.bestError.error !== lastError) {
+        if (result.bestError.error !== lastThrownError) {
           throw new Error(
-            `[test][ErrorBehaviorInvariant] bestError.error !== lastError`,
+            `[test][ErrorBehaviorInvariant] bestError.error !== lastThrownError`,
           )
         }
-      } else if (this.findBestError) {
-        if (thrownError == null) {
+      } else if (this._findBestError) {
+        if (caughtError == null) {
           throw new Error(
             `[test][ErrorBehaviorInvariant] error expected but not thrown (findBestError=true)`,
           )
         }
-        if (thrownError !== lastError) {
+        if (caughtError !== lastThrownError) {
           throw new Error(
-            `[test][ErrorBehaviorInvariant] thrownError !== lastError`,
+            `[test][ErrorBehaviorInvariant] caughtError !== lastThrownError`,
           )
         }
       } else {
-        if (thrownError == null) {
+        if (caughtError == null) {
           throw new Error(
             `[test][ErrorBehaviorInvariant] error expected but not thrown`,
           )
         }
-        if (thrownError !== lastError) {
+        if (caughtError !== lastThrownError) {
           throw new Error(
-            `[test][ErrorBehaviorInvariant] thrownError !== lastError`,
+            `[test][ErrorBehaviorInvariant] caughtError !== lastThrownError`,
           )
         }
       }
     } else {
-      if (thrownError != null) {
+      if (caughtError != null) {
         throw new Error(
           `[test][ErrorBehaviorInvariant] no error expected but error thrown`,
         )

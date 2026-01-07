@@ -53,13 +53,13 @@ export class OnErrorInvariant {
     }
   }
 
-  validateFinal(lastError: TestError | null): void {
-    if (lastError != null && this.onErrorCount === 0) {
+  validateFinal(lastThrownError: TestError | null): void {
+    if (lastThrownError != null && this.onErrorCount === 0) {
       throw new Error(
         `[test][OnErrorInvariant] error occurred but onError was not called`,
       )
     }
-    if (lastError == null && this.onErrorCount > 0) {
+    if (lastThrownError == null && this.onErrorCount > 0) {
       throw new Error(
         `[test][OnErrorInvariant] onError called ${this.onErrorCount} times but no error occurred`,
       )

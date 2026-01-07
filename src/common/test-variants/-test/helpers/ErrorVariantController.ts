@@ -30,7 +30,7 @@ function deepEqualJsonLikeWithoutSeed(a: any, b: any): boolean {
  */
 export class ErrorVariantController {
   private _retries = 0
-  private _lastError: TestError | null = null
+  private _lastThrownError: TestError | null = null
   private readonly _errorVariantArgs: TestArgs | undefined | null
   private readonly _retriesToError: number
 
@@ -51,14 +51,14 @@ export class ErrorVariantController {
       this._retries++
       if (this._retries > this._retriesToError) {
         this._retries = 0
-        this._lastError = new TestError('TEST ERROR')
-        throw this.lastError
+        this._lastThrownError = new TestError('TEST ERROR')
+        throw this.lastThrownError
       }
     }
   }
 
-  get lastError(): TestError | null {
-    return this._lastError
+  get lastThrownError(): TestError | null {
+    return this._lastThrownError
   }
 
   get errorVariantArgs(): TestArgs | null {

@@ -141,7 +141,7 @@ export class LogInvariant {
   validateFinal(
     callCount: number,
     elapsedTime: number,
-    lastError: Error | null,
+    lastThrownError: Error | null,
   ): void {
     if (isLogEnabled()) {
       return
@@ -181,7 +181,7 @@ export class LogInvariant {
         `[test][LogInvariant] mode changes log count ${this.logModeChanges} < expected minimum ${this.modeChangesRange[0]}`,
       )
     }
-    if (this.errorEnabled && lastError != null && this.logErrors <= 0) {
+    if (this.errorEnabled && lastThrownError != null && this.logErrors <= 0) {
       throw new Error(`[test][LogInvariant] error log expected but not logged`)
     }
   }
