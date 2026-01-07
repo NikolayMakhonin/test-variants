@@ -280,8 +280,9 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   iterationsInvariant.validate(callController.completedCount, result)
   // logInvariant.validateFinal(callCount, timeController.now(), lastThrownError)
   parallelInvariant.validateFinal()
-  onModeChangeInvariant.validateFinal(callCount)
+  onModeChangeInvariant.validateFinal()
   onErrorInvariant.validateFinal(lastThrownError)
+  callOptionsInvariant.validateFinal()
   callCountInvariant.validateFinal(callCount)
 
   callController.finalize()
