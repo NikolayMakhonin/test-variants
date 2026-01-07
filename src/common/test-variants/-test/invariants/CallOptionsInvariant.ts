@@ -8,15 +8,22 @@ import type { ITimeController } from '@flemist/time-controller'
  * Active for every test function call. Validates callOptions properties.
  *
  * ## Validated Rules
- * - abortSignal is provided
- * - timeController matches expected controller
+ * - abortSignal is provided and is an object
+ * - timeController matches expected controller (identity check)
  *
- * ## Note
- * - abortSignal identity is not checked because the library creates a combined
- *   signal from external + internal parallel abort controller
- * - abortSignal.aborted is not checked because the library may call tests
- *   with an aborted signal (e.g., after sequentialOnError switch)
- * - timeController is passed through unchanged, so identity check works
+ * ## Why abortSignal.aborted is NOT checked
+ * The library creates a combined abortSignal from external + parallel abort controller.
+ * When sequentialOnError triggers (findBestError switches from parallel to sequential),
+ * the library aborts the parallel controller, which aborts the combined signal.
+ * Subsequent sequential tests are still called with this aborted signal.
+ * This is valid library behavior - the aborted signal just indicates parallel execution
+ * was cancelled, but sequential execution continues.
+ *
+ * Tests should handle aborted signals gracefully (check signal before async operations).
+ *
+ * ## Why abortSignal identity is NOT checked
+ * The library creates a NEW combined signal (combineAbortSignals) which is different
+ * from our mock's abortController.signal. Checking identity would always fail.
  */
 export class CallOptionsInvariant {
   private readonly _timeController: ITimeController

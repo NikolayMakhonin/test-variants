@@ -177,7 +177,11 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     parallelLimit,
     sequentialOnError,
   )
-  const onModeChangeInvariant = new OnModeChangeInvariant(iterationModes)
+  const onModeChangeInvariant = new OnModeChangeInvariant(
+    iterationModes,
+    callController,
+    parallelLimit,
+  )
   const errorBehaviorInvariant = new ErrorBehaviorInvariant(
     options,
     runOptions,
@@ -273,7 +277,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     lastThrownError,
     result,
   )
-  iterationsInvariant.validate(callCount, result)
+  iterationsInvariant.validate(callController.completedCount, result)
   // logInvariant.validateFinal(callCount, timeController.now(), lastThrownError)
   parallelInvariant.validateFinal()
   onModeChangeInvariant.validateFinal(callCount)

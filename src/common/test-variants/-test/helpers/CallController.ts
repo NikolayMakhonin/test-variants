@@ -17,6 +17,7 @@ import { TestError } from '../helpers/TestError'
  */
 export class CallController {
   private _callCount = 0
+  private _completedCount = 0
   private _currentConcurrent = 0
   private _maxConcurrent = 0
   private readonly _isAsync: boolean | null
@@ -63,6 +64,7 @@ export class CallController {
 
     const complete = (): TestFuncResult => {
       decrementConcurrent()
+      this._completedCount++
       end()
 
       if (shouldBeAsync) {
@@ -106,6 +108,10 @@ export class CallController {
 
   get callCount(): number {
     return this._callCount
+  }
+
+  get completedCount(): number {
+    return this._completedCount
   }
 
   get currentConcurrent(): number {

@@ -5,13 +5,13 @@ import { TestArgs } from 'src/common/test-variants/-test/types'
  * Validates iteration count in test result
  *
  * ## Applicability
- * Active when test completes without error.
- * Validates result.iterations matches expected calculation.
+ * Active for all test executions. Validates result.iterations.
  *
  * ## Validated Rules
  * - iterations >= 0
- * - When no error: iterations equals sum of iterations from all test calls
- * - When error occurred: iterations <= expected (some calls may not have completed)
+ * - iterations equals sum of iterations from all COMPLETED (successful) test calls
+ * - Calculation based on completedCount, not callCount
+ * - Mixed mode: odd calls are sync, even calls are async (1=sync, 2=async, 3=sync, ...)
  */
 export class IterationsInvariant {
   private readonly _iterationsSync: number
@@ -31,11 +31,11 @@ export class IterationsInvariant {
   /**
    * Validates iteration count after test execution
    *
-   * @param callCount - Number of test function calls
-   * @param result - The test result (null when error thrown)
+   * @param completedCount - Number of successfully completed test calls
+   * @param result - The test result (null when error thrown without dontThrowIfError)
    */
   validate(
-    callCount: number,
+    completedCount: number,
     result: TestVariantsResult<TestArgs> | null,
   ): void {
     if (result == null) {
@@ -48,36 +48,25 @@ export class IterationsInvariant {
       )
     }
 
-    const iterationsExpected = this._calculateExpectedIterations(callCount)
+    const iterationsExpected = this._calculateExpectedIterations(completedCount)
 
-    if (result.bestError != null) {
-      // When error occurred, iterations may be less than expected
-      // because the failing call's iterations are not counted
-      if (result.iterations > iterationsExpected) {
-        throw new Error(
-          `[test][IterationsInvariant] iterations ${result.iterations} > expected ${iterationsExpected} (with error)`,
-        )
-      }
-    } else {
-      // When no error, iterations must match exactly
-      if (result.iterations !== iterationsExpected) {
-        throw new Error(
-          `[test][IterationsInvariant] iterations ${result.iterations} !== expected ${iterationsExpected}`,
-        )
-      }
+    if (result.iterations !== iterationsExpected) {
+      throw new Error(
+        `[test][IterationsInvariant] iterations ${result.iterations} !== expected ${iterationsExpected} (completedCount=${completedCount})`,
+      )
     }
   }
 
-  private _calculateExpectedIterations(callCount: number): number {
+  private _calculateExpectedIterations(completedCount: number): number {
     if (this._isAsync === true) {
-      return callCount * this._iterationsAsync
+      return completedCount * this._iterationsAsync
     }
     if (this._isAsync === false) {
-      return callCount * this._iterationsSync
+      return completedCount * this._iterationsSync
     }
-    // Mixed mode: even-numbered calls are async, odd-numbered calls are sync
-    const syncCalls = Math.ceil(callCount / 2)
-    const asyncCalls = Math.floor(callCount / 2)
+    // Mixed mode: odd calls (1, 3, 5, ...) are sync, even calls (2, 4, 6, ...) are async
+    const syncCalls = Math.ceil(completedCount / 2)
+    const asyncCalls = Math.floor(completedCount / 2)
     return syncCalls * this._iterationsSync + asyncCalls * this._iterationsAsync
   }
 }
