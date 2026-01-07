@@ -221,7 +221,7 @@ export function createVariantsIterator<Args extends Obj>(
       return false
     }
 
-    return false
+    return true
   }
 
   /** @return true if all modes passed */
@@ -251,6 +251,8 @@ export function createVariantsIterator<Args extends Obj>(
         return false
       }
     }
+
+    return true
   }
 
   function didModesPassRunAnyTests(): boolean {
@@ -320,7 +322,7 @@ export function createVariantsIterator<Args extends Obj>(
         return null
       }
 
-      const args = modeVariantsIterate()
+      const args = nextModeVariant()
       if (args != null) {
         // Produce test args
         return args
@@ -358,7 +360,7 @@ export function createVariantsIterator<Args extends Obj>(
       }
     }
 
-    return false
+    return true
   }
 
   function isModeLimitTestsReached(): boolean {
@@ -440,8 +442,7 @@ export function createVariantsIterator<Args extends Obj>(
 
   // region mode iterate
 
-  function modeVariantsIterate(): ArgsWithSeed<Args> | null {
-    // TODO: refactor this
+  function nextModeVariant(): ArgsWithSeed<Args> | null {
     const modeConfig = modeConfigs[modeIndex]
     const modeState = modeStates[modeIndex]
     const navigationState = modeState.navigationState
@@ -463,7 +464,7 @@ export function createVariantsIterator<Args extends Obj>(
     }
 
     if (isModeAttemptsSupported(modeConfig)) {
-      firstModeAttempt()
+      resetModeAttempts()
     }
 
     if (modeState.startTime == null) {
@@ -502,7 +503,7 @@ export function createVariantsIterator<Args extends Obj>(
     return null
   }
 
-  function firstModeAttempt() {
+  function resetModeAttempts() {
     const modeConfig = modeConfigs[modeIndex]
     const modeState = modeStates[modeIndex]
     const navigationState = modeState.navigationState
