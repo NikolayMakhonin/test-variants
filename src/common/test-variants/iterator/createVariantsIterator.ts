@@ -427,6 +427,11 @@ export function createVariantsIterator<Args extends Obj>(
       }
     }
 
+    // TODO:
+    // if (!isModeAlive(modeIndex)) {
+    //   return false
+    // }
+
     return true
   }
 
