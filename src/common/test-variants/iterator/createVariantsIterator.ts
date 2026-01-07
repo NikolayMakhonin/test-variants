@@ -312,16 +312,6 @@ export function createVariantsIterator<Args extends Obj>(
     return true
   }
 
-  function didModesPassRunAnyTests(): boolean {
-    for (let i = 0, len = modeStates.length; i < len; i++) {
-      const modeState = modeStates[i]
-      if (didModeRunAnyTests(modeState)) {
-        return true
-      }
-    }
-    return false
-  }
-
   function hasSequentialModes(): boolean {
     for (let i = 0, len = modeConfigs.length; i < len; i++) {
       if (isModeSequential(modeConfigs[i])) {
@@ -490,11 +480,6 @@ export function createVariantsIterator<Args extends Obj>(
     return false
   }
 
-  /** Checks whether the mode executed at least one test in its last run */
-  function didModeRunAnyTests(modeState: ModeState<Args>): boolean {
-    return modeState.testsInLastTurn > 0
-  }
-
   /** @return true if mode completed a full cycle */
   function nextModeCycle(): boolean {
     const modeConfig = modeConfigs[modeIndex]
@@ -611,7 +596,7 @@ export function createVariantsIterator<Args extends Obj>(
     }
     const attemptsPerVariant =
       (modeConfig as SequentialModeConfig).attemptsPerVariant ?? 1
-    return attemptsPerVariant === 0
+    return attemptsPerVariant <= 0
   }
 
   // endregion
