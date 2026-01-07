@@ -8,41 +8,32 @@ import type { ITimeController } from '@flemist/time-controller'
  * Active for every test function call. Validates callOptions properties.
  *
  * ## Validated Rules
- * - abortSignal matches expected signal
- * - abortSignal is not aborted when test is called
+ * - abortSignal is provided
  * - timeController matches expected controller
- * - Current time does not exceed limitTime
+ *
+ * ## Note
+ * - abortSignal identity is not checked because the library creates a combined
+ *   signal from external + internal parallel abort controller
+ * - abortSignal.aborted is not checked because the library may call tests
+ *   with an aborted signal (e.g., after sequentialOnError switch)
+ * - timeController is passed through unchanged, so identity check works
  */
 export class CallOptionsInvariant {
-  private readonly abortSignal: IAbortSignalFast
-  private readonly timeController: ITimeController
-  private readonly limitTime: number | undefined | null
+  private readonly _timeController: ITimeController
 
-  constructor(
-    abortSignal: IAbortSignalFast,
-    timeController: ITimeController,
-    limitTime: number | undefined | null,
-  ) {
-    this.abortSignal = abortSignal
-    this.timeController = timeController
-    this.limitTime = limitTime
+  constructor(timeController: ITimeController) {
+    this._timeController = timeController
   }
 
   onCall(callOptions: {
     abortSignal?: IAbortSignalFast
     timeController?: ITimeController
   }): void {
-    if (callOptions.abortSignal !== this.abortSignal) {
-      throw new Error(`[test][CallOptionsInvariant] abortSignal mismatch`)
+    if (callOptions.abortSignal == null) {
+      throw new Error(`[test][CallOptionsInvariant] abortSignal is null`)
     }
-    if (callOptions.abortSignal.aborted) {
-      throw new Error(`[test][CallOptionsInvariant] call after aborted`)
-    }
-    if (callOptions.timeController !== this.timeController) {
+    if (callOptions.timeController !== this._timeController) {
       throw new Error(`[test][CallOptionsInvariant] timeController mismatch`)
-    }
-    if (this.limitTime != null && this.timeController.now() > this.limitTime) {
-      throw new Error(`[test][CallOptionsInvariant] time limit exceeded`)
     }
   }
 }

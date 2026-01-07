@@ -69,16 +69,15 @@ import { generateTemplate } from './generators/template'
 import { generateRunOptions } from './generators/run'
 import { generateErrorVariantIndex } from './generators/testFunc'
 import { estimateCallCount } from './estimations/estimateCallCount'
-// import { ITERATIONS_SYNC, ITERATIONS_ASYNC } from './constants'
-// import { estimateModeChanges } from './estimations/estimateModeChanges'
+import { ITERATIONS_SYNC, ITERATIONS_ASYNC, MODES_DEFAULT } from './constants'
 // import { LogInvariant } from './invariants/LogInvariant'
 import { ErrorBehaviorInvariant } from './invariants/ErrorBehaviorInvariant'
-// import { IterationsInvariant } from './invariants/IterationsInvariant'
+import { IterationsInvariant } from './invariants/IterationsInvariant'
 import { ParallelInvariant } from './invariants/ParallelInvariant'
 import { CallCountInvariant } from './invariants/CallCountInvariant'
 import { OnErrorInvariant } from './invariants/OnErrorInvariant'
-// import { OnModeChangeInvariant } from './invariants/OnModeChangeInvariant'
-// import { CallOptionsInvariant } from './invariants/CallOptionsInvariant'
+import { OnModeChangeInvariant } from './invariants/OnModeChangeInvariant'
+import { CallOptionsInvariant } from './invariants/CallOptionsInvariant'
 import { ErrorVariantController } from './helpers/ErrorVariantController'
 import { CallController } from './helpers/CallController'
 import { getParallelLimit } from './helpers/getParallelLimit'
@@ -128,11 +127,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     errorVariantIndex,
     withDelay,
   )
-  // const _iterationModes = runOptions.iterationModes ?? MODES_DEFAULT
-  // const modeChangesRange = estimateModeChanges(
-  //   iterationModes,
-  //   callCountRange[1],
-  // )
+  const iterationModes = runOptions.iterationModes ?? MODES_DEFAULT
 
   if (isLogEnabled()) {
     log('<template>')
@@ -148,7 +143,6 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     log('</expected>')
     log('<estimation>')
     log('callCountRange: ', callCountRange)
-    // log('modeChangesRange: ', modeChangesRange)
     log('</estimation>')
   }
 
@@ -183,10 +177,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     parallelLimit,
     sequentialOnError,
   )
-  // const onModeChangeInvariant = new OnModeChangeInvariant(
-  //   iterationModes,
-  //   modeChangesRange,
-  // )
+  const onModeChangeInvariant = new OnModeChangeInvariant(iterationModes)
   const errorBehaviorInvariant = new ErrorBehaviorInvariant(
     options,
     runOptions,
@@ -194,16 +185,14 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     errorVariantIndex,
     retriesToError,
   )
-  // const iterationsInvariant = new IterationsInvariant(
-  //   ITERATIONS_SYNC,
-  //   ITERATIONS_ASYNC,
-  //   options.async,
-  // )
-  // const callOptionsInvariant = new CallOptionsInvariant(
-  //   abortSignal,
-  //   timeController,
-  //   runOptions.limitTime,
-  // )
+  const iterationsInvariant = new IterationsInvariant(
+    ITERATIONS_SYNC,
+    ITERATIONS_ASYNC,
+    options.async,
+  )
+  const callOptionsInvariant = new CallOptionsInvariant(
+    callController.timeController,
+  )
 
   function logFunc(_type: TestVariantsLogType, _message: string): void {
     if (isLogEnabled()) {
@@ -224,16 +213,16 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     )
   }
 
-  function onModeChange(_event: ModeChangeEvent): void {
-    // onModeChangeInvariant.onModeChange(event, callController.callCount)
+  function onModeChange(event: ModeChangeEvent): void {
+    onModeChangeInvariant.onModeChange(event)
   }
 
   // Create test function
   const testFunc = createTestVariants(function innerTest(
     args: TestArgs,
-    _callOptions,
+    callOptions,
   ) {
-    // callOptionsInvariant.onCall(callOptions)
+    callOptionsInvariant.onCall(callOptions)
     deepFreezeJsonLike(args)
 
     return callController.call(
@@ -284,10 +273,10 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     lastThrownError,
     result,
   )
-  // iterationsInvariant.validate(callCount, result)
+  iterationsInvariant.validate(callCount, result)
   // logInvariant.validateFinal(callCount, timeController.now(), lastThrownError)
   parallelInvariant.validateFinal()
-  // onModeChangeInvariant.validateFinal(callCount)
+  onModeChangeInvariant.validateFinal(callCount)
   onErrorInvariant.validateFinal(lastThrownError)
   callCountInvariant.validateFinal(callCount)
 
