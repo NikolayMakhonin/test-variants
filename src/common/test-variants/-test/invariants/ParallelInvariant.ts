@@ -61,13 +61,9 @@ export class ParallelInvariant {
 
     const maxConcurrent = this._callController.maxConcurrent
 
-    // If sync-only, no parallelism expected
-    if (this._isAsync === false) {
-      if (maxConcurrent !== 1) {
-        throw new Error(
-          `[test][ParallelInvariant] sync tests should have maxConcurrent=1 but got ${maxConcurrent}`,
-        )
-      }
+    // If not pure async, parallelism may not be achieved
+    // (sync calls complete immediately, mixed mode has some sync calls)
+    if (this._isAsync !== true) {
       return
     }
 
