@@ -101,7 +101,7 @@ export function createVariantsIterator<Args extends Obj>(
       cycleCount: 0,
       completedCount: 0,
       testsInLastRun: 0,
-      startTime: 0,
+      startTime: null,
     }
   }
 
@@ -275,24 +275,23 @@ export function createVariantsIterator<Args extends Obj>(
   }
 
   function calcMinCompletedCount(): number {
-    let minCompletedCount: number | null = null
+    let hasSequentialModes = false
+    let minCompletedCount: number = Infinity
     for (let i = 0, len = modeStates.length; i < len; i++) {
       const modeState = modeStates[i]
       const modeConfig = modeConfigs[i]
       if (isModeSequential(modeConfig)) {
-        if (minCompletedCount == null) {
-          if (modeState.testsInLastRun <= 0) {
-            minCompletedCount = Infinity
-          } else {
-            minCompletedCount = modeState.completedCount
-          }
-        } else if (modeState.completedCount < minCompletedCount) {
+        hasSequentialModes = true
+        if (
+          modeState.testsInLastRun > 0 &&
+          modeState.completedCount < minCompletedCount
+        ) {
           minCompletedCount = modeState.completedCount
         }
       }
     }
 
-    if (minCompletedCount == null) {
+    if (!hasSequentialModes) {
       throw new Error('Unexpected behavior')
     }
 
