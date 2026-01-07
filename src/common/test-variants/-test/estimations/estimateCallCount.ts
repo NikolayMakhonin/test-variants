@@ -69,27 +69,35 @@ export function estimateCallCount(
     }
   }
 
-  if (hasSequentialMode) {
-    if (countActiveSequentialModes === 0) {
+  let _min = LIMIT_MAX
+  let _max = LIMIT_MAX
+
+  if (!hasSequentialMode) {
+    if (countActiveRandomModes === 0) {
       return [0, 0]
     }
-    if (countActiveRandomModes > 0 && completionCount > 0) {
-      return [countRandomTests, countRandomTests]
-    }
-  } else if (countActiveRandomModes === 0) {
+  } else if (countActiveSequentialModes === 0) {
     return [0, 0]
+  } else if (countActiveRandomModes > 0 && completionCount > 0) {
+    _min = min(_min, countRandomTests)
+    _max = min(_max, countRandomTests * 2)
+  } else {
+    _min = min(
+      _min,
+      sumSequentialTestsPerCompletion > 0
+        ? sumSequentialTestsPerCompletion * completionCount
+        : hasSequentialMode
+          ? 1
+          : (runOptions.limitTests ?? 1),
+    )
+    _max = min(
+      _max,
+      sumSequentialTestsPerCompletion > 0
+        ? sumSequentialTestsPerCompletion * (completionCount + 1) // TODO: убрать +1
+        : LIMIT_MAX,
+    )
   }
 
-  let _min =
-    sumSequentialTestsPerCompletion > 0
-      ? sumSequentialTestsPerCompletion * completionCount
-      : hasSequentialMode
-        ? 1
-        : (runOptions.limitTests ?? 1)
-  let _max =
-    sumSequentialTestsPerCompletion > 0
-      ? sumSequentialTestsPerCompletion * (completionCount + 1) // TODO: убрать +1
-      : LIMIT_MAX
   _min = min(min(_min, LIMIT_MAX), runOptions.limitTests)
   _max = min(min(_max, LIMIT_MAX), runOptions.limitTests)
 
