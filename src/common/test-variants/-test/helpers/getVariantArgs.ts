@@ -35,7 +35,9 @@ export function getVariantArgs(
     if (errorIndex != null && index === errorIndex) {
       errorArgs = Object.freeze({ ...args })
     }
-    lastArgs = args
+    // TODO: подумать как оптимизировать, как сделать так чтобы итератор
+    // не обнулял свойства последнего элемента
+    lastArgs = { ...args }
   })
 
   return Object.freeze({

@@ -173,7 +173,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   // )
   const errorBehaviorInvariant = new ErrorBehaviorInvariant(
     options,
-    runOptions.findBestError,
+    runOptions,
     variantsCount,
     errorVariantIndex,
     retriesToError,

@@ -11,18 +11,17 @@ import {
 import { generateBoundaryInt } from './primitives'
 import { getArgKey } from '../caches'
 
-function generateArgValuePrimitive(
-  rnd: Random,
-  options: StressTestArgs,
-): number {
-  return generateBoundaryInt(rnd, options.argValueMax)
-}
+// Если значения генерировать, то потом нельзя будет по значениям точно определять вариант,
+// а это важно для идентификации ошибочного варианта.
+// function generateArgValuePrimitive(
+//   rnd: Random,
+//   options: StressTestArgs,
+// ): number {
+//   return generateBoundaryInt(rnd, options.argValueMax)
+// }
 
-function generateArgValueObject(
-  rnd: Random,
-  options: StressTestArgs,
-): ObjectValue {
-  return Object.freeze({ value: generateArgValuePrimitive(rnd, options) })
+function createArgValueObject(value: number): ObjectValue {
+  return Object.freeze({ value })
 }
 
 function generateArgValueType(
@@ -32,12 +31,16 @@ function generateArgValueType(
   return options.argValueType ?? (randomBoolean(rnd) ? 'primitive' : 'object')
 }
 
-function generateArgValue(rnd: Random, options: StressTestArgs): TemplateValue {
+function generateArgValue(
+  rnd: Random,
+  options: StressTestArgs,
+  value: number,
+): TemplateValue {
   const valueType = generateArgValueType(rnd, options)
   if (valueType === 'primitive') {
-    return generateArgValuePrimitive(rnd, options)
+    return value
   }
-  return generateArgValueObject(rnd, options)
+  return createArgValueObject(value)
 }
 
 function generateArgValuesArray(
@@ -46,8 +49,9 @@ function generateArgValuesArray(
 ): readonly TemplateValue[] {
   const count = generateBoundaryInt(rnd, options.argValuesCountMax)
   const values: TemplateValue[] = []
+  const reverseOrder = randomBoolean(rnd)
   for (let i = 0; i < count; i++) {
-    values[i] = generateArgValue(rnd, options)
+    values[i] = generateArgValue(rnd, options, reverseOrder ? count - 1 - i : i)
   }
   return Object.freeze(values)
 }

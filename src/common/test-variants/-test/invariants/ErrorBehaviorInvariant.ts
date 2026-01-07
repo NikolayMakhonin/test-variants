@@ -1,6 +1,8 @@
-import type { FindBestErrorOptions, TestVariantsResult } from 'src/common'
+import type { TestVariantsResult, TestVariantsRunOptions } from 'src/common'
 import { TestError } from 'src/common/test-variants/-test/helpers/TestError'
 import { StressTestArgs, TestArgs } from 'src/common/test-variants/-test/types'
+import { ModeType } from 'src/common/test-variants/types'
+import { MODES_DEFAULT } from 'src/common/test-variants/-test/constants'
 
 /**
  * Validates error handling behavior
@@ -16,20 +18,20 @@ import { StressTestArgs, TestArgs } from 'src/common/test-variants/-test/types'
  */
 export class ErrorBehaviorInvariant {
   private readonly _options: StressTestArgs
-  private readonly _findBestError: FindBestErrorOptions | undefined | null
+  private readonly _runOptions: TestVariantsRunOptions<TestArgs>
   private readonly _variantsCount: number
   private readonly _errorVariantIndex: number | null
   private readonly _retriesToError: number
 
   constructor(
     options: StressTestArgs,
-    findBestError: FindBestErrorOptions | undefined | null,
+    runOptions: TestVariantsRunOptions<TestArgs>,
     variantsCount: number,
     errorVariantIndex: number | null,
     retriesToError: number,
   ) {
     this._options = options
-    this._findBestError = findBestError
+    this._runOptions = runOptions
     this._variantsCount = variantsCount
     this._errorVariantIndex = errorVariantIndex
     this._retriesToError = retriesToError
@@ -53,25 +55,64 @@ export class ErrorBehaviorInvariant {
       throw caughtError
     }
 
+    let modeType: ModeType | null = null
+    const modes = this._runOptions.iterationModes ?? MODES_DEFAULT
+    for (let i = 0, len = modes.length; i < len; i++) {
+      const mode = modes[i]
+      if (modeType == null) {
+        modeType = mode.mode
+      } else if (modeType !== mode.mode) {
+        modeType = null
+        break
+      }
+    }
+
+    if (modeType == null) {
+      return
+    }
+
     let errorExpected: boolean | null = null
-    if (
+    if (callCount === 0) {
+      errorExpected = false
+    } else if (
       this._errorVariantIndex == null ||
       this._errorVariantIndex >= this._variantsCount
     ) {
       errorExpected = false
-    } else if (this._variantsCount > 1 && this._options.modeType === 'random') {
-      return
-    } else {
+    } else if (modeType === 'random') {
+      if (this._variantsCount > 1) {
+        return
+      }
+      if (callCount > this._retriesToError) {
+        errorExpected = true
+      }
+      // TODO: add here: errorExpected = false
+    } else if (modeType === 'forward') {
       if (
         callCount >=
-        (this._errorVariantIndex + 1) * (this._retriesToError + 1)
+        this._errorVariantIndex + 1 + this._variantsCount * this._retriesToError
       ) {
         errorExpected = true
       }
       // TODO: add here: errorExpected = false
+    } else if (modeType === 'backward') {
+      if (
+        callCount >=
+        this._variantsCount -
+          this._errorVariantIndex +
+          this._variantsCount * this._retriesToError
+      ) {
+        errorExpected = true
+      }
+      // TODO: add here: errorExpected = false
+    } else {
+      throw new Error(
+        `[test][ErrorBehaviorInvariant] unknown modeType "${modeType}"`,
+      )
     }
 
-    const dontThrowIfError = this._findBestError?.dontThrowIfError ?? false
+    const dontThrowIfError =
+      this._runOptions.findBestError?.dontThrowIfError ?? false
 
     if (errorExpected) {
       if (lastThrownError == null) {
@@ -79,7 +120,7 @@ export class ErrorBehaviorInvariant {
           `[test][ErrorBehaviorInvariant] error expected but lastThrownError is null`,
         )
       }
-      if (this._findBestError && dontThrowIfError) {
+      if (this._runOptions.findBestError && dontThrowIfError) {
         if (caughtError != null) {
           throw new Error(
             `[test][ErrorBehaviorInvariant] error thrown but dontThrowIfError=true`,
@@ -95,7 +136,7 @@ export class ErrorBehaviorInvariant {
             `[test][ErrorBehaviorInvariant] bestError.error !== lastThrownError`,
           )
         }
-      } else if (this._findBestError) {
+      } else if (this._runOptions.findBestError) {
         if (caughtError == null) {
           throw new Error(
             `[test][ErrorBehaviorInvariant] error expected but not thrown (findBestError=true)`,
