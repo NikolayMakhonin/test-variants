@@ -85,6 +85,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
 
   try {
     await runIterationLoop(runContext)
+    abortSignalParallel.throwIfAborted()
   } catch (error) {
     abortControllerGlobal.abort(new AbortErrorSilent())
     throw error
