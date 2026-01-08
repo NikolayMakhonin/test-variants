@@ -162,9 +162,7 @@ async function runCycleAsync<Args extends Obj>(
     // When sequentialOnError=true and error occurred, parallel is aborted and falls back to sequential
     const useParallel = pool && !isParallelAborted(runContext)
 
-    // In parallel mode, wait for pool slot BEFORE fetching args
-    // This ensures time advances before limit check in getNextArgs()
-    // slotHeld tracks ownership: true = we must release, false = transferred to runParallelTest
+    // Wait for pool slot BEFORE fetching args so time advances before limit check
     let slotHeld = false
     if (useParallel) {
       if (!pool.hold(1)) {

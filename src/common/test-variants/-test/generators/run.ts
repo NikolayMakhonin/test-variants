@@ -112,7 +112,14 @@ function generateMode(
   const cycles = generateBoundaryInt(rnd, options.modeCyclesMax)
   const attemptsPerVariant = generateBoundaryInt(rnd, options.modeAttemptsMax)
   const limitTests = generateLimit(rnd, variants * cycles * attemptsPerVariant)
-  return Object.freeze({ mode, cycles, attemptsPerVariant, limitTests })
+  const limitTime = generateBoundaryInt(rnd, TIME_MAX)
+  return Object.freeze({
+    mode,
+    cycles,
+    attemptsPerVariant,
+    limitTests,
+    limitTime: limitTime === 0 ? void 0 : limitTime,
+  })
 }
 
 function generateModes(

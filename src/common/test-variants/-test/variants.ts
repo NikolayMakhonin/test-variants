@@ -80,6 +80,7 @@ import { OnErrorInvariant } from './invariants/OnErrorInvariant'
 import { OnModeChangeInvariant } from './invariants/OnModeChangeInvariant'
 import { CallOptionsInvariant } from './invariants/CallOptionsInvariant'
 import { FindBestErrorInvariant } from './invariants/FindBestErrorInvariant'
+import { LimitTimeInvariant } from './invariants/LimitTimeInvariant'
 import { ErrorVariantController } from './helpers/ErrorVariantController'
 import { CallController } from './helpers/CallController'
 import { runWithTimeController } from './helpers/runWithTimeController'
@@ -201,6 +202,10 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     errorVariantIndex,
     errorVariantController.errorVariantArgs,
   )
+  const limitTimeInvariant = new LimitTimeInvariant(
+    runOptions,
+    callController.timeController,
+  )
 
   function logFunc(_type: TestVariantsLogType, _message: string): void {
     if (isLogEnabled()) {
@@ -224,6 +229,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
 
   function onModeChange(event: ModeChangeEvent): void {
     onModeChangeInvariant.onModeChange(event)
+    limitTimeInvariant.onModeChange(event)
   }
 
   // Create test function
@@ -290,7 +296,8 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   onErrorInvariant.validateFinal(lastThrownError)
   callCountInvariant.validateFinal(callCount)
   callOptionsInvariant.validateFinal()
-  // findBestErrorInvariant.validateFinal(caughtError, lastThrownError, result)
+  findBestErrorInvariant.validateFinal(caughtError, lastThrownError, result)
+  limitTimeInvariant.validateFinal()
 
   callController.finalize()
 }

@@ -14,7 +14,7 @@ import { MODES_DEFAULT } from '../constants'
  * Every mode change event
  *
  * ## Invariants
- * - onModeChange count within estimated range [min, max]
+ * - onModeChange count within estimated range [min, max] (skipped when time limits present)
  * - First modeChange: modeIndex=0, tests=0
  * - modeIndex cycles in order: 0→1→...→N-1→0→...
  * - modeIndex within range [0, modesCount)
@@ -28,6 +28,7 @@ export class OnModeChangeInvariant {
   private _lastModeIndex = -1
   private readonly _runOptions: TestVariantsRunOptions<TestArgs>
   private readonly _modeChangesRange: NumberRange
+  private readonly _hasTimeLimits: boolean
 
   constructor(
     runOptions: TestVariantsRunOptions<TestArgs>,
@@ -35,6 +36,20 @@ export class OnModeChangeInvariant {
   ) {
     this._runOptions = runOptions
     this._modeChangesRange = modeChangesRange
+    this._hasTimeLimits = this._detectTimeLimits()
+  }
+
+  private _detectTimeLimits(): boolean {
+    if (this._runOptions.limitTime != null) {
+      return true
+    }
+    const modes = this._runOptions.iterationModes ?? MODES_DEFAULT
+    for (let i = 0, len = modes.length; i < len; i++) {
+      if (modes[i].limitTime != null) {
+        return true
+      }
+    }
+    return false
   }
 
   /** Use in onModeChange callback */
@@ -95,8 +110,11 @@ export class OnModeChangeInvariant {
       )
     }
 
-    // Validate max during execution
-    if (this._modeChangeCount > this._modeChangesRange[1]) {
+    // Validate max during execution (skip when time limits present)
+    if (
+      !this._hasTimeLimits &&
+      this._modeChangeCount > this._modeChangesRange[1]
+    ) {
       throw new Error(
         `[test][OnModeChangeInvariant] modeChangeCount (${this._modeChangeCount}) > max (${this._modeChangesRange[1]})`,
       )
@@ -108,6 +126,10 @@ export class OnModeChangeInvariant {
 
   /** Run after test variants completion */
   validateFinal(): void {
+    // Skip range validation when time limits present
+    if (this._hasTimeLimits) {
+      return
+    }
     if (this._modeChangeCount < this._modeChangesRange[0]) {
       throw new Error(
         `[test][OnModeChangeInvariant] modeChangeCount (${this._modeChangeCount}) < min (${this._modeChangesRange[0]})`,

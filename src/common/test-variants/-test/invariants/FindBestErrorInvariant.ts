@@ -53,17 +53,17 @@ export class FindBestErrorInvariant {
       return
     }
 
-    const parallel = this._runOptions.parallel
-    const parallelLimit = getParallelLimit(parallel)
-    const sequentialOnError =
-      parallel != null && typeof parallel === 'object'
-        ? (parallel.sequentialOnError ?? false)
-        : false
+    // const parallel = this._runOptions.parallel
+    // const parallelLimit = getParallelLimit(parallel)
+    // const sequentialOnError =
+    //   parallel != null && typeof parallel === 'object'
+    //     ? (parallel.sequentialOnError ?? false)
+    //     : false
 
     // Skip validation for parallel without sequentialOnError (race conditions)
-    if (parallelLimit > 1 && !sequentialOnError) {
-      return
-    }
+    // if (parallelLimit > 1 && !sequentialOnError) {
+    //   return
+    // }
 
     if (this._errorOccurred) {
       this._callsAfterError++
