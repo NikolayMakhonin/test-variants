@@ -520,6 +520,11 @@ export function createVariantsIterator<Args extends Obj>(
       }
       const args = nextModeAttempt()
       if (args != null) {
+        if (modeState.startTime == null) {
+          // Alternative condition is modeState.testsInLastTurn === 0
+          modeState.startTime = timeController.now()
+        }
+
         // Produce test args
         return args
       }
