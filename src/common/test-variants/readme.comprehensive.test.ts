@@ -182,9 +182,10 @@ describe('README comprehensive', () => {
       /AppleWebKit/.test(navigator.userAgent) &&
       !/Chrome/.test(navigator.userAgent)
     ) {
-      expect(receivedLogs.find(l => l.type === 'start')?.message).toContain(
-        'memory',
-      )
+      expect(
+        receivedLogs.find(l => l.type === 'start')?.message,
+        navigator.userAgent,
+      ).toContain('memory')
     }
     expect(receivedLogs.find(l => l.type === 'error')?.message).toContain(
       'test error',
