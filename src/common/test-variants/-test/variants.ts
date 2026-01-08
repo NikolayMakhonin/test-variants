@@ -56,9 +56,12 @@
  * Write all code, comments, and logs in English following all project text writing rules
  */
 
-import { createTestVariants as createTestVariantsOld } from '#this'
+import {
+  createTestVariants as createTestVariantsOld,
+  type TestVariantsLogOptions,
+} from '#this'
 import { createTestVariants } from 'src/common/test-variants/createTestVariants'
-import { Random } from '@flemist/simple-utils'
+import { Random, RequiredNonNullable } from '@flemist/simple-utils'
 import type { ModeChangeEvent, TestVariantsLogType } from '../types'
 import { isLogEnabled, runWithLogs } from './log'
 import { StressTestArgs, TestArgs } from './types'
@@ -71,7 +74,7 @@ import { generateErrorVariantIndex } from './generators/testFunc'
 import { estimateCallCount } from './estimations/estimateCallCount'
 import { estimateModeChanges } from './estimations/estimateModeChanges'
 import { MODES_DEFAULT } from './constants'
-// import { LogInvariant } from './invariants/LogInvariant'
+import { LogInvariant } from './invariants/LogInvariant'
 import { ErrorBehaviorInvariant } from './invariants/ErrorBehaviorInvariant'
 import { IterationsInvariant } from './invariants/IterationsInvariant'
 import { ParallelInvariant } from './invariants/ParallelInvariant'
@@ -171,11 +174,9 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     runOptions,
     callController,
   )
-  // const logInvariant = new LogInvariant(
-  //   runOptions.log,
-  //   modeChangesRange,
-  //   () => callController.callCount,
-  // )
+  const logInvariant = new LogInvariant(
+    runOptions.log as RequiredNonNullable<TestVariantsLogOptions>,
+  )
   const onErrorInvariant = new OnErrorInvariant(
     runOptions,
     errorVariantController.errorVariantArgs,
@@ -207,11 +208,11 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     callController.timeController,
   )
 
-  function logFunc(_type: TestVariantsLogType, _message: string): void {
+  function logFunc(type: TestVariantsLogType, message: string): void {
     if (isLogEnabled()) {
-      log(`[${_type}] ${_message}`)
+      log(`[${type}] ${message}`)
     }
-    // logInvariant.onLog(type, message)
+    logInvariant.onLog(type, message, callController.callCount)
   }
 
   function onError(event: {
@@ -228,6 +229,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   }
 
   function onModeChange(event: ModeChangeEvent): void {
+    logInvariant.onModeChange(event.modeIndex, event.mode.mode)
     onModeChangeInvariant.onModeChange(event)
     limitTimeInvariant.onModeChange(event)
   }
@@ -290,7 +292,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     result,
   )
   // iterationsInvariant.validateFinal(callController.completedCount, result)
-  // logInvariant.validateFinal(callCount, timeController.now(), lastThrownError)
+  logInvariant.validateFinal(onErrorInvariant.onErrorCount)
   parallelInvariant.validateFinal()
   onModeChangeInvariant.validateFinal()
   onErrorInvariant.validateFinal(lastThrownError)

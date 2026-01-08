@@ -1,8 +1,6 @@
 import type { TestVariantsLogOptions } from 'src/common'
 import type { TestVariantsLogType } from 'src/common/test-variants/types'
-import type { NumberRange } from '@flemist/simple-utils'
-import { isLogEnabled } from 'src/common/test-variants/-test/log'
-import { log } from 'src/common/helpers/log'
+import { RequiredNonNullable } from '@flemist/simple-utils'
 
 /**
  * Validates log callback behavior
@@ -11,178 +9,320 @@ import { log } from 'src/common/helpers/log'
  * Active when log options are provided to runOptions.
  * Validates every log callback invocation during test execution.
  *
- * ## Validated Rules
- * - Each log type is called only when its corresponding option is enabled
- * - 'start' log is called exactly once before any test execution
- * - 'completed' log is called exactly once at the end
+ * ## Invariants
+ *
+ * ### Per-log validation (onLog)
+ * - Each log type is called exclusively when its corresponding option is enabled
  * - No logs occur after 'completed'
- * - 'progress' and 'error' logs occur only after at least one test call
+ * - 'start' log called exactly once, before any other logs
+ * - 'completed' log called exactly once, at the end
+ * - 'progress' and 'error' logs occur exclusively after at least one test call (tests > 0)
  * - 'modeChange' and 'debug' logs can occur before test calls
+ *
+ * ### Content validation (values only, not format)
+ * - 'start': no value checks
+ * - 'completed': tests value
+ * - 'modeChange': modeIndex value, mode name value (forward/backward/random)
+ * - 'progress': tests value
+ * - 'error': tests value
+ * - 'debug': no value checks
+ *
+ * ### Log examples
+ *
+ * start:
+ * ```
+ * [test-variants] start, memory: 139MB
+ * ```
+ *
+ * progress:
+ * ```
+ * [test-variants] tests: 615 (5.0s), async: 12, memory: 148MB (+8.8MB)
+ * ```
+ *
+ * modeChange:
+ * ```
+ * [test-variants] mode[0]: forward
+ * [test-variants] mode[1]: backward, limitTests=10
+ * [test-variants] mode[2]: random, limitTime=10.9m
+ * ```
+ *
+ * completed:
+ * ```
+ * [test-variants] end, tests: 815 (7.0s), async: 123, memory: 138MB (-1.0MB)
+ * ```
+ *
+ * error:
+ * ```
+ * [test-variants] error variant: {arg1: value1}
+ * Error: test error message
+ * tests: 5
+ * ```
+ *
+ * debug:
+ * ```
+ * [test-variants] debug iteration: 0
+ * ```
+ *
+ * ## Note on modeChange validation
+ *
+ * Library emits modeChange log BEFORE calling onModeChange callback.
+ * LogInvariant stores modeChange message in onLog, then validates it
+ * when onModeChange is called with actual mode info.
  */
 export class LogInvariant {
-  private logStart = false
-  private logCompleted = false
-  private logProgressCount = 0
-  private logModeChanges = 0
-  private logErrors = 0
-  private logDebugs = 0
+  private _logStartCount = 0
+  private _logCompletedCount = 0
+  private _logProgressCount = 0
+  private _logModeChangeCount = 0
+  private _logErrorCount = 0
+  private _logDebugCount = 0
+  private _anyLogAfterCompleted = false
 
-  private readonly logOptions:
-    | TestVariantsLogOptions
-    | boolean
-    | undefined
-    | null
-  private readonly startEnabled: boolean
-  private readonly completedEnabled: boolean
-  private readonly progressEnabled: boolean
-  private readonly modeChangeEnabled: boolean
-  private readonly errorEnabled: boolean
-  private readonly debugEnabled: boolean
-  private readonly modeChangesRange: NumberRange
-  private readonly getCallCount: () => number
+  /** Stores last modeChange message for validation in onModeChange */
+  private _pendingModeChangeMessage: string | null = null
 
-  constructor(
-    logOptions: TestVariantsLogOptions | boolean | undefined | null,
-    modeChangesRange: NumberRange,
-    getCallCount: () => number,
-  ) {
-    this.logOptions = logOptions
-    this.modeChangesRange = modeChangesRange
-    this.getCallCount = getCallCount
-    if (typeof logOptions === 'boolean') {
-      this.startEnabled = logOptions
-      this.completedEnabled = logOptions
-      this.progressEnabled = logOptions
-      this.modeChangeEnabled = logOptions
-      this.errorEnabled = logOptions
-      this.debugEnabled = logOptions
-    } else {
-      this.startEnabled = !!logOptions?.start
-      this.completedEnabled = !!logOptions?.completed
-      this.progressEnabled = !!logOptions?.progress
-      this.modeChangeEnabled = !!logOptions?.modeChange
-      this.errorEnabled = !!logOptions?.error
-      this.debugEnabled = !!logOptions?.debug
+  private readonly _logOptions: TestVariantsLogOptions
+
+  constructor(logOptions: RequiredNonNullable<TestVariantsLogOptions>) {
+    this._logOptions = logOptions
+  }
+
+  /**
+   * Call when mode changes to validate pending modeChange log
+   *
+   * Library calls logFunc('modeChange', ...) BEFORE onModeChange callback,
+   * so we validate the stored message here when we know the actual mode info
+   */
+  onModeChange(modeIndex: number, modeName: string): void {
+    if (this._pendingModeChangeMessage == null) {
+      return
+    }
+
+    const message = this._pendingModeChangeMessage
+    this._pendingModeChangeMessage = null
+
+    if (!new RegExp('\\b' + modeIndex + '\\b').test(message)) {
+      throw new Error(
+        `[test][LogInvariant] modeChange log missing modeIndex value "${modeIndex}"\nmessage: ${message}`,
+      )
+    }
+
+    if (!message.includes(modeName)) {
+      throw new Error(
+        `[test][LogInvariant] modeChange log missing mode name "${modeName}"\nmessage: ${message}`,
+      )
     }
   }
 
-  onLog(type: TestVariantsLogType, message: string): void {
-    if (isLogEnabled()) {
-      log(`[test][LogInvariant][onLog] type=${type} message=${message}`)
-    }
-    if (this.logCompleted) {
-      throw new Error(`[test][LogInvariant] log after completed`)
+  /** Call for each log func invocation */
+  onLog(type: TestVariantsLogType, message: string, tests: number): void {
+    if (this._logCompletedCount > 0) {
+      this._anyLogAfterCompleted = true
+      throw new Error(`[test][LogInvariant] log after completed: type=${type}`)
     }
 
     if (type === 'start') {
-      if (this.logStart) {
-        throw new Error(`[test][LogInvariant] start logged multiple times`)
-      }
-      if (!this.startEnabled) {
-        throw new Error(`[test][LogInvariant] start log when not enabled`)
-      }
-      this.logStart = true
-      return
-    }
-
-    if (type === 'modeChange') {
-      if (!this.modeChangeEnabled) {
-        throw new Error(`[test][LogInvariant] modeChange log when not enabled`)
-      }
-      this.logModeChanges++
-      return
-    }
-
-    if (type === 'debug') {
-      if (!this.debugEnabled) {
-        throw new Error(`[test][LogInvariant] debug log when not enabled`)
-      }
-      this.logDebugs++
+      this._validateStartLog(message)
       return
     }
 
     if (type === 'completed') {
-      if (this.logCompleted) {
-        throw new Error(`[test][LogInvariant] completed logged multiple times`)
-      }
-      if (!this.completedEnabled) {
-        throw new Error(`[test][LogInvariant] completed log when not enabled`)
-      }
-      this.logCompleted = true
+      this._validateCompletedLog(message, tests)
       return
     }
 
-    if (this.getCallCount() === 0) {
-      throw new Error(`[test][LogInvariant] log before test started`)
+    if (type === 'modeChange') {
+      this._onModeChangeLog(message)
+      return
     }
 
     if (type === 'progress') {
-      if (!this.progressEnabled) {
-        throw new Error(`[test][LogInvariant] progress log when not enabled`)
-      }
-      this.logProgressCount++
+      this._validateProgressLog(message, tests)
       return
     }
 
     if (type === 'error') {
-      if (!this.errorEnabled) {
-        throw new Error(`[test][LogInvariant] error log when not enabled`)
-      }
-      this.logErrors++
+      this._validateErrorLog(message, tests)
+      return
+    }
+
+    if (type === 'debug') {
+      this._validateDebugLog(message)
       return
     }
 
     throw new Error(`[test][LogInvariant] unknown log type "${type}"`)
   }
 
-  /**
-   * Validates final log state after test execution
-   */
-  validateFinal(
-    callCount: number,
-    elapsedTime: number,
-    lastThrownError: Error | null,
-  ): void {
-    if (isLogEnabled()) {
-      return
+  private _validateStartLog(_message: string): void {
+    if (!this._logOptions.start) {
+      throw new Error(`[test][LogInvariant] start log when disabled`)
     }
-    if (this.startEnabled && !this.logStart) {
-      throw new Error(`[test][LogInvariant] start log expected but not logged`)
+
+    this._logStartCount++
+
+    if (this._logStartCount > 1) {
+      throw new Error(`[test][LogInvariant] start logged multiple times`)
     }
-    if (this.completedEnabled && !this.logCompleted) {
+  }
+
+  private _validateCompletedLog(message: string, tests: number): void {
+    if (!this._logOptions.completed) {
+      throw new Error(`[test][LogInvariant] completed log when disabled`)
+    }
+
+    this._logCompletedCount++
+
+    if (this._logCompletedCount > 1) {
+      throw new Error(`[test][LogInvariant] completed logged multiple times`)
+    }
+
+    if (!new RegExp('\\b' + tests + '\\b').test(message)) {
       throw new Error(
-        `[test][LogInvariant] completed log expected but not logged`,
+        `[test][LogInvariant] completed log missing tests value "${tests}"\nmessage: ${message}`,
       )
     }
-    const logProgressOption =
-      typeof this.logOptions === 'boolean'
-        ? this.logOptions
-        : this.logOptions?.progress
-    if (
-      this.progressEnabled &&
-      typeof logProgressOption === 'number' &&
-      callCount > 0
-    ) {
-      const logProgressExpected =
-        logProgressOption === 0
-          ? callCount
-          : Math.floor(elapsedTime / logProgressOption)
-      if (this.logProgressCount !== logProgressExpected) {
-        throw new Error(
-          `[test][LogInvariant] progress log count ${this.logProgressCount} !== expected ${logProgressExpected}`,
-        )
-      }
+  }
+
+  private _onModeChangeLog(message: string): void {
+    if (!this._logOptions.modeChange) {
+      throw new Error(`[test][LogInvariant] modeChange log when disabled`)
     }
-    if (
-      this.modeChangeEnabled &&
-      this.logModeChanges < this.modeChangesRange[0]
-    ) {
+
+    this._logModeChangeCount++
+    this._pendingModeChangeMessage = message
+  }
+
+  private _validateProgressLog(message: string, tests: number): void {
+    if (!this._logOptions.progress) {
+      throw new Error(`[test][LogInvariant] progress log when disabled`)
+    }
+
+    if (tests <= 0) {
       throw new Error(
-        `[test][LogInvariant] mode changes log count ${this.logModeChanges} < expected minimum ${this.modeChangesRange[0]}`,
+        `[test][LogInvariant] progress log before any tests (tests=${tests})`,
       )
     }
-    if (this.errorEnabled && lastThrownError != null && this.logErrors <= 0) {
-      throw new Error(`[test][LogInvariant] error log expected but not logged`)
+
+    this._logProgressCount++
+
+    if (!new RegExp('\\b' + tests + '\\b').test(message)) {
+      throw new Error(
+        `[test][LogInvariant] progress log missing tests value "${tests}"\nmessage: ${message}`,
+      )
     }
+  }
+
+  private _validateErrorLog(message: string, tests: number): void {
+    if (!this._logOptions.error) {
+      throw new Error(`[test][LogInvariant] error log when disabled`)
+    }
+
+    if (tests <= 0) {
+      throw new Error(
+        `[test][LogInvariant] error log before any tests (tests=${tests})`,
+      )
+    }
+
+    this._logErrorCount++
+
+    if (!new RegExp('\\b' + tests + '\\b').test(message)) {
+      throw new Error(
+        `[test][LogInvariant] error log missing tests value "${tests}"\nmessage: ${message}`,
+      )
+    }
+  }
+
+  private _validateDebugLog(_message: string): void {
+    if (!this._logOptions.debug) {
+      throw new Error(`[test][LogInvariant] debug log when disabled`)
+    }
+
+    this._logDebugCount++
+  }
+
+  /** Run after test variants completion */
+  validateFinal(onErrorCount: number): void {
+    if (this._anyLogAfterCompleted) {
+      throw new Error(`[test][LogInvariant] log occurred after completed`)
+    }
+
+    if (this._logOptions.start && this._logStartCount !== 1) {
+      throw new Error(
+        `[test][LogInvariant] start log count ${this._logStartCount} !== 1`,
+      )
+    }
+
+    if (!this._logOptions.start && this._logStartCount !== 0) {
+      throw new Error(
+        `[test][LogInvariant] start log count ${this._logStartCount} !== 0 when disabled`,
+      )
+    }
+
+    if (this._logOptions.completed && this._logCompletedCount !== 1) {
+      throw new Error(
+        `[test][LogInvariant] completed log count ${this._logCompletedCount} !== 1`,
+      )
+    }
+
+    if (!this._logOptions.completed && this._logCompletedCount !== 0) {
+      throw new Error(
+        `[test][LogInvariant] completed log count ${this._logCompletedCount} !== 0 when disabled`,
+      )
+    }
+
+    if (!this._logOptions.modeChange && this._logModeChangeCount !== 0) {
+      throw new Error(
+        `[test][LogInvariant] modeChange log count ${this._logModeChangeCount} !== 0 when disabled`,
+      )
+    }
+
+    if (!this._logOptions.progress && this._logProgressCount !== 0) {
+      throw new Error(
+        `[test][LogInvariant] progress log count ${this._logProgressCount} !== 0 when disabled`,
+      )
+    }
+
+    if (!this._logOptions.error && this._logErrorCount !== 0) {
+      throw new Error(
+        `[test][LogInvariant] error log count ${this._logErrorCount} !== 0 when disabled`,
+      )
+    }
+
+    if (!this._logOptions.debug && this._logDebugCount !== 0) {
+      throw new Error(
+        `[test][LogInvariant] debug log count ${this._logDebugCount} !== 0 when disabled`,
+      )
+    }
+
+    if (this._logOptions.error && this._logErrorCount !== onErrorCount) {
+      throw new Error(
+        `[test][LogInvariant] error log count ${this._logErrorCount} !== onErrorCount ${onErrorCount}`,
+      )
+    }
+  }
+
+  get logStartCount(): number {
+    return this._logStartCount
+  }
+
+  get logCompletedCount(): number {
+    return this._logCompletedCount
+  }
+
+  get logProgressCount(): number {
+    return this._logProgressCount
+  }
+
+  get logModeChangeCount(): number {
+    return this._logModeChangeCount
+  }
+
+  get logErrorCount(): number {
+    return this._logErrorCount
+  }
+
+  get logDebugCount(): number {
+    return this._logDebugCount
   }
 }
