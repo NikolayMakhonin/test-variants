@@ -62,7 +62,7 @@ export function createTestRun<Args extends Obj>(
       if (logOptions.error) {
         logOptions.func(
           'error',
-          `[test-variants] error variant: ${formatAny(args, { pretty: true })}\n${formatAny(error)}\ntests: ${tests}`,
+          `[test-variants] error variant: ${formatAny(args, { pretty: true })}\ntests: ${tests}\n${formatAny(error)}`,
         )
       }
     }

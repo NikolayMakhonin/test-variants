@@ -60,11 +60,8 @@
 //   createTestVariants as createTestVariantsOld,
 //   type TestVariantsLogOptions,
 // } from '#this'
-import {
-  createTestVariants as createTestVariantsNode,
-  TestVariantsLogOptions,
-} from 'src/node'
-import { createTestVariants } from 'src/common/test-variants/createTestVariants'
+import { createTestVariants } from '#this'
+import { TestVariantsLogOptions } from 'src/common/test-variants/types'
 import { Random, RequiredNonNullable } from '@flemist/simple-utils'
 import type { ModeChangeEvent, TestVariantsLogType } from '../types'
 import { isLogEnabled, runWithLogs } from './log'
@@ -298,6 +295,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     lastThrownError,
     result,
   )
+  // TODO: debug this
   // iterationsInvariant.validateFinal(callController.completedCount, result)
   // With findBestError: completed is logged before throwing
   // Without findBestError: error is thrown immediately without completed
@@ -314,7 +312,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   callController.finalize()
 }
 
-export const testVariants = createTestVariantsNode(
+export const testVariants = createTestVariants(
   async (options: StressTestArgs) => {
     try {
       await executeStressTest(options)

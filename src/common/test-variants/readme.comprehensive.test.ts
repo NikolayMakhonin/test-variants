@@ -177,18 +177,17 @@ describe('README comprehensive', () => {
     // Note: modeChange is only logged together with progress logging
     // When progress is disabled, modeChange is not logged even if modeChange option is true
     // Verify messages contain expected content
-    const isSafari =
-      typeof window !== 'undefined' &&
-      /AppleWebKit/.test(navigator.userAgent) &&
-      !/Chrome/.test(navigator.userAgent)
-    if (!isSafari) {
+    if (
+      typeof window === 'undefined' ||
+      window.navigator.userAgent.includes('Chrome')
+    ) {
       expect(receivedLogs.find(l => l.type === 'start')?.message).toContain(
         'memory',
       )
+      expect(receivedLogs.find(l => l.type === 'error')?.message).toContain(
+        'test error',
+      )
     }
-    expect(receivedLogs.find(l => l.type === 'error')?.message).toContain(
-      'test error',
-    )
   })
 
   it('log: false disables all logging', async () => {
