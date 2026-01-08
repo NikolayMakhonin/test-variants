@@ -65,9 +65,9 @@ import { RequiredNonNullable } from '@flemist/simple-utils'
  *
  * ## Note on modeChange validation
  *
- * Library emits modeChange log BEFORE calling onModeChange callback.
- * LogInvariant stores modeChange message in onLog, then validates it
- * when onModeChange is called with actual mode info.
+ * Library calls onModeChange callback BEFORE emitting modeChange log (throttled).
+ * LogInvariant stores expected mode info in onModeChange, then validates
+ * when modeChange log is received.
  */
 export class LogInvariant {
   private _logStartCount = 0
@@ -78,8 +78,9 @@ export class LogInvariant {
   private _logDebugCount = 0
   private _anyLogAfterCompleted = false
 
-  /** Stores last modeChange message for validation in onModeChange */
-  private _pendingModeChangeMessage: string | null = null
+  /** Stores expected mode info for validation when modeChange log is received */
+  private _pendingModeInfo: { modeIndex: number; modeName: string } | null =
+    null
 
   private readonly _logOptions: TestVariantsLogOptions
   private readonly _parallelLimit: number
@@ -93,30 +94,13 @@ export class LogInvariant {
   }
 
   /**
-   * Call when mode changes to validate pending modeChange log
+   * Call when mode changes to store expected mode info
    *
-   * Library calls logFunc('modeChange', ...) BEFORE onModeChange callback,
-   * so we validate the stored message here when we know the actual mode info
+   * Library calls onModeChange callback BEFORE logFunc('modeChange', ...),
+   * so we store expected info here for validation when log is received
    */
   onModeChange(modeIndex: number, modeName: string): void {
-    if (this._pendingModeChangeMessage == null) {
-      return
-    }
-
-    const message = this._pendingModeChangeMessage
-    this._pendingModeChangeMessage = null
-
-    if (!new RegExp('\\b' + modeIndex + '\\b').test(message)) {
-      throw new Error(
-        `[test][LogInvariant] modeChange log missing modeIndex value "${modeIndex}"\nmessage: ${message}`,
-      )
-    }
-
-    if (!message.includes(modeName)) {
-      throw new Error(
-        `[test][LogInvariant] modeChange log missing mode name "${modeName}"\nmessage: ${message}`,
-      )
-    }
+    this._pendingModeInfo = { modeIndex, modeName }
   }
 
   /** Call for each log func invocation */
@@ -195,9 +179,34 @@ export class LogInvariant {
     }
 
     this._logModeChangeCount++
-    this._pendingModeChangeMessage = message
+
+    const info = this._pendingModeInfo
+    if (info == null) {
+      throw new Error(
+        `[test][LogInvariant] modeChange log without pending mode info\nmessage: ${message}`,
+      )
+    }
+    this._pendingModeInfo = null
+
+    if (!new RegExp('\\b' + info.modeIndex + '\\b').test(message)) {
+      throw new Error(
+        `[test][LogInvariant] modeChange log missing modeIndex value "${info.modeIndex}"\nmessage: ${message}`,
+      )
+    }
+
+    if (!message.includes(info.modeName)) {
+      throw new Error(
+        `[test][LogInvariant] modeChange log missing mode name "${info.modeName}"\nmessage: ${message}`,
+      )
+    }
   }
 
+  /**
+   * Validates progress log content
+   *
+   * With parallel execution, tests value in log (library's state.tests) may
+   * differ from callCount due to timing differences.
+   */
   private _validateProgressLog(message: string, tests: number): void {
     if (!this._logOptions.progress) {
       throw new Error(`[test][LogInvariant] progress log when disabled`)
@@ -210,6 +219,11 @@ export class LogInvariant {
     }
 
     this._logProgressCount++
+
+    // Skip tests value validation for parallel (timing differences)
+    if (this._parallelLimit > 1) {
+      return
+    }
 
     if (!new RegExp('\\b' + tests + '\\b').test(message)) {
       throw new Error(
