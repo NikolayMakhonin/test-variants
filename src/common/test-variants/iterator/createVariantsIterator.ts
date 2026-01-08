@@ -111,13 +111,11 @@ export function createVariantsIterator<Args extends Obj>(
   // region onModeChange
 
   function callOnModeChange(): void {
-    if (onModeChange != null) {
-      onModeChange({
-        mode: modeConfigs[modeIndex],
-        modeIndex,
-        tests,
-      })
-    }
+    onModeChange?.({
+      mode: modeConfigs[modeIndex],
+      modeIndex,
+      tests,
+    })
   }
 
   // endregion

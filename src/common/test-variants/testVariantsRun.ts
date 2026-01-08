@@ -4,13 +4,12 @@ import type { Obj } from '@flemist/simple-utils'
 import { Pool } from '@flemist/time-limits'
 import { garbageCollect } from 'src/common/garbage-collect/garbageCollect'
 import type { VariantsIterator } from './iterator/types'
-import { getMemoryUsage } from './log/getMemoryUsage'
 import { createRunResult } from './run/createRunResult'
-import { createRunState } from './run/createRunState'
+import type { RunState } from './run/createRunState'
 import { resolveRunOptions } from './run/resolveRunOptions'
 import type { RunContext } from './run/RunContext'
 import { runIterationLoop } from './run/runIterationLoop'
-import { logStart, logCompleted } from './run/runLogger'
+import { logStart, logCompleted, logModeChange } from './run/runLogger'
 import type {
   TestVariantsTestRun,
   TestVariantsRunOptionsInternal,
@@ -21,6 +20,7 @@ import { AbortErrorSilent } from 'src/common/test-variants/run/AbortErrorSilent'
 export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   testRun: TestVariantsTestRun<Args>,
   variantsIterator: VariantsIterator<Args>,
+  state: RunState,
   options?: null | TestVariantsRunOptionsInternal<Args, SavedArgs>,
 ): Promise<TestVariantsResult<Args>> {
   const optionsResolved = resolveRunOptions(options)
@@ -64,11 +64,9 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     })
   }
 
-  const startMemory = getMemoryUsage()
-  const state = createRunState(timeController, startMemory)
   const pool = parallel <= 1 ? null : new Pool(parallel)
 
-  logStart(logOptions, startMemory)
+  logStart(logOptions, state.startMemory)
 
   const runContext: RunContext<Args> = {
     options: optionsResolved,
@@ -82,6 +80,8 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     pool,
     state,
   }
+
+  logModeChange(runContext)
 
   try {
     await runIterationLoop(runContext)

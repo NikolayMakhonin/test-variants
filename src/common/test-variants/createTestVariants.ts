@@ -1,7 +1,9 @@
 import type { Obj } from '@flemist/simple-utils'
+import { timeControllerDefault } from '@flemist/time-controller'
 import type { TestVariantsTemplates } from './iterator/types'
-import { formatModeConfig } from './log/format'
+import { getMemoryUsage } from './log/getMemoryUsage'
 import { resolveLogOptions } from './log/logOptions'
+import { createRunState } from './run/createRunState'
 import type { TestVariantsTest } from './run/types'
 import { createTestRun } from './createTestRun'
 import { createVariantsIterator } from './iterator/createVariantsIterator'
@@ -19,17 +21,14 @@ export function createTestVariants<Args extends Obj>(
         log: logOptions,
       })
 
+      const timeController = options?.timeController ?? timeControllerDefault
+      const startMemory = getMemoryUsage()
+      const state = createRunState(timeController, startMemory)
+
       const userOnModeChange = options?.onModeChange
       function onModeChange(event: ModeChangeEvent): void {
-        if (logOptions.modeChange) {
-          logOptions.func(
-            'modeChange',
-            `[test-variants] ${formatModeConfig(event.mode, event.modeIndex)}`,
-          )
-        }
-        if (userOnModeChange != null) {
-          userOnModeChange(event)
-        }
+        state.pendingModeChange = event
+        userOnModeChange?.(event)
       }
 
       // Extended templates include extra args beyond Args; iterator accepts base Args structure
@@ -40,14 +39,14 @@ export function createTestVariants<Args extends Obj>(
         equals: options?.findBestError?.equals,
         limitArgOnError: options?.findBestError?.limitArgOnError,
         includeErrorVariant: options?.findBestError?.includeErrorVariant,
-        timeController: options?.timeController,
+        timeController,
         onModeChange,
         limitCompletionCount: options?.cycles ?? 1,
         limitTests: options?.limitTests,
         limitTime: options?.limitTime,
       })
 
-      return testVariantsRun(testRun, variantsIterator, options)
+      return testVariantsRun(testRun, variantsIterator, state, options)
     }
   }
 }

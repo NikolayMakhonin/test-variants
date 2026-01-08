@@ -1,7 +1,7 @@
 import type { RequiredNonNullable } from '@flemist/simple-utils'
 import { formatBytes, formatDuration, formatModeConfig } from '../log/format'
 import { getMemoryUsage } from '../log/getMemoryUsage'
-import type { TestVariantsLogOptions, ModeConfig } from '../types'
+import type { TestVariantsLogOptions } from '../types'
 import type { RunContext } from './RunContext'
 
 function formatMemoryDiff(current: number, previous: number): string {
@@ -46,19 +46,21 @@ export function logCompleted(runContext: RunContext<any>): void {
   logOptions.func('completed', msg)
 }
 
-export function logModeChange(
-  logOptions: RequiredNonNullable<TestVariantsLogOptions>,
-  modeConfig: ModeConfig | null,
-  modeIndex: number,
-): void {
-  if (!logOptions.modeChange) {
+/** Log pending mode change and clear it */
+export function logModeChange(runContext: RunContext<any>): void {
+  const { options, state } = runContext
+  const { logOptions } = options
+  const event = state.pendingModeChange
+
+  if (!logOptions.modeChange || event == null) {
     return
   }
 
   logOptions.func(
     'modeChange',
-    `[test-variants] ${formatModeConfig(modeConfig, modeIndex)}`,
+    `[test-variants] ${formatModeConfig(event.mode, event.modeIndex)}`,
   )
+  state.pendingModeChange = null
 }
 
 /**
@@ -134,6 +136,9 @@ export function logProgress(runContext: RunContext<any>): boolean {
   if (!logOptions.progress || now - state.prevLogTime < logOptions.progress) {
     return false
   }
+
+  // Log pending mode change together with progress
+  logModeChange(runContext)
 
   const totalElapsed = now - state.startTime
   // let msg = `[test-variants] ${formatVariantProgress(runContext)}`

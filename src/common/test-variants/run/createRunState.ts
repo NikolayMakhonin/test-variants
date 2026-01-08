@@ -1,4 +1,5 @@
 import type { ITimeController } from '@flemist/time-controller'
+import type { ModeChangeEvent } from '../types'
 
 /** Runtime state for test variants run */
 export type RunState = {
@@ -19,6 +20,8 @@ export type RunState = {
   // Logging state
   prevLogTime: number
   prevLogMemory: number | null
+  /** Mode change event waiting to be logged with next progress */
+  pendingModeChange: ModeChangeEvent | null
 
   // GC tracking
   prevGcTime: number
@@ -42,6 +45,7 @@ export function createRunState(
     iterationsAsync: 0,
     prevLogTime: startTime,
     prevLogMemory: startMemory,
+    pendingModeChange: null,
     prevGcTime: startTime,
     prevGcIterations: 0,
     prevGcIterationsAsync: 0,
