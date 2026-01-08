@@ -164,53 +164,61 @@ async function runCycleAsync<Args extends Obj>(
 
     // In parallel mode, wait for pool slot BEFORE fetching args
     // This ensures time advances before limit check in getNextArgs()
-    if (useParallel && !pool.hold(1)) {
-      await poolWait({ pool, count: 1, hold: true })
-    }
-
-    // Use pending args for first iteration if provided, then fetch new ones
-    if (currentArgs == null) {
-      currentArgs = getNextArgs(runContext, currentArgs)
-      if (currentArgs == null) {
-        if (useParallel) {
-          void pool.release(1)
-        }
-        break
-      }
-    }
-
-    const periodicResult = handlePeriodicTasks(runContext)
-    if (isPromiseLike(periodicResult)) {
-      await periodicResult
-    }
-
-    if (isExternalAborted(runContext)) {
-      if (useParallel) {
-        void pool.release(1)
-      }
-      currentArgs = null
-      continue
-    }
-
+    // slotHeld tracks ownership: true = we must release, false = transferred to runParallelTest
+    let slotHeld = false
     if (useParallel) {
-      runParallelTest(runContext, currentArgs)
-    } else {
-      if (logOptions.debug && pool && isParallelAborted(runContext)) {
-        logOptions.func(
-          'debug',
-          `[test-variants] parallel aborted, running sequential: tests=${state.tests}`,
-        )
+      if (!pool.hold(1)) {
+        await poolWait({ pool, count: 1, hold: true })
       }
-      const result = runSequentialTest(runContext, currentArgs)
-      if (isPromiseLike(result)) {
-        await result
-      }
+      slotHeld = true
     }
 
-    // Clear for next iteration to fetch new args
-    currentArgs = null
+    try {
+      // Use pending args for first iteration if provided, then fetch new ones
+      if (currentArgs == null) {
+        currentArgs = getNextArgs(runContext, currentArgs)
+        if (currentArgs == null) {
+          break
+        }
+      }
+
+      const periodicResult = handlePeriodicTasks(runContext)
+      if (isPromiseLike(periodicResult)) {
+        await periodicResult
+      }
+
+      if (isExternalAborted(runContext)) {
+        currentArgs = null
+        continue
+      }
+
+      if (useParallel) {
+        runParallelTest(runContext, currentArgs)
+        slotHeld = false // ownership transferred to runParallelTest
+      } else {
+        if (logOptions.debug && pool && isParallelAborted(runContext)) {
+          logOptions.func(
+            'debug',
+            `[test-variants] parallel aborted, running sequential: tests=${state.tests}`,
+          )
+        }
+        const result = runSequentialTest(runContext, currentArgs)
+        if (isPromiseLike(result)) {
+          await result
+        }
+      }
+
+      // Clear for next iteration to fetch new args
+      currentArgs = null
+    } finally {
+      if (slotHeld) {
+        void pool!.release(1)
+      }
+    }
   }
 
+  // Wait for all parallel tests to complete before returning
+  // Acquiring all slots means all tests have released theirs
   if (pool) {
     await poolWait({ pool, count: parallel, hold: true })
     void pool.release(parallel)
