@@ -1,5 +1,11 @@
-import type { ModeChangeEvent, ModeConfig } from 'src/common'
+import type {
+  ModeChangeEvent,
+  ModeConfig,
+  TestVariantsRunOptions,
+} from 'src/common'
 import type { NumberRange } from '@flemist/simple-utils'
+import type { TestArgs } from '../types'
+import { MODES_DEFAULT } from '../constants'
 
 /**
  * Validates onModeChange callback behavior
@@ -20,19 +26,21 @@ export class OnModeChangeInvariant {
   private _modeChangeCount = 0
   private _lastTests = -1
   private _lastModeIndex = -1
-  private readonly _iterationModes: readonly ModeConfig[]
+  private readonly _runOptions: TestVariantsRunOptions<TestArgs>
   private readonly _modeChangesRange: NumberRange
 
   constructor(
-    iterationModes: readonly ModeConfig[],
+    runOptions: TestVariantsRunOptions<TestArgs>,
     modeChangesRange: NumberRange,
   ) {
-    this._iterationModes = iterationModes
+    this._runOptions = runOptions
     this._modeChangesRange = modeChangesRange
   }
 
   /** Use in onModeChange callback */
   onModeChange(event: ModeChangeEvent): void {
+    const iterationModes = this._runOptions.iterationModes ?? MODES_DEFAULT
+
     this._modeChangeCount++
 
     // Validate tests >= 0
@@ -43,14 +51,14 @@ export class OnModeChangeInvariant {
     }
 
     // Validate modeIndex in range
-    if (event.modeIndex < 0 || event.modeIndex >= this._iterationModes.length) {
+    if (event.modeIndex < 0 || event.modeIndex >= iterationModes.length) {
       throw new Error(
-        `[test][OnModeChangeInvariant] modeIndex (${event.modeIndex}) out of range [0, ${this._iterationModes.length})`,
+        `[test][OnModeChangeInvariant] modeIndex (${event.modeIndex}) out of range [0, ${iterationModes.length})`,
       )
     }
 
     // Validate mode reference
-    const expectedMode = this._iterationModes[event.modeIndex]
+    const expectedMode = iterationModes[event.modeIndex]
     if (event.mode !== expectedMode) {
       throw new Error(
         `[test][OnModeChangeInvariant] mode !== iterationModes[${event.modeIndex}]`,
@@ -72,7 +80,7 @@ export class OnModeChangeInvariant {
     } else {
       // Validate modeIndex cycling order: 0→1→...→N-1→0→...
       const expectedModeIndex =
-        (this._lastModeIndex + 1) % this._iterationModes.length
+        (this._lastModeIndex + 1) % iterationModes.length
       if (event.modeIndex !== expectedModeIndex) {
         throw new Error(
           `[test][OnModeChangeInvariant] modeIndex (${event.modeIndex}) !== expected (${expectedModeIndex}), prev (${this._lastModeIndex})`,

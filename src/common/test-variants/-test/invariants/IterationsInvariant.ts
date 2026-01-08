@@ -1,5 +1,6 @@
 import type { TestVariantsResult } from 'src/common'
-import { TestArgs } from 'src/common/test-variants/-test/types'
+import type { StressTestArgs, TestArgs } from '../types'
+import { ITERATIONS_SYNC, ITERATIONS_ASYNC } from '../constants'
 
 /**
  * Validates iteration count in test result
@@ -14,18 +15,10 @@ import { TestArgs } from 'src/common/test-variants/-test/types'
  * - Mixed mode: call 1 is sync, call 2 is async, call 3 is sync, etc
  */
 export class IterationsInvariant {
-  private readonly _iterationsSync: number
-  private readonly _iterationsAsync: number
-  private readonly _isAsync: boolean | null
+  private readonly _options: StressTestArgs
 
-  constructor(
-    iterationsSync: number,
-    iterationsAsync: number,
-    isAsync: boolean | null,
-  ) {
-    this._iterationsSync = iterationsSync
-    this._iterationsAsync = iterationsAsync
-    this._isAsync = isAsync
+  constructor(options: StressTestArgs) {
+    this._options = options
   }
 
   /** Run after test variants completion */
@@ -53,14 +46,14 @@ export class IterationsInvariant {
   }
 
   private _calculateExpectedIterations(completedCount: number): number {
-    if (this._isAsync === true) {
-      return completedCount * this._iterationsAsync
+    if (this._options.async === true) {
+      return completedCount * ITERATIONS_ASYNC
     }
-    if (this._isAsync === false) {
-      return completedCount * this._iterationsSync
+    if (this._options.async === false) {
+      return completedCount * ITERATIONS_SYNC
     }
     const syncCalls = Math.ceil(completedCount / 2)
     const asyncCalls = Math.floor(completedCount / 2)
-    return syncCalls * this._iterationsSync + asyncCalls * this._iterationsAsync
+    return syncCalls * ITERATIONS_SYNC + asyncCalls * ITERATIONS_ASYNC
   }
 }

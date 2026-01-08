@@ -1,7 +1,10 @@
-import type { TestVariantsResult } from 'src/common'
+import type { TestVariantsResult, TestVariantsRunOptions } from 'src/common'
 import { TestError } from 'src/common/test-variants/-test/helpers/TestError'
-import { TestArgs } from 'src/common/test-variants/-test/types'
+import { StressTestArgs, TestArgs } from 'src/common/test-variants/-test/types'
 import { deepEqualJsonLikeWithoutSeed } from 'src/common/test-variants/-test/helpers/deepEqualJsonLikeWithoutSeed'
+import { getParallelLimit } from '../helpers/getParallelLimit'
+import { getMaxAttemptsPerVariant } from '../helpers/getMaxAttemptsPerVariant'
+import { MODES_DEFAULT } from '../constants'
 
 /**
  * Validates findBestError behavior
@@ -18,46 +21,47 @@ import { deepEqualJsonLikeWithoutSeed } from 'src/common/test-variants/-test/hel
  *
  * ## Skipped Cases
  * - parallel > 1 without sequentialOnError (race conditions)
+ * - attemptsPerVariant > 1 (can't distinguish retry from retest)
+ * - dynamic templates (variant indices don't have same meaning)
  */
 export class FindBestErrorInvariant {
-  private readonly _findBestErrorEnabled: boolean
-  private readonly _dontThrowIfError: boolean
-  private readonly _includeErrorVariant: boolean
+  private readonly _options: StressTestArgs
+  private readonly _runOptions: TestVariantsRunOptions<TestArgs>
   private readonly _errorVariantIndex: number | null
   private readonly _errorVariantArgs: TestArgs | null
-  private readonly _parallel: number
-  private readonly _sequentialOnError: boolean
 
   private _errorOccurred = false
   private _errorVariantRetestedAfterError = false
   private _callsAfterError = 0
 
   constructor(
-    findBestErrorEnabled: boolean,
-    dontThrowIfError: boolean,
-    includeErrorVariant: boolean,
+    options: StressTestArgs,
+    runOptions: TestVariantsRunOptions<TestArgs>,
     errorVariantIndex: number | null,
     errorVariantArgs: TestArgs | null,
-    parallel: number,
-    sequentialOnError: boolean,
   ) {
-    this._findBestErrorEnabled = findBestErrorEnabled
-    this._dontThrowIfError = dontThrowIfError
-    this._includeErrorVariant = includeErrorVariant
+    this._options = options
+    this._runOptions = runOptions
     this._errorVariantIndex = errorVariantIndex
     this._errorVariantArgs = errorVariantArgs
-    this._parallel = parallel
-    this._sequentialOnError = sequentialOnError
   }
 
   /** Call inside test func before potential error */
   onCall(args: TestArgs): void {
-    if (!this._findBestErrorEnabled) {
+    const findBestErrorEnabled = !!this._runOptions.findBestError
+    if (!findBestErrorEnabled) {
       return
     }
 
+    const parallel = this._runOptions.parallel
+    const parallelLimit = getParallelLimit(parallel)
+    const sequentialOnError =
+      parallel != null && typeof parallel === 'object'
+        ? (parallel.sequentialOnError ?? false)
+        : false
+
     // Skip validation for parallel without sequentialOnError (race conditions)
-    if (this._parallel > 1 && !this._sequentialOnError) {
+    if (parallelLimit > 1 && !sequentialOnError) {
       return
     }
 
@@ -65,8 +69,10 @@ export class FindBestErrorInvariant {
       this._callsAfterError++
 
       // Check if error variant is being retested
+      const includeErrorVariant =
+        this._runOptions.findBestError?.includeErrorVariant ?? false
       if (
-        !this._includeErrorVariant &&
+        !includeErrorVariant &&
         this._errorVariantArgs != null &&
         deepEqualJsonLikeWithoutSeed(args, this._errorVariantArgs)
       ) {
@@ -86,18 +92,38 @@ export class FindBestErrorInvariant {
     lastThrownError: TestError | null,
     result: TestVariantsResult<TestArgs> | null,
   ): void {
-    if (!this._findBestErrorEnabled) {
+    const findBestErrorEnabled = !!this._runOptions.findBestError
+    if (!findBestErrorEnabled) {
       return
     }
+
+    const parallel = this._runOptions.parallel
+    const parallelLimit = getParallelLimit(parallel)
+    const sequentialOnError =
+      parallel != null && typeof parallel === 'object'
+        ? (parallel.sequentialOnError ?? false)
+        : false
 
     // Skip validation for parallel without sequentialOnError (race conditions)
-    if (this._parallel > 1 && !this._sequentialOnError) {
+    if (parallelLimit > 1 && !sequentialOnError) {
       return
     }
 
+    const iterationModes = this._runOptions.iterationModes ?? MODES_DEFAULT
+    const attemptsPerVariant = getMaxAttemptsPerVariant(iterationModes)
+    const isDynamicTemplate = this._options.argType !== 'static'
+    const includeErrorVariant =
+      this._runOptions.findBestError?.includeErrorVariant ?? false
+    const dontThrowIfError =
+      this._runOptions.findBestError?.dontThrowIfError ?? false
+
     // Validate includeErrorVariant=false behavior
+    // Skip when attemptsPerVariant > 1 (can't distinguish retry from retest)
+    // Skip for dynamic templates (args comparison unreliable)
     if (
-      !this._includeErrorVariant &&
+      attemptsPerVariant <= 1 &&
+      !isDynamicTemplate &&
+      !includeErrorVariant &&
       this._errorOccurred &&
       this._errorVariantRetestedAfterError
     ) {
@@ -107,7 +133,7 @@ export class FindBestErrorInvariant {
     }
 
     // Validate dontThrowIfError behavior
-    if (this._dontThrowIfError && lastThrownError != null) {
+    if (dontThrowIfError && lastThrownError != null) {
       // Should not throw, error should be in result.bestError
       if (caughtError != null) {
         throw new Error(
@@ -128,8 +154,12 @@ export class FindBestErrorInvariant {
 
     // Validate error at variant 0 causes immediate termination
     // Skip when includeErrorVariant=true (system verification mode allows retesting)
+    // Skip when attemptsPerVariant > 1 (legitimate retries expected)
+    // Skip for dynamic templates (variant 0 doesn't mean all indices are 0)
     if (
-      !this._includeErrorVariant &&
+      attemptsPerVariant <= 1 &&
+      !isDynamicTemplate &&
+      !includeErrorVariant &&
       this._errorOccurred &&
       this._errorVariantIndex === 0 &&
       this._callsAfterError > 0
@@ -140,7 +170,7 @@ export class FindBestErrorInvariant {
     }
 
     // Validate dontThrowIfError=false behavior: error must be thrown
-    if (!this._dontThrowIfError && lastThrownError != null) {
+    if (!dontThrowIfError && lastThrownError != null) {
       if (caughtError == null) {
         throw new Error(
           `[test][FindBestErrorInvariant] error occurred but not thrown (dontThrowIfError=false)`,

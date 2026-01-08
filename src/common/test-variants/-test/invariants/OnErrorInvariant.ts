@@ -1,6 +1,8 @@
+import type { TestVariantsRunOptions } from 'src/common'
 import { TestArgs } from 'src/common/test-variants/-test/types'
 import { TestError } from 'src/common/test-variants/-test/helpers/TestError'
 import { deepEqualJsonLikeWithoutSeed } from 'src/common/test-variants/-test/helpers/deepEqualJsonLikeWithoutSeed'
+import { getParallelLimit } from '../helpers/getParallelLimit'
 
 /**
  * Validates onError callback behavior
@@ -26,21 +28,15 @@ import { deepEqualJsonLikeWithoutSeed } from 'src/common/test-variants/-test/hel
 export class OnErrorInvariant {
   private _onErrorCount = 0
   private _lastOnErrorTests = 0
-  private readonly _findBestErrorEnabled: boolean
+  private readonly _runOptions: TestVariantsRunOptions<TestArgs>
   private readonly _errorVariantArgs: TestArgs | null
-  private readonly _parallel: number
-  private readonly _sequentialOnError: boolean
 
   constructor(
-    findBestErrorEnabled: boolean,
+    runOptions: TestVariantsRunOptions<TestArgs>,
     errorVariantArgs: TestArgs | null,
-    parallel: number,
-    sequentialOnError: boolean,
   ) {
-    this._findBestErrorEnabled = findBestErrorEnabled
+    this._runOptions = runOptions
     this._errorVariantArgs = errorVariantArgs
-    this._parallel = parallel
-    this._sequentialOnError = sequentialOnError
   }
 
   onError(
@@ -48,17 +44,25 @@ export class OnErrorInvariant {
     callCount: number,
     lastThrownError: TestError | null,
   ): void {
+    const parallel = this._runOptions.parallel
+    const parallelLimit = getParallelLimit(parallel)
+    const sequentialOnError =
+      parallel != null && typeof parallel === 'object'
+        ? (parallel.sequentialOnError ?? false)
+        : false
+    const findBestErrorEnabled = !!this._runOptions.findBestError
+
     // Skip validation for parallel without sequentialOnError (race conditions)
-    if (this._parallel > 1 && !this._sequentialOnError) {
+    if (parallelLimit > 1 && !sequentialOnError) {
       this._onErrorCount++
       return
     }
 
     // After first error with sequentialOnError, execution is sequential
     const isSequential =
-      this._parallel <= 1 || (this._sequentialOnError && this._onErrorCount > 0)
+      parallelLimit <= 1 || (sequentialOnError && this._onErrorCount > 0)
 
-    if (this._onErrorCount > 0 && !this._findBestErrorEnabled) {
+    if (this._onErrorCount > 0 && !findBestErrorEnabled) {
       throw new Error(
         `[test][OnErrorInvariant] onError called multiple times but findBestError disabled`,
       )
@@ -98,7 +102,7 @@ export class OnErrorInvariant {
 
     // With findBestError, tests should not decrease (search progresses forward lexicographically)
     if (
-      this._findBestErrorEnabled &&
+      findBestErrorEnabled &&
       this._onErrorCount > 0 &&
       isSequential &&
       event.tests < this._lastOnErrorTests
@@ -117,8 +121,15 @@ export class OnErrorInvariant {
   }
 
   validateFinal(lastThrownError: TestError | null): void {
+    const parallel = this._runOptions.parallel
+    const parallelLimit = getParallelLimit(parallel)
+    const sequentialOnError =
+      parallel != null && typeof parallel === 'object'
+        ? (parallel.sequentialOnError ?? false)
+        : false
+
     // Skip validation for parallel without sequentialOnError (race conditions)
-    if (this._parallel > 1 && !this._sequentialOnError) {
+    if (parallelLimit > 1 && !sequentialOnError) {
       return
     }
 

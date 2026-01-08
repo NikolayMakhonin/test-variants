@@ -1,4 +1,7 @@
+import type { TestVariantsRunOptions } from 'src/common'
+import type { StressTestArgs, TestArgs } from '../types'
 import type { CallController } from '../helpers/CallController'
+import { getParallelLimit } from '../helpers/getParallelLimit'
 
 /**
  * Validates parallel execution behavior
@@ -13,35 +16,40 @@ import type { CallController } from '../helpers/CallController'
  * - With parallelLimit > 1 and enough calls, maxConcurrent === parallelLimit
  */
 export class ParallelInvariant {
-  private readonly _parallelLimit: number
-  private readonly _isAsync: boolean | null
-  private readonly _sequentialOnError: boolean
+  private readonly _options: StressTestArgs
+  private readonly _runOptions: TestVariantsRunOptions<TestArgs>
   private readonly _callController: CallController
 
   constructor(
-    parallelLimit: number,
-    isAsync: boolean | null,
-    sequentialOnError: boolean,
+    options: StressTestArgs,
+    runOptions: TestVariantsRunOptions<TestArgs>,
     callController: CallController,
   ) {
-    this._parallelLimit = parallelLimit
-    this._isAsync = isAsync
-    this._sequentialOnError = sequentialOnError
+    this._options = options
+    this._runOptions = runOptions
     this._callController = callController
   }
 
   /** Call inside test func after call starts */
   onCall(): void {
+    const parallelLimit = getParallelLimit(this._runOptions.parallel)
     const currentConcurrent = this._callController.currentConcurrent
-    if (currentConcurrent > this._parallelLimit) {
+    if (currentConcurrent > parallelLimit) {
       throw new Error(
-        `[test][ParallelInvariant] currentConcurrent ${currentConcurrent} > parallelLimit ${this._parallelLimit}`,
+        `[test][ParallelInvariant] currentConcurrent ${currentConcurrent} > parallelLimit ${parallelLimit}`,
       )
     }
   }
 
   /** Run after test variants completion */
   validateFinal(): void {
+    const parallel = this._runOptions.parallel
+    const parallelLimit = getParallelLimit(parallel)
+    const sequentialOnError =
+      parallel != null && typeof parallel === 'object'
+        ? (parallel.sequentialOnError ?? false)
+        : false
+
     const currentConcurrent = this._callController.currentConcurrent
     if (currentConcurrent !== 0) {
       throw new Error(
@@ -50,7 +58,7 @@ export class ParallelInvariant {
     }
 
     // Skip complex cases (like ErrorBehaviorInvariant approach)
-    if (this._sequentialOnError) {
+    if (sequentialOnError) {
       return
     }
 
@@ -62,7 +70,7 @@ export class ParallelInvariant {
     const maxConcurrent = this._callController.maxConcurrent
 
     // If sync-only, no parallelism expected
-    if (this._isAsync === false) {
+    if (this._options.async === false) {
       if (maxConcurrent !== 1) {
         throw new Error(
           `[test][ParallelInvariant] sync tests should have maxConcurrent=1 but got ${maxConcurrent}`,
@@ -73,15 +81,15 @@ export class ParallelInvariant {
 
     // If not pure async, parallelism may not be achieved
     // (sync calls complete immediately, mixed mode has some sync calls)
-    if (this._isAsync !== true) {
+    if (this._options.async !== true) {
       return
     }
 
     // If parallel > 1 and enough calls, expect full parallelism
-    if (this._parallelLimit > 1 && callCount >= this._parallelLimit) {
-      if (maxConcurrent !== this._parallelLimit) {
+    if (parallelLimit > 1 && callCount >= parallelLimit) {
+      if (maxConcurrent !== parallelLimit) {
         throw new Error(
-          `[test][ParallelInvariant] maxConcurrent ${maxConcurrent} !== parallelLimit ${this._parallelLimit} (callCount=${callCount})`,
+          `[test][ParallelInvariant] maxConcurrent ${maxConcurrent} !== parallelLimit ${parallelLimit} (callCount=${callCount})`,
         )
       }
     }

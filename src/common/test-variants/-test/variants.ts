@@ -70,7 +70,7 @@ import { generateRunOptions } from './generators/run'
 import { generateErrorVariantIndex } from './generators/testFunc'
 import { estimateCallCount } from './estimations/estimateCallCount'
 import { estimateModeChanges } from './estimations/estimateModeChanges'
-import { ITERATIONS_SYNC, ITERATIONS_ASYNC, MODES_DEFAULT } from './constants'
+import { MODES_DEFAULT } from './constants'
 // import { LogInvariant } from './invariants/LogInvariant'
 import { ErrorBehaviorInvariant } from './invariants/ErrorBehaviorInvariant'
 import { IterationsInvariant } from './invariants/IterationsInvariant'
@@ -82,7 +82,6 @@ import { CallOptionsInvariant } from './invariants/CallOptionsInvariant'
 import { FindBestErrorInvariant } from './invariants/FindBestErrorInvariant'
 import { ErrorVariantController } from './helpers/ErrorVariantController'
 import { CallController } from './helpers/CallController'
-import { getParallelLimit } from './helpers/getParallelLimit'
 import { runWithTimeController } from './helpers/runWithTimeController'
 import { log } from 'src/common/helpers/log'
 import { getVariantArgs } from 'src/common/test-variants/-test/helpers/getVariantArgs'
@@ -166,15 +165,9 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
 
   // Initialize invariants
   const callCountInvariant = new CallCountInvariant(callCountRange)
-  const parallelLimit = getParallelLimit(runOptions.parallel)
-  const sequentialOnError =
-    runOptions.parallel != null && typeof runOptions.parallel === 'object'
-      ? (runOptions.parallel.sequentialOnError ?? false)
-      : false
   const parallelInvariant = new ParallelInvariant(
-    parallelLimit,
-    options.async,
-    sequentialOnError,
+    options,
+    runOptions,
     callController,
   )
   // const logInvariant = new LogInvariant(
@@ -183,13 +176,11 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   //   () => callController.callCount,
   // )
   const onErrorInvariant = new OnErrorInvariant(
-    !!runOptions.findBestError,
+    runOptions,
     errorVariantController.errorVariantArgs,
-    parallelLimit,
-    sequentialOnError,
   )
   const onModeChangeInvariant = new OnModeChangeInvariant(
-    iterationModes,
+    runOptions,
     modeChangesRange,
   )
   const errorBehaviorInvariant = new ErrorBehaviorInvariant(
@@ -199,23 +190,16 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     errorVariantIndex,
     retriesToError,
   )
-  const iterationsInvariant = new IterationsInvariant(
-    ITERATIONS_SYNC,
-    ITERATIONS_ASYNC,
-    options.async,
-  )
+  const iterationsInvariant = new IterationsInvariant(options)
   const callOptionsInvariant = new CallOptionsInvariant(
     callController.timeController,
     callController,
   )
   const findBestErrorInvariant = new FindBestErrorInvariant(
-    !!runOptions.findBestError,
-    runOptions.findBestError?.dontThrowIfError ?? false,
-    runOptions.findBestError?.includeErrorVariant ?? false,
+    options,
+    runOptions,
     errorVariantIndex,
     errorVariantController.errorVariantArgs,
-    parallelLimit,
-    sequentialOnError,
   )
 
   function logFunc(_type: TestVariantsLogType, _message: string): void {
