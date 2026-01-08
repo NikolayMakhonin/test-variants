@@ -87,7 +87,7 @@ export function _createVariantNavigationState(
     Array.from({ length: argsPattern.length }, () => void 0 as any),
     'state.argValues',
   )
-  assert.strictEqual(state.attempts, -1, 'state.attemptIndex')
+  assert.strictEqual(state.attempts, 0, 'state.attemptIndex')
   assert.deepStrictEqual(state.templates, templates, 'state.templates')
   assert.strictEqual(state.limitArgOnError, null, 'state.limitArgOnError')
   assert.strictEqual(state.equals, deepEqualJsonLike, 'state.equals')
