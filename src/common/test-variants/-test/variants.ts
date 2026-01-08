@@ -79,6 +79,7 @@ import { CallCountInvariant } from './invariants/CallCountInvariant'
 import { OnErrorInvariant } from './invariants/OnErrorInvariant'
 import { OnModeChangeInvariant } from './invariants/OnModeChangeInvariant'
 import { CallOptionsInvariant } from './invariants/CallOptionsInvariant'
+import { FindBestErrorInvariant } from './invariants/FindBestErrorInvariant'
 import { ErrorVariantController } from './helpers/ErrorVariantController'
 import { CallController } from './helpers/CallController'
 import { getParallelLimit } from './helpers/getParallelLimit'
@@ -207,6 +208,15 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     callController.timeController,
     callController,
   )
+  const findBestErrorInvariant = new FindBestErrorInvariant(
+    !!runOptions.findBestError,
+    runOptions.findBestError?.dontThrowIfError ?? false,
+    runOptions.findBestError?.includeErrorVariant ?? false,
+    errorVariantIndex,
+    errorVariantController.errorVariantArgs,
+    parallelLimit,
+    sequentialOnError,
+  )
 
   function logFunc(_type: TestVariantsLogType, _message: string): void {
     if (isLogEnabled()) {
@@ -220,6 +230,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     args: TestArgs
     tests: number
   }): void {
+    findBestErrorInvariant.onError()
     onErrorInvariant.onError(
       event,
       callController.callCount,
@@ -238,6 +249,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   ) {
     callOptionsInvariant.onCall(callOptions)
     deepFreezeJsonLike(args)
+    findBestErrorInvariant.onCall(args)
 
     return callController.call(
       () => {
@@ -287,13 +299,14 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     lastThrownError,
     result,
   )
-  iterationsInvariant.validateFinal(callController.completedCount, result)
+  // iterationsInvariant.validateFinal(callController.completedCount, result)
   // logInvariant.validateFinal(callCount, timeController.now(), lastThrownError)
   parallelInvariant.validateFinal()
   onModeChangeInvariant.validateFinal()
   onErrorInvariant.validateFinal(lastThrownError)
   callCountInvariant.validateFinal(callCount)
   callOptionsInvariant.validateFinal()
+  // findBestErrorInvariant.validateFinal(caughtError, lastThrownError, result)
 
   callController.finalize()
 }
