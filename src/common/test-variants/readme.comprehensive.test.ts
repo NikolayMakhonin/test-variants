@@ -7,10 +7,7 @@
 import { describe, it, expect } from 'vitest'
 import { createTestVariants } from 'src/common/test-variants/createTestVariants'
 import { createTestVariants as createTestVariantsNode } from 'src/node'
-import {
-  AbortControllerFast,
-  IAbortSignalFast,
-} from '@flemist/abort-controller-fast'
+import { AbortControllerFast } from '@flemist/abort-controller-fast'
 import { TimeControllerMock } from '@flemist/time-controller'
 import type {
   ModeChangeEvent,
@@ -972,9 +969,13 @@ describe('README comprehensive', () => {
       saveErrorVariants: {
         dir: testDir,
         argsToJson: args => ({ customA: args.a.id }),
-        jsonToArgs: json => ({
-          a: { id: (json as { customA: number }).customA, data: 'restored' },
-        }),
+        jsonToArgs: json =>
+          ({
+            a: {
+              id: (json as { customA: number }).customA,
+              data: 'restored',
+            },
+          }) as any,
         useToFindBestError: true,
       },
     })
