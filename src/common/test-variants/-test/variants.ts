@@ -86,6 +86,7 @@ import { FindBestErrorInvariant } from './invariants/FindBestErrorInvariant'
 import { LimitTimeInvariant } from './invariants/LimitTimeInvariant'
 import { ErrorVariantController } from './helpers/ErrorVariantController'
 import { CallController } from './helpers/CallController'
+import { getParallelLimit } from './helpers/getParallelLimit'
 import { runWithTimeController } from './helpers/runWithTimeController'
 import { log } from 'src/common/helpers/log'
 import { getVariantArgs } from 'src/common/test-variants/-test/helpers/getVariantArgs'
@@ -174,8 +175,10 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     runOptions,
     callController,
   )
+  const parallelLimit = getParallelLimit(runOptions.parallel)
   const logInvariant = new LogInvariant(
     runOptions.log as RequiredNonNullable<TestVariantsLogOptions>,
+    parallelLimit,
   )
   const onErrorInvariant = new OnErrorInvariant(
     runOptions,
@@ -292,7 +295,10 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     result,
   )
   // iterationsInvariant.validateFinal(callController.completedCount, result)
-  logInvariant.validateFinal(onErrorInvariant.onErrorCount)
+  // With findBestError: completed is logged before throwing
+  // Without findBestError: error is thrown immediately without completed
+  const completedSkipped = caughtError != null && !runOptions.findBestError
+  logInvariant.validateFinal(onErrorInvariant.onErrorCount, completedSkipped)
   parallelInvariant.validateFinal()
   onModeChangeInvariant.validateFinal()
   onErrorInvariant.validateFinal(lastThrownError)

@@ -16,15 +16,15 @@ import { RequiredNonNullable } from '@flemist/simple-utils'
  * - No logs occur after 'completed'
  * - 'start' log called exactly once, before any other logs
  * - 'completed' log called exactly once, at the end
- * - 'progress' and 'error' logs occur exclusively after at least one test call (tests > 0)
+ * - 'progress' logs occur exclusively after at least one test call (tests > 0)
  * - 'modeChange' and 'debug' logs can occur before test calls
  *
  * ### Content validation (values only, not format)
  * - 'start': no value checks
- * - 'completed': tests value
+ * - 'completed': tests value (callCount)
  * - 'modeChange': modeIndex value, mode name value (forward/backward/random)
- * - 'progress': tests value
- * - 'error': tests value
+ * - 'progress': tests value (callCount)
+ * - 'error': tests value (callCount - 1, tests completed before error)
  * - 'debug': no value checks
  *
  * ### Log examples
@@ -82,9 +82,14 @@ export class LogInvariant {
   private _pendingModeChangeMessage: string | null = null
 
   private readonly _logOptions: TestVariantsLogOptions
+  private readonly _parallelLimit: number
 
-  constructor(logOptions: RequiredNonNullable<TestVariantsLogOptions>) {
+  constructor(
+    logOptions: RequiredNonNullable<TestVariantsLogOptions>,
+    parallelLimit: number,
+  ) {
     this._logOptions = logOptions
+    this._parallelLimit = parallelLimit
   }
 
   /**
@@ -213,22 +218,31 @@ export class LogInvariant {
     }
   }
 
+  /**
+   * Validates error log content
+   *
+   * Note: tests parameter is callCount (calls started), but error log shows
+   * tests completed before error, which is callCount - 1.
+   * With parallel execution, tests value in log may differ from callCount - 1
+   * because more tests may have started between dispatch and error.
+   */
   private _validateErrorLog(message: string, tests: number): void {
     if (!this._logOptions.error) {
       throw new Error(`[test][LogInvariant] error log when disabled`)
     }
 
-    if (tests <= 0) {
-      throw new Error(
-        `[test][LogInvariant] error log before any tests (tests=${tests})`,
-      )
-    }
-
     this._logErrorCount++
 
-    if (!new RegExp('\\b' + tests + '\\b').test(message)) {
+    // Skip tests value validation for parallel (race conditions)
+    if (this._parallelLimit > 1) {
+      return
+    }
+
+    // Error log shows tests completed before error = callCount - 1
+    const testsInLog = tests - 1
+    if (!new RegExp('\\b' + testsInLog + '\\b').test(message)) {
       throw new Error(
-        `[test][LogInvariant] error log missing tests value "${tests}"\nmessage: ${message}`,
+        `[test][LogInvariant] error log missing tests value "${testsInLog}"\nmessage: ${message}`,
       )
     }
   }
@@ -241,8 +255,13 @@ export class LogInvariant {
     this._logDebugCount++
   }
 
-  /** Run after test variants completion */
-  validateFinal(onErrorCount: number): void {
+  /**
+   * Run after test variants completion
+   *
+   * @param onErrorCount - number of onError callback calls
+   * @param completedSkipped - true if completed log was skipped (error thrown without findBestError)
+   */
+  validateFinal(onErrorCount: number, completedSkipped: boolean): void {
     if (this._anyLogAfterCompleted) {
       throw new Error(`[test][LogInvariant] log occurred after completed`)
     }
@@ -259,9 +278,15 @@ export class LogInvariant {
       )
     }
 
-    if (this._logOptions.completed && this._logCompletedCount !== 1) {
+    // Completed log is skipped when error thrown without findBestError
+    const expectedCompletedCount = completedSkipped ? 0 : 1
+
+    if (
+      this._logOptions.completed &&
+      this._logCompletedCount !== expectedCompletedCount
+    ) {
       throw new Error(
-        `[test][LogInvariant] completed log count ${this._logCompletedCount} !== 1`,
+        `[test][LogInvariant] completed log count ${this._logCompletedCount} !== ${expectedCompletedCount}`,
       )
     }
 
