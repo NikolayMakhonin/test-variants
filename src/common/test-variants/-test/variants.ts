@@ -196,6 +196,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   )
   const callOptionsInvariant = new CallOptionsInvariant(
     callController.timeController,
+    callController,
   )
 
   function logFunc(_type: TestVariantsLogType, _message: string): void {
@@ -283,9 +284,9 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   onModeChangeInvariant.validateFinal()
   onErrorInvariant.validateFinal(lastThrownError)
   callCountInvariant.validateFinal(callCount)
+  callOptionsInvariant.validateFinal()
 
   callController.finalize()
-  callOptionsInvariant.validateFinal(true)
 }
 
 export const testVariants = createTestVariantsOld(

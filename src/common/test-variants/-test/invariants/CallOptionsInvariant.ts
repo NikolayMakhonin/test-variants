@@ -1,5 +1,6 @@
 import type { IAbortSignalFast } from '@flemist/abort-controller-fast'
 import type { ITimeController } from '@flemist/time-controller'
+import type { CallController } from '../helpers/CallController'
 
 /**
  * Validates TestOptions passed to test function
@@ -8,21 +9,23 @@ import type { ITimeController } from '@flemist/time-controller'
  * Every test function call
  *
  * ## Invariants
- * - abortSignal exists
+ * - abortSignal exists and is not null
  * - timeController matches expected instance
- * - abortSignal is aborted after CallController.finalize
+ * - abortSignal not aborted on first call
+ * - abortSignal aborted after CallController.finalize (combined signal depends on internal signal)
  *
  * ## Skipped Validations
  * - abortSignal identity (library combines signals via combineAbortSignals)
- * - abortSignal.aborted after first error with sequentialOnError (library aborts internal controller)
+ * - abortSignal.aborted state during execution (depends on errors and sequentialOnError)
  */
 export class CallOptionsInvariant {
   private readonly _timeController: ITimeController
-  private _abortedDuringExecution = false
+  private readonly _callController: CallController
   private _lastAbortSignal: IAbortSignalFast | null = null
 
-  constructor(timeController: ITimeController) {
+  constructor(timeController: ITimeController, callController: CallController) {
     this._timeController = timeController
+    this._callController = callController
   }
 
   /** Use inside test func */
@@ -39,22 +42,25 @@ export class CallOptionsInvariant {
       )
     }
 
-    this._lastAbortSignal = callOptions.abortSignal
-
-    if (callOptions.abortSignal.aborted && !this._abortedDuringExecution) {
-      this._abortedDuringExecution = true
+    const callCount = this._callController.callCount
+    if (callCount === 1 && callOptions.abortSignal.aborted) {
+      throw new Error(
+        `[test][CallOptionsInvariant] abortSignal aborted on first call`,
+      )
     }
+
+    this._lastAbortSignal = callOptions.abortSignal
   }
 
   /** Run after test variants completion */
-  validateFinal(abortSignalShouldBeAborted: boolean): void {
+  validateFinal(): void {
     if (this._lastAbortSignal == null) {
       return
     }
 
-    if (abortSignalShouldBeAborted && !this._lastAbortSignal.aborted) {
+    if (!this._lastAbortSignal.aborted) {
       throw new Error(
-        `[test][CallOptionsInvariant] abortSignal.aborted == false`,
+        `[test][CallOptionsInvariant] abortSignal not aborted after finalize`,
       )
     }
   }
