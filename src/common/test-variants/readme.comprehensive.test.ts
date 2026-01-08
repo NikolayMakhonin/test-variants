@@ -177,11 +177,11 @@ describe('README comprehensive', () => {
     // Note: modeChange is only logged together with progress logging
     // When progress is disabled, modeChange is not logged even if modeChange option is true
     // Verify messages contain expected content
-    if (
+    const isSafari =
       typeof window !== 'undefined' &&
       /AppleWebKit/.test(navigator.userAgent) &&
       !/Chrome/.test(navigator.userAgent)
-    ) {
+    if (!isSafari) {
       expect(
         receivedLogs.find(l => l.type === 'start')?.message,
         navigator.userAgent,
