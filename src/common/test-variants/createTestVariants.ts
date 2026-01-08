@@ -42,7 +42,7 @@ export function createTestVariants<Args extends Obj>(
         includeErrorVariant: options?.findBestError?.includeErrorVariant,
         timeController: options?.timeController,
         onModeChange,
-        limitCompletionCount: options?.cycles,
+        limitCompletionCount: options?.cycles ?? 1,
         limitTests: options?.limitTests,
         limitTime: options?.limitTime,
       })
