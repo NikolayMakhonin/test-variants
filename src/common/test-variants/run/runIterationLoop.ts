@@ -159,10 +159,22 @@ async function runCycleAsync<Args extends Obj>(
   // Only check external abort for cycle continuation
   // Parallel abort (from findBestError) causes fallback to sequential, not cycle exit
   while (!isExternalAborted(runContext)) {
+    // When sequentialOnError=true and error occurred, parallel is aborted and falls back to sequential
+    const useParallel = pool && !isParallelAborted(runContext)
+
+    // In parallel mode, wait for pool slot BEFORE fetching args
+    // This ensures time advances before limit check in getNextArgs()
+    if (useParallel && !pool.hold(1)) {
+      await poolWait({ pool, count: 1, hold: true })
+    }
+
     // Use pending args for first iteration if provided, then fetch new ones
     if (currentArgs == null) {
       currentArgs = getNextArgs(runContext, currentArgs)
       if (currentArgs == null) {
+        if (useParallel) {
+          void pool.release(1)
+        }
         break
       }
     }
@@ -173,16 +185,14 @@ async function runCycleAsync<Args extends Obj>(
     }
 
     if (isExternalAborted(runContext)) {
+      if (useParallel) {
+        void pool.release(1)
+      }
       currentArgs = null
       continue
     }
 
-    // When parallel is aborted (error in findBestError mode), fall back to sequential
-    // This matches previous version behavior: if (!pool || abortSignal.aborted) -> sequential
-    if (pool && !isParallelAborted(runContext)) {
-      if (!pool.hold(1)) {
-        await poolWait({ pool, count: 1, hold: true })
-      }
+    if (useParallel) {
       runParallelTest(runContext, currentArgs)
     } else {
       if (logOptions.debug && pool && isParallelAborted(runContext)) {
