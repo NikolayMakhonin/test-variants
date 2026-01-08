@@ -69,6 +69,7 @@ import { generateTemplate } from './generators/template'
 import { generateRunOptions } from './generators/run'
 import { generateErrorVariantIndex } from './generators/testFunc'
 import { estimateCallCount } from './estimations/estimateCallCount'
+import { estimateModeChanges } from './estimations/estimateModeChanges'
 import { ITERATIONS_SYNC, ITERATIONS_ASYNC, MODES_DEFAULT } from './constants'
 // import { LogInvariant } from './invariants/LogInvariant'
 import { ErrorBehaviorInvariant } from './invariants/ErrorBehaviorInvariant'
@@ -128,6 +129,14 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     withDelay,
   )
   const iterationModes = runOptions.iterationModes ?? MODES_DEFAULT
+  const modeChangesRange = estimateModeChanges(
+    options,
+    runOptions,
+    variantsCount,
+    errorVariantIndex,
+    withDelay,
+    callCountRange,
+  )
 
   if (isLogEnabled()) {
     log('<template>')
@@ -143,6 +152,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
     log('</expected>')
     log('<estimation>')
     log('callCountRange: ', callCountRange)
+    log('modeChangesRange: ', modeChangesRange)
     log('</estimation>')
   }
 
@@ -179,8 +189,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   )
   const onModeChangeInvariant = new OnModeChangeInvariant(
     iterationModes,
-    callController,
-    parallelLimit,
+    modeChangesRange,
   )
   const errorBehaviorInvariant = new ErrorBehaviorInvariant(
     options,
