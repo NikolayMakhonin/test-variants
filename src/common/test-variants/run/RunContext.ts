@@ -16,6 +16,8 @@ export type RunContext<Args extends Obj> = {
   testRun: TestVariantsTestRun<Args>
   variantsIterator: VariantsIterator<Args>
   testOptions: TestOptions
+  testOptionsParallel: TestOptions
+  abortControllerGlobal: IAbortControllerFast
   abortControllerParallel: IAbortControllerFast
   abortSignal: IAbortSignalFast
   pool: IPool | null

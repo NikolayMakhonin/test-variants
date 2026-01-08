@@ -16,6 +16,7 @@ import type {
   TestVariantsRunOptionsInternal,
 } from './run/types'
 import type { TestOptions, TestVariantsResult } from './types'
+import { AbortErrorSilent } from 'src/common/test-variants/run/AbortErrorSilent'
 
 export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
   testRun: TestVariantsTestRun<Args>,
@@ -33,14 +34,24 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     parallel,
   } = optionsResolved
 
+  const abortControllerGlobal = new AbortControllerFast()
   const abortControllerParallel = new AbortControllerFast()
-  const abortSignal = combineAbortSignals(
+  const abortSignalGlobal = combineAbortSignals(
     abortSignalExternal,
+    abortControllerGlobal.signal,
+  )
+  const abortSignalParallel = combineAbortSignals(
+    abortSignalGlobal,
     abortControllerParallel.signal,
   )
 
   const testOptions: TestOptions = {
-    abortSignal,
+    abortSignal: abortSignalGlobal,
+    timeController,
+  }
+
+  const testOptionsParallel: TestOptions = {
+    abortSignal: abortSignalParallel,
     timeController,
   }
 
@@ -64,16 +75,17 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     testRun,
     variantsIterator,
     testOptions,
+    testOptionsParallel,
+    abortControllerGlobal,
     abortControllerParallel,
-    abortSignal,
+    abortSignal: abortSignalParallel,
     pool,
     state,
   }
   await runIterationLoop(runContext)
 
-  if (abortSignal.aborted && abortSignal.reason != null) {
-    throw abortSignal.reason
-  }
+  abortSignalGlobal.throwIfAborted()
+  abortControllerGlobal.abort(new AbortErrorSilent())
 
   logCompleted(runContext)
   await garbageCollect(1)

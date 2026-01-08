@@ -83,7 +83,7 @@ export class CallController {
     const onError = (err: any): never => {
       decrementConcurrent()
       if (!(err instanceof TestError)) {
-        this._abortController.abort()
+        this._abortController.abort(err)
       }
       throw err
     }

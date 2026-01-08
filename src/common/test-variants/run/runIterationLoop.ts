@@ -7,6 +7,7 @@ import { shouldTriggerGC, triggerGC } from './gcManager'
 import type { RunContext } from './RunContext'
 import { logProgress } from './runLogger'
 import type { TestFuncResult } from './types'
+import { AbortErrorSilent } from 'src/common/test-variants/run/AbortErrorSilent'
 
 function updateIterationState(
   state: RunContext<any>['state'],
@@ -21,7 +22,7 @@ function updateIterationState(
 
 function enterDebugMode(runContext: RunContext<any>): void {
   runContext.state.debugMode = true
-  runContext.abortControllerParallel.abort()
+  runContext.abortControllerParallel.abort(new AbortErrorSilent())
 }
 
 function runSequentialTest<Args extends Obj>(
@@ -54,6 +55,9 @@ function runSequentialTest<Args extends Obj>(
     }
     updateIterationState(state, promiseOrResult)
   } catch (err) {
+    if (err instanceof AbortErrorSilent) {
+      return
+    }
     return handleErrorSequential(runContext, args, err, tests)
   }
 }
@@ -62,7 +66,7 @@ function runParallelTest<Args extends Obj>(
   runContext: RunContext<Args>,
   args: ArgsWithSeed<Args>,
 ): void {
-  const { pool, abortSignal, testRun, testOptions, state } = runContext
+  const { pool, abortSignal, testRun, testOptionsParallel, state } = runContext
   if (!pool) {
     return
   }
@@ -76,7 +80,7 @@ function runParallelTest<Args extends Obj>(
         return
       }
 
-      let promiseOrResult = testRun(args, tests, testOptions)
+      let promiseOrResult = testRun(args, tests, testOptionsParallel)
       if (isPromiseLike(promiseOrResult)) {
         promiseOrResult = await promiseOrResult
       }
@@ -87,6 +91,9 @@ function runParallelTest<Args extends Obj>(
       }
       updateIterationState(state, promiseOrResult)
     } catch (err) {
+      if (err instanceof AbortErrorSilent) {
+        return
+      }
       handleErrorParallel(runContext, args, err, tests)
     } finally {
       void pool.release(1)

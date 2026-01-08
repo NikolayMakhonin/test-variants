@@ -12,6 +12,7 @@ import type {
   TestVariantsTest,
   TestVariantsTestRun,
 } from './run/types'
+import { AbortErrorSilent } from 'src/common/test-variants/run/AbortErrorSilent'
 
 /** Minimum pause time (ms) to detect JS debugger stepping */
 const DEBUG_PAUSE_THRESHOLD_MS = 50
@@ -112,6 +113,9 @@ export function createTestRun<Args extends Obj>(
 
       return normalizeTestResult(promiseOrResult, false)
     } catch (err) {
+      if (err instanceof AbortErrorSilent) {
+        return
+      }
       return handleTestError(err, args, tests)
     }
   }

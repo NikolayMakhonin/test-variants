@@ -2,6 +2,7 @@ import type { PromiseOrValue } from '@flemist/async-utils'
 import type { Obj } from '@flemist/simple-utils'
 import type { ArgsWithSeed } from '../types'
 import type { RunContext } from './RunContext'
+import { AbortErrorSilent } from 'src/common/test-variants/run/AbortErrorSilent'
 
 function saveArgs<Args extends Obj>(
   runContext: RunContext<Args>,
@@ -50,7 +51,7 @@ export function handleErrorParallel<Args extends Obj>(
           `[test-variants] sequentialOnError: aborting parallel, switching to sequential`,
         )
       }
-      abortControllerParallel.abort(null)
+      abortControllerParallel.abort(new AbortErrorSilent())
     } else if (logOptions.debug) {
       logOptions.func(
         'debug',
