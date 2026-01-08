@@ -127,7 +127,9 @@ export class FindBestErrorInvariant {
     }
 
     // Validate error at variant 0 causes immediate termination
+    // Skip when includeErrorVariant=true (system verification mode allows retesting)
     if (
+      !this._includeErrorVariant &&
       this._errorOccurred &&
       this._errorVariantIndex === 0 &&
       this._callsAfterError > 0
@@ -137,11 +139,13 @@ export class FindBestErrorInvariant {
       )
     }
 
-    // Validate bestError populated when error occurred
-    if (lastThrownError != null && result?.bestError == null) {
-      throw new Error(
-        `[test][FindBestErrorInvariant] error occurred but bestError is null`,
-      )
+    // Validate dontThrowIfError=false behavior: error must be thrown
+    if (!this._dontThrowIfError && lastThrownError != null) {
+      if (caughtError == null) {
+        throw new Error(
+          `[test][FindBestErrorInvariant] error occurred but not thrown (dontThrowIfError=false)`,
+        )
+      }
     }
   }
 }
