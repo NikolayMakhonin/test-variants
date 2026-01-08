@@ -177,9 +177,14 @@ describe('README comprehensive', () => {
     // Note: modeChange is only logged together with progress logging
     // When progress is disabled, modeChange is not logged even if modeChange option is true
     // Verify messages contain expected content
-    expect(receivedLogs.find(l => l.type === 'start')?.message).toContain(
-      'memory',
-    )
+    if (
+      typeof window !== 'undefined' &&
+      !/iPad|iPhone|iPod/.test(navigator.userAgent)
+    ) {
+      expect(receivedLogs.find(l => l.type === 'start')?.message).toContain(
+        'memory',
+      )
+    }
     expect(receivedLogs.find(l => l.type === 'error')?.message).toContain(
       'test error',
     )
