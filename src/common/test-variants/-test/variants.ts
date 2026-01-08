@@ -56,10 +56,14 @@
  * Write all code, comments, and logs in English following all project text writing rules
  */
 
+// import {
+//   createTestVariants as createTestVariantsOld,
+//   type TestVariantsLogOptions,
+// } from '#this'
 import {
-  createTestVariants as createTestVariantsOld,
-  type TestVariantsLogOptions,
-} from '#this'
+  createTestVariants as createTestVariantsNode,
+  TestVariantsLogOptions,
+} from 'src/node'
 import { createTestVariants } from 'src/common/test-variants/createTestVariants'
 import { Random, RequiredNonNullable } from '@flemist/simple-utils'
 import type { ModeChangeEvent, TestVariantsLogType } from '../types'
@@ -310,7 +314,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
   callController.finalize()
 }
 
-export const testVariants = createTestVariantsOld(
+export const testVariants = createTestVariantsNode(
   async (options: StressTestArgs) => {
     try {
       await executeStressTest(options)
