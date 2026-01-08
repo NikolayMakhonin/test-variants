@@ -53,7 +53,7 @@ describe(
           dir: 'tmp/test/createTestVariants/variants',
           attemptsPerVariant: 10,
           // Never use it here. findBestError with limitArgOnError is completely enough here.
-          useToFindBestError: true,
+          useToFindBestError: false,
         },
         iterationModes: [
           {
