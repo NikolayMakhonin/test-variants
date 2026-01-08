@@ -82,7 +82,13 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     pool,
     state,
   }
-  await runIterationLoop(runContext)
+
+  try {
+    await runIterationLoop(runContext)
+  } catch (error) {
+    abortControllerGlobal.abort(new AbortErrorSilent())
+    throw error
+  }
 
   abortSignalGlobal.throwIfAborted()
   abortControllerGlobal.abort(new AbortErrorSilent())

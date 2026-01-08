@@ -18,7 +18,25 @@ export function estimateModeChanges(
     return [0, 0]
   }
 
-  if (variantsCount === 0) {
+  // Single mode: always exactly 1 mode change (initial)
+  if (modesCount === 1) {
+    const mode = modes[0]
+    // Check if mode is dead from start
+    if (mode.limitTests != null && mode.limitTests <= 0) {
+      return [1, 1]
+    }
+    if (mode.limitTime != null && mode.limitTime <= 0) {
+      return [1, 1]
+    }
+    const isSequential = mode.mode === 'forward' || mode.mode === 'backward'
+    if (isSequential) {
+      if (mode.cycles != null && mode.cycles <= 0) {
+        return [1, 1]
+      }
+      if (mode.attemptsPerVariant != null && mode.attemptsPerVariant <= 0) {
+        return [1, 1]
+      }
+    }
     return [1, 1]
   }
 
@@ -26,12 +44,70 @@ export function estimateModeChanges(
     return [1, LIMIT_MAX]
   }
 
+  const completionCount = runOptions.cycles ?? 1
+
+  // Check if any sequential modes exist in config
+  let hasSequentialModes = false
+  for (let i = 0, len = modes.length; i < len; i++) {
+    if (modes[i].mode === 'forward' || modes[i].mode === 'backward') {
+      hasSequentialModes = true
+      break
+    }
+  }
+
+  // Check if any mode is alive from start
+  let hasAnyAliveMode = false
+  let hasAliveSequentialMode = false
+  for (let i = 0, len = modes.length; i < len; i++) {
+    const mode = modes[i]
+    if (mode.limitTests != null && mode.limitTests <= 0) {
+      continue
+    }
+    if (mode.limitTime != null && mode.limitTime <= 0) {
+      continue
+    }
+    const isSequential = mode.mode === 'forward' || mode.mode === 'backward'
+    if (isSequential) {
+      if (mode.cycles != null && mode.cycles <= 0) {
+        continue
+      }
+      if (mode.attemptsPerVariant != null && mode.attemptsPerVariant <= 0) {
+        continue
+      }
+      hasAliveSequentialMode = true
+    }
+    hasAnyAliveMode = true
+  }
+
+  // If no modes are alive, stops immediately after initialize
+  if (!hasAnyAliveMode) {
+    return [1, 1]
+  }
+
+  // With any sequential modes in config and cycles=0: stops immediately after initialize
+  if (hasSequentialModes && completionCount <= 0) {
+    return [1, 1]
+  }
+
+  // Sequential modes exist in config but all are dead: stops at initialize
+  if (hasSequentialModes && !hasAliveSequentialMode) {
+    return [1, 1]
+  }
+
+  // When variantsCount=0 or no tests will run
+  if (variantsCount === 0 || callCountRange[1] === 0) {
+    // Iterator still runs through modes once before stopping
+    // Each mode gets a turn, each turn triggers mode change
+    return [1, 1 + modesCount]
+  }
+
   let hasTimeLimits = runOptions.limitTime != null
 
   let hasActiveSequentialMode = false
   let hasActiveRandomMode = false
 
-  const testsPerModeList: number[] = []
+  const testsPerTurnList: number[] = []
+  let maxTurnsPerCompletion: number | null = null
 
   for (let i = 0, len = modes.length; i < len; i++) {
     const mode = modes[i]
@@ -39,6 +115,7 @@ export function estimateModeChanges(
       (mode.limitTests != null && mode.limitTests <= 0) ||
       (mode.limitTime != null && mode.limitTime <= 0)
     ) {
+      testsPerTurnList.push(0)
       continue
     }
 
@@ -47,11 +124,21 @@ export function estimateModeChanges(
       case 'backward': {
         const modeCycles = mode.cycles ?? 1
         const attempts = mode.attemptsPerVariant ?? 1
-        const testsPerModeCycle = variantsCount * attempts
-        const testsPerMode = testsPerModeCycle * modeCycles
-        const testsPerModeTurn = min(testsPerMode, mode.limitTests ?? LIMIT_MAX)
-        testsPerModeList.push(testsPerModeTurn)
-        if (testsPerMode > 0) {
+        if (modeCycles <= 0 || attempts <= 0) {
+          testsPerTurnList.push(0)
+          continue
+        }
+        const testsPerCompletion = variantsCount * modeCycles * attempts
+        const testsPerTurn = min(
+          testsPerCompletion,
+          mode.limitTests ?? LIMIT_MAX,
+        )
+        testsPerTurnList.push(testsPerTurn)
+        maxTurnsPerCompletion = max(
+          maxTurnsPerCompletion,
+          Math.ceil(testsPerCompletion / testsPerTurn),
+        )
+        if (testsPerCompletion > 0) {
           hasActiveSequentialMode = true
         }
         if (mode.limitTime != null) {
@@ -61,8 +148,8 @@ export function estimateModeChanges(
       }
       case 'random': {
         hasActiveRandomMode = true
-        const testsPerModeTurn = mode.limitTests ?? LIMIT_MAX
-        testsPerModeList.push(testsPerModeTurn)
+        const testsPerTurn = mode.limitTests ?? LIMIT_MAX
+        testsPerTurnList.push(testsPerTurn)
         if (mode.limitTime != null) {
           hasTimeLimits = true
         }
@@ -78,31 +165,47 @@ export function estimateModeChanges(
     return [1, 1]
   }
 
-  const completionCount = runOptions.cycles ?? 1
+  // Calculate mode changes based on modes passes
+  // Mode change happens when entering a mode (initial + each mode switch)
+  // modeChanges = 1 + (completeModesPasses × modesCount)
 
   let _min = 1
   let _max = 1
 
-  if (modesCount === 1) {
-    _min = 1
-    _max = 1
-  } else {
-    const testsPerModesPass = testsPerModeList.reduce(
-      (sum, testsPerMode) => sum + testsPerMode,
-      0,
-    )
+  if (hasActiveSequentialMode && maxTurnsPerCompletion != null) {
+    // Sequential modes control termination via completionCount
+    // completeModesPasses = maxTurnsPerCompletion × completionCount
+    const minModesPasses =
+      Math.floor(maxTurnsPerCompletion / 2) * completionCount
+    const maxModesPasses = maxTurnsPerCompletion * (completionCount + 2)
 
+    _min = max(1, 1 + minModesPasses * modesCount)
+    _max = max(1, 1 + maxModesPasses * modesCount)
+  } else if (hasActiveRandomMode) {
+    // Only random modes: estimate based on callCount and testsPerModesPass
+    const testsPerModesPass = testsPerTurnList.reduce((sum, t) => sum + t, 0)
     if (testsPerModesPass > 0) {
-      const minModesPassCount = Math.floor(
-        callCountRange[0] / testsPerModesPass,
-      )
-      const maxModesPassCount = Math.ceil(callCountRange[1] / testsPerModesPass)
+      const minModesPasses =
+        callCountRange[0] > 0
+          ? Math.floor(callCountRange[0] / testsPerModesPass)
+          : 0
+      const maxModesPasses =
+        callCountRange[1] > 0
+          ? Math.ceil(callCountRange[1] / testsPerModesPass) + 1
+          : 0
 
-      _min = max(1, 1 + minModesPassCount * modesCount - (modesCount - 1))
-      _max = max(
-        1,
-        1 + maxModesPassCount * modesCount * (completionCount + 2) + modesCount,
-      )
+      _min = max(1, 1 + minModesPasses * modesCount)
+      _max = max(1, 1 + maxModesPasses * modesCount)
+    }
+  }
+
+  // Apply global limitTests constraint
+  if (runOptions.limitTests != null && runOptions.limitTests > 0) {
+    const testsPerModesPass = testsPerTurnList.reduce((sum, t) => sum + t, 0)
+    if (testsPerModesPass > 0) {
+      const maxModesPassesByLimit =
+        Math.ceil(runOptions.limitTests / testsPerModesPass) + 1
+      _max = min(_max, 1 + maxModesPassesByLimit * modesCount)
     }
   }
 
