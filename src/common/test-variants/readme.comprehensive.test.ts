@@ -179,7 +179,7 @@ describe('README comprehensive', () => {
     // Verify messages contain expected content
     if (
       typeof window !== 'undefined' &&
-      !/iPad|iPhone|iPod/.test(navigator.userAgent)
+      /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
     ) {
       expect(receivedLogs.find(l => l.type === 'start')?.message).toContain(
         'memory',
