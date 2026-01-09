@@ -28,7 +28,6 @@ import {
   extendTemplatesWithExtraArgs,
   isArgsKeysInTemplate,
 } from './helpers/template'
-import { compareLexicographic } from 'src/common/test-variants/iterator/helpers/compareLexicographic'
 
 const DEFAULT_MODE_CONFIGS: ModeConfig[] = [{ mode: 'forward' }]
 
