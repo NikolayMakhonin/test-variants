@@ -396,13 +396,13 @@ export function retreatVariantNavigation<Args extends Obj>(
 export function calcArgsIndexes<Args extends Obj>(
   state: VariantNavigationState<Args>,
   targetArgs: Args,
-  considerLimits: boolean,
 ): number[] | null {
   resetVariantNavigation(state)
 
   const argsNames = state.argsNames
   const argsCount = argsNames.length
   const indexes: number[] = []
+  let belowMax = false
 
   for (let argIndex = 0; argIndex < argsCount; argIndex++) {
     const argName = argsNames[argIndex]
@@ -415,11 +415,9 @@ export function calcArgsIndexes<Args extends Obj>(
     state.argValues[argIndex] = calcArgValues(state, argName)
 
     let maxIndex = -1
-    if (considerLimits) {
-      maxIndex = getArgValueMaxIndex(state, argIndex, true)
-      if (maxIndex < 0) {
-        return null
-      }
+    maxIndex = getArgValueMaxIndex(state, argIndex, belowMax)
+    if (maxIndex < 0) {
+      return null
     }
 
     const valueIndex = findValueIndex(
@@ -430,7 +428,7 @@ export function calcArgsIndexes<Args extends Obj>(
     if (valueIndex < 0) {
       return null
     }
-    if (considerLimits && valueIndex > maxIndex) {
+    if (valueIndex > maxIndex) {
       return null
     }
 
@@ -439,6 +437,9 @@ export function calcArgsIndexes<Args extends Obj>(
     state.indexes[argIndex] = valueIndex
     state.args[state.argsNames[argIndex]] =
       state.argValues[argIndex][valueIndex]
+    if (state.indexes[argIndex] < maxIndex) {
+      belowMax = true
+    }
   }
 
   return indexes

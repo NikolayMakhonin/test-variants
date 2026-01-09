@@ -23,11 +23,8 @@ export type AddLimitOptions<Args extends Obj> = {
   error?: unknown
   /** Number of tests run when this limit is applied */
   tests?: null | number
-  /**
-   * If true, limit is applied only when stricter on ALL arguments than the previous limit.
-   * If false (default), limit is applied when lexicographically smaller than the previous limit.
-   */
-  limitEachArg?: null | boolean
+  /** Limit per-arg indexes; boolean enables/disables, function for custom per-arg logic */
+  limitArg?: null | boolean | LimitArgOnError
   /** Extend template with extra args from limit if they are missing */
   extendTemplates?: null | boolean
 }

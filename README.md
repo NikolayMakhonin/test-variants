@@ -226,9 +226,8 @@ const result = await testVariants({
     // all errors from them are collected and used as initial constraints for findBestError
     // Useful when you need to continue best error search after testVariants restart
     useToFindBestError: false,
-    // If true, limit is applied only when stricter on ALL arguments than the previous limit
-    // If false (default), limit is applied when lexicographically smaller than the previous limit
-    limitEachArg: boolean, // default: false
+    // Same as limitArgOnError
+    limitArg: boolean | Function, // default: false
     // Extend template with extra args from limit if they are missing
     extendTemplates: boolean, // default: false
   },

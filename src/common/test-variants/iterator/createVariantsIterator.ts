@@ -153,22 +153,12 @@ export function createVariantsIterator<Args extends Obj>(
       )
     }
 
-    const limitEachArg = true
+    calcState.limitArgOnError =
+      addLimitOptions?.limitArg ?? limitArgOnError ?? null
 
     // Here we also check that the new limit is stricter than the old one
-    const argLimits = calcArgsIndexes(calcState, args, limitEachArg)
+    const argLimits = calcArgsIndexes(calcState, args)
     if (argLimits == null) {
-      return
-    }
-
-    if (
-      !limitEachArg &&
-      compareLexicographic(
-        argLimits,
-        modeStates[0].navigationState.argLimits,
-      ) >= 0
-    ) {
-      // New limit is not stricter than the old one
       return
     }
 

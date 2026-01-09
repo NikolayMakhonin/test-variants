@@ -53,7 +53,7 @@ class SaveErrorVariantsStoreNode<Args extends Obj, SavedArgs = Args>
     const { testRun, variantsIterator, testOptions, findBestErrorEnabled } =
       options
     const useToFindBestError = this.options.useToFindBestError
-    const limitEachArg = this.options.limitEachArg ?? false
+    const limitArg = this.options.limitArg ?? false
     const extendTemplates = this.options.extendTemplates ?? false
     const attemptsPerVariant = this.options.attemptsPerVariant ?? 1
 
@@ -79,7 +79,7 @@ class SaveErrorVariantsStoreNode<Args extends Obj, SavedArgs = Args>
             variantsIterator.addLimit({
               args,
               error,
-              limitEachArg,
+              limitArg,
               extendTemplates,
             })
             break
