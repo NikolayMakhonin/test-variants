@@ -1,6 +1,6 @@
 {
   "name": "@flemist/test-variants",
-  "version": "5.0.0",
+  "version": "5.0.1",
   "description": "Runs a test function with all possible combinations of its parameters.",
   "sideEffects": false,
   "types": "build/common/index.d.ts",

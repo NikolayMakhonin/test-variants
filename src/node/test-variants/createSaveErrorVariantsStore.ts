@@ -53,6 +53,8 @@ class SaveErrorVariantsStoreNode<Args extends Obj, SavedArgs = Args>
     const { testRun, variantsIterator, testOptions, findBestErrorEnabled } =
       options
     const useToFindBestError = this.options.useToFindBestError
+    const limitEachArg = this.options.limitEachArg ?? false
+    const extendTemplates = this.options.extendTemplates ?? false
     const attemptsPerVariant = this.options.attemptsPerVariant ?? 1
 
     const files = await readErrorVariantFiles(this.options.dir)
@@ -74,7 +76,12 @@ class SaveErrorVariantsStoreNode<Args extends Obj, SavedArgs = Args>
           }
         } catch (error) {
           if (useToFindBestError && findBestErrorEnabled) {
-            variantsIterator.addLimit({ args, error })
+            variantsIterator.addLimit({
+              args,
+              error,
+              limitEachArg,
+              extendTemplates,
+            })
             break
           } else {
             throw error

@@ -146,6 +146,13 @@ export type SaveErrorVariantsOptions<Args extends Obj, SavedArgs = Args> = {
   jsonToArgs?: null | ((json: SavedArgs) => ArgsWithSeed<Args>)
   /** Use saved errors to set findBestError limits instead of throwing on replay */
   useToFindBestError?: null | boolean
+  /**
+   * If true, limit is applied only when stricter on ALL arguments than the previous limit.
+   * If false (default), limit is applied when lexicographically smaller than the previous limit.
+   */
+  limitEachArg?: null | boolean
+  /** Extend template with extra args from limit if they are missing */
+  extendTemplates?: null | boolean
 }
 
 // endregion

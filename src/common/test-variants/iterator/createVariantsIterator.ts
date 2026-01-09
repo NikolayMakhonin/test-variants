@@ -28,6 +28,7 @@ import {
   extendTemplatesWithExtraArgs,
   isArgsKeysInTemplate,
 } from './helpers/template'
+import { compareLexicographic } from 'src/common/test-variants/iterator/helpers/compareLexicographic'
 
 const DEFAULT_MODE_CONFIGS: ModeConfig[] = [{ mode: 'forward' }]
 
@@ -153,8 +154,19 @@ export function createVariantsIterator<Args extends Obj>(
     }
 
     // Here we also check that the new limit is stricter than the old one
-    const argLimits = calcArgsIndexes(calcState, args)
+    const argLimits = calcArgsIndexes(calcState, args, limitEachArg)
     if (argLimits == null) {
+      return
+    }
+
+    if (
+      !limitEachArg &&
+      compareLexicographic(
+        argLimits,
+        modeStates[0].navigationState.argLimits,
+      ) >= 0
+    ) {
+      // New limit is not stricter than the old one
       return
     }
 
@@ -166,6 +178,7 @@ export function createVariantsIterator<Args extends Obj>(
     }
 
     // Replace argLimits in ALL modes' navigation states
+    calcState.argLimits = argLimits
     for (let i = 0, len = modeStates.length; i < len; i++) {
       const navigationState = modeStates[i].navigationState
       navigationState.argLimits = argLimits
