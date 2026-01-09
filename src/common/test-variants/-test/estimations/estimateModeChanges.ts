@@ -222,8 +222,21 @@ export function estimateModeChanges(
     _min = 1
   }
 
+  // Dynamic templates with random modes: mode changes are unpredictable.
+  //
+  // The estimation formula assumes each mode turn produces its limitTests count of tests.
+  // But with dynamic templates, random navigation picks values that may lead to
+  // invalid arg combinations (e.g., when dynamic function returns empty array for
+  // certain previous arg values, or when limits exclude all valid values).
+  // When navigation fails, the mode switches WITHOUT producing any test.
+  // These "empty" mode switches are not accounted in the formula above.
+  //
+  // The number of empty switches depends on: random seed, dynamic template logic,
+  // current limit state, and their interactions - fundamentally unpredictable.
+  // LIMIT_MAX correctly expresses "unbounded" rather than pretending we can estimate it.
   if (options.argType !== 'static' && hasActiveRandomMode) {
     _min = 1
+    _max = LIMIT_MAX
   }
 
   return [_min, _max]

@@ -138,7 +138,9 @@ export function createVariantsIterator<Args extends Obj>(
     }
 
     // Extend templates with values from args that may not be in templates
-    extendTemplatesWithExtraArgs(templates, args, equals)
+    if (addLimitOptions?.extendTemplates) {
+      extendTemplatesWithExtraArgs(templates, args, equals)
+    }
 
     // Create or reuse dedicated navigation state for computing indexes
     if (calcState == null) {
