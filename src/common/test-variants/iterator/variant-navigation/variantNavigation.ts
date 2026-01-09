@@ -90,6 +90,10 @@ export function getArgValueMaxIndex(
   belowMax: boolean,
 ): number {
   const valuesCount = state.argValues[argIndex].length
+  if (valuesCount === 0) {
+    // Otherwise limitArgOnError called unnecessarily with empty values
+    return -1
+  }
   const argLimit = state.argLimits[argIndex]
   if (argLimit == null) {
     return valuesCount - 1
