@@ -75,19 +75,25 @@ class SaveErrorVariantsStoreNode<Args extends Obj, SavedArgs = Args>
             await promiseOrResult
           }
         } catch (error) {
-          if (useToFindBestError && findBestErrorEnabled) {
-            variantsIterator.addLimit({
-              args,
-              error,
-              limitArg,
-              extendTemplates,
-            })
-            break
-          } else {
-            throw error
-          }
+          variantsIterator.addLimit({
+            args,
+            error,
+            limitArg,
+            extendTemplates,
+          })
+          break
         }
       }
+    }
+
+    if (
+      !(useToFindBestError && findBestErrorEnabled) &&
+      variantsIterator.limit
+    ) {
+      throw (
+        variantsIterator.limit.error ??
+        new Error('Limit found but error missing')
+      )
     }
   }
 }

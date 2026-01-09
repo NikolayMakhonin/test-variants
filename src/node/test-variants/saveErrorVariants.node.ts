@@ -256,7 +256,7 @@ describe('test-variants > saveErrorVariants', () => {
       await assert.rejects(
         async () =>
           testFunc({ a: [2, 3] })({
-            saveErrorVariants: { dir: TEST_DIR },
+            saveErrorVariants: { dir: TEST_DIR, extendTemplates: true },
             log: logOptionsDisabled,
           }),
         /replay error/,
