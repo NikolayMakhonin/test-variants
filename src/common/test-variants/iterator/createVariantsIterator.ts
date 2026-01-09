@@ -153,6 +153,8 @@ export function createVariantsIterator<Args extends Obj>(
       )
     }
 
+    const limitEachArg = true
+
     // Here we also check that the new limit is stricter than the old one
     const argLimits = calcArgsIndexes(calcState, args, limitEachArg)
     if (argLimits == null) {
