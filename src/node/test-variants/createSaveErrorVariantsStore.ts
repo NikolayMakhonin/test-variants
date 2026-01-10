@@ -16,6 +16,7 @@ import {
   readErrorVariantFiles,
   saveErrorVariantFile,
 } from './saveErrorVariants'
+import { compareLexicographic } from 'src/common/test-variants/iterator/helpers/compareLexicographic'
 
 /** Node.js implementation of SaveErrorVariantsStore using file system */
 class SaveErrorVariantsStoreNode<Args extends Obj, SavedArgs = Args>
@@ -57,7 +58,23 @@ class SaveErrorVariantsStoreNode<Args extends Obj, SavedArgs = Args>
     const extendTemplates = this.options.extendTemplates ?? false
     const attemptsPerVariant = this.options.attemptsPerVariant ?? 1
 
+    const indexesCache = new Map<ArgsWithSeed<Args>, number[] | null>()
+    function getIndexes(args: ArgsWithSeed<Args>): number[] | null {
+      let indexes = indexesCache.get(args)
+      if (indexes === undefined) {
+        // Otherwise the last file by save date will just be selected.
+        // There's no point in that here.
+        indexes = variantsIterator.calcIndexes(args, {
+          includeLimit: false,
+          limitArg,
+        })
+        indexesCache.set(args, indexes)
+      }
+      return indexes
+    }
+
     const files = await readErrorVariantFiles(this.options.dir)
+    const filesArgs: ArgsWithSeed<Args>[] = []
     for (
       let fileIndex = 0, filesLen = files.length;
       fileIndex < filesLen;
@@ -68,6 +85,31 @@ class SaveErrorVariantsStoreNode<Args extends Obj, SavedArgs = Args>
         filePath,
         this.options.jsonToArgs,
       )
+      if (extendTemplates) {
+        variantsIterator.extendTemplates(args)
+      }
+      if (getIndexes(args) != null) {
+        filesArgs.push(args)
+      }
+    }
+
+    function compareArgs(a: ArgsWithSeed<Args>, b: ArgsWithSeed<Args>): number {
+      // getIndexes returns cached non-null values since we filter before sorting
+      return compareLexicographic(getIndexes(a)!, getIndexes(b)!)
+    }
+
+    // Sort by lexicographic order to replay best (smallest) variants first
+    // Sorting in ES2018 preserves the order for equal elements.
+    // Therefore, equal elements will still be in the order of the save date,
+    // specified in the file name.
+    filesArgs.sort(compareArgs)
+
+    for (
+      let argsIndex = 0, len = filesArgs.length;
+      argsIndex < len;
+      argsIndex++
+    ) {
+      const args = filesArgs[argsIndex]
       for (let retry = 0; retry < attemptsPerVariant; retry++) {
         try {
           const promiseOrResult = testRun(args, 0, testOptions)
@@ -75,25 +117,16 @@ class SaveErrorVariantsStoreNode<Args extends Obj, SavedArgs = Args>
             await promiseOrResult
           }
         } catch (error) {
-          variantsIterator.addLimit({
-            args,
-            error,
-            limitArg,
-            extendTemplates,
-          })
-          break
+          if (useToFindBestError && findBestErrorEnabled) {
+            variantsIterator.addLimit({
+              args,
+              error,
+            })
+            break
+          }
+          throw error
         }
       }
-    }
-
-    if (
-      !(useToFindBestError && findBestErrorEnabled) &&
-      variantsIterator.limit
-    ) {
-      throw (
-        variantsIterator.limit.error ??
-        new Error('Limit found but error missing')
-      )
     }
   }
 }

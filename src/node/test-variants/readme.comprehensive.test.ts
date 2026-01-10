@@ -182,6 +182,7 @@ describe('README comprehensive node', () => {
             },
           }) as any,
         useToFindBestError: true,
+        extendTemplates: true,
       },
     })
 

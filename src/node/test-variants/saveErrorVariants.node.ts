@@ -215,7 +215,7 @@ describe('test-variants > saveErrorVariants', () => {
       await fs.promises.mkdir(TEST_DIR, { recursive: true })
       await fs.promises.writeFile(
         path.join(TEST_DIR, '2024-01-01_10-00-00.json'),
-        JSON.stringify({ a: 99, seed: null }),
+        JSON.stringify({ a: 2, seed: null }),
       )
 
       const replayedArgs: number[] = []
@@ -236,7 +236,8 @@ describe('test-variants > saveErrorVariants', () => {
         log: logOptionsDisabled,
       })
 
-      assert.deepStrictEqual(replayedArgs, [99])
+      // Saved variant a=2 replayed first, then normal iteration runs a=1, a=2
+      assert.deepStrictEqual(replayedArgs, [2])
       assert.deepStrictEqual(normalArgs, [1, 2])
     })
 
@@ -282,7 +283,9 @@ describe('test-variants > saveErrorVariants', () => {
         }
       })
 
-      await testFunc({ a: [2] })({
+      // Saved value a=1 is in template, so it will be replayed 3 times
+      // then called once more during normal iteration
+      await testFunc({ a: [1, 2] })({
         saveErrorVariants: {
           dir: TEST_DIR,
           attemptsPerVariant: 3,
@@ -290,7 +293,8 @@ describe('test-variants > saveErrorVariants', () => {
         log: logOptionsDisabled,
       })
 
-      assert.strictEqual(replayCount, 3)
+      // 3 replay attempts + 1 normal iteration = 4
+      assert.strictEqual(replayCount, 4)
     })
   })
 })
