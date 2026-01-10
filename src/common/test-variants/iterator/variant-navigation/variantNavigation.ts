@@ -1,5 +1,5 @@
 import type { Obj } from '@flemist/simple-utils'
-import {
+import type {
   ArgName,
   TestVariantsTemplatesWithExtra,
   VariantNavigationState,
@@ -114,7 +114,7 @@ export function getArgValueMaxIndex(
 }
 
 /** Check if variant navigation is at limit or beyond (lexicographic comparison) */
-function isVariantNavigationAtLimit<Args extends Obj>(
+export function isVariantNavigationAtLimit<Args extends Obj>(
   state: VariantNavigationState<Args>,
 ): boolean {
   const argsCount = state.indexes.length
@@ -272,9 +272,9 @@ export function retreatVariantNavigation<Args extends Obj>(
   state: VariantNavigationState<Args>,
 ): boolean {
   if (isVariantNavigationAtLimit(state)) {
-    // Если лимит стал меньше текущей позиции и мы двигаемся назад,
-    // то мы должны начать с последнего валидного варианта, вместо возврата false.
-    // А этого проще всего добиться сбросом состояния навигации и последующим продвижением назад.
+    // When limit becomes smaller than current position while moving backward,
+    // start from the last valid variant instead of returning false.
+    // Achieved by resetting navigation state then retreating backward.
     resetVariantNavigation(state)
   }
 
@@ -405,7 +405,6 @@ export function calcArgsIndexes<Args extends Obj>(
 
   const argsNames = state.argsNames
   const argsCount = argsNames.length
-  const indexes: number[] = []
   let belowMax = false
 
   for (let argIndex = 0; argIndex < argsCount; argIndex++) {
@@ -418,8 +417,7 @@ export function calcArgsIndexes<Args extends Obj>(
 
     state.argValues[argIndex] = calcArgValues(state, argName)
 
-    let maxIndex = -1
-    maxIndex = getArgValueMaxIndex(state, argIndex, belowMax)
+    const maxIndex = getArgValueMaxIndex(state, argIndex, belowMax)
     if (maxIndex < 0) {
       return null
     }
@@ -436,8 +434,6 @@ export function calcArgsIndexes<Args extends Obj>(
       return null
     }
 
-    indexes.push(valueIndex)
-
     state.indexes[argIndex] = valueIndex
     state.args[state.argsNames[argIndex]] =
       state.argValues[argIndex][valueIndex]
@@ -446,7 +442,11 @@ export function calcArgsIndexes<Args extends Obj>(
     }
   }
 
-  return indexes
+  if (isVariantNavigationAtLimit(state)) {
+    return null
+  }
+
+  return state.indexes.slice()
 }
 
 /**

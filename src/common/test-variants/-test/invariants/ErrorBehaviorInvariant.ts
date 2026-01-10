@@ -133,7 +133,9 @@ export class ErrorBehaviorInvariant {
             `[test][ErrorBehaviorInvariant] bestError is null but error expected`,
           )
         }
-        if (result.bestError.error !== lastThrownError) {
+        // Skip identity check for parallel > 1: multiple errors on same variant can occur
+        // before limit takes effect, making bestError.error differ from lastThrownError
+        if (parallel <= 1 && result.bestError.error !== lastThrownError) {
           throw new Error(
             `[test][ErrorBehaviorInvariant] bestError.error !== lastThrownError`,
           )

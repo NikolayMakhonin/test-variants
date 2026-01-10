@@ -23,10 +23,14 @@ export type AddLimitOptions<Args extends Obj> = {
   error?: unknown
   /** Number of tests run when this limit is applied */
   tests?: null | number
+}
+
+/** Options for calcIndexes method */
+export type CalcIndexesOptions = {
   /** Limit per-arg indexes; boolean enables/disables, function for custom per-arg logic */
   limitArg?: null | boolean | LimitArgOnError
-  /** Extend template with extra args from limit if they are missing */
-  extendTemplates?: null | boolean
+  /** When true, error variant is included in iteration (for debugging); default false excludes it */
+  includeLimit?: null | boolean
 }
 
 /** Options for creating test variants iterator */
@@ -82,6 +86,13 @@ export type VariantsIterator<Args extends Obj> = {
   readonly tests: number
   /** Add or tighten limit */
   addLimit(options?: null | AddLimitOptions<Args>): void
+  /** Calculate indexes for args; returns null if args not in templates or beyond limit */
+  calcIndexes(
+    args: ArgsWithSeed<Args>,
+    options?: null | CalcIndexesOptions,
+  ): number[] | null
+  /** Extend templates with args values that are not in templates */
+  extendTemplates(args: Args): void
   /** Get next variant or null when done */
   next(): ArgsWithSeed<Args> | null
 }

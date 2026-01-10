@@ -2,6 +2,7 @@ import { deepCloneJsonLike, Obj } from '@flemist/simple-utils'
 import { timeControllerDefault } from '@flemist/time-controller'
 import type {
   AddLimitOptions,
+  CalcIndexesOptions,
   ModeState,
   TestVariantsTemplatesWithExtra,
   VariantNavigationState,
@@ -20,6 +21,7 @@ import {
   advanceVariantNavigation,
   calcArgsIndexes,
   createVariantNavigationState,
+  isVariantNavigationAtLimit,
   randomVariantNavigation,
   retreatVariantNavigation,
 } from './variant-navigation/variantNavigation'
@@ -64,8 +66,8 @@ export function createVariantsIterator<Args extends Obj>(
       : iterationModes
   const modeStates: ModeState<Args>[] = []
 
-  // Dedicated navigation state for computing indexes in addLimit
-  let calcState: VariantNavigationState<Args> | null = null
+  // Dedicated navigation state for computing indexes in calcIndexes
+  let calcState: VariantNavigationState<Args> = null!
 
   let limit: VariantsIteratorLimit<Args> | null = null
   let modeIndex = 0
@@ -80,6 +82,7 @@ export function createVariantsIterator<Args extends Obj>(
       createModeStates()
       modeIndex = 0
       callOnModeChange()
+      createCalcState()
     }
   }
 
@@ -106,6 +109,16 @@ export function createVariantsIterator<Args extends Obj>(
     }
   }
 
+  function createCalcState(): void {
+    calcState = createVariantNavigationState(
+      templates,
+      equals ?? null,
+      // Initial values; overwritten in calcIndexes before each use
+      false,
+      false,
+    )
+  }
+
   // endregion
 
   // region onModeChange
@@ -116,6 +129,48 @@ export function createVariantsIterator<Args extends Obj>(
       modeIndex,
       tests,
     })
+  }
+
+  // endregion
+
+  // region extendTemplates
+
+  /** Extends templates with args values that are not in templates */
+  function extendTemplates(args: Args): void {
+    initialize()
+
+    // Validate args
+    if (!isArgsKeysInTemplate(templates.templates, args)) {
+      return
+    }
+
+    extendTemplatesWithExtraArgs(templates, args, equals)
+  }
+
+  // endregion
+
+  // region calcIndexes
+
+  /**
+   * Calculates indexes for given args according to current templates and limit.
+   * @return null if args keys are not in templates
+   */
+  function calcIndexes(
+    args: ArgsWithSeed<Args>,
+    options?: null | CalcIndexesOptions,
+  ): number[] | null {
+    initialize()
+
+    // Validate args
+    if (!isArgsKeysInTemplate(templates.templates, args)) {
+      return null
+    }
+
+    calcState.limitArgOnError = options?.limitArg ?? limitArgOnError ?? null
+    calcState.includeErrorVariant =
+      options?.includeLimit ?? includeErrorVariant ?? false
+
+    return calcArgsIndexes(calcState, args)
   }
 
   // endregion
@@ -131,34 +186,8 @@ export function createVariantsIterator<Args extends Obj>(
     // Ensure mode states exist before updating limits
     initialize()
 
-    // Validate args
-    if (!isArgsKeysInTemplate(templates.templates, args)) {
-      // TODO: debug log here
-      return
-    }
+    const argLimits = calcIndexes(args)
 
-    // Extend templates with values from args that may not be in templates
-    if (addLimitOptions?.extendTemplates) {
-      extendTemplatesWithExtraArgs(templates, args, equals)
-    }
-
-    // Create or reuse dedicated navigation state for computing indexes
-    if (calcState == null) {
-      calcState = createVariantNavigationState(
-        templates,
-        equals ?? null,
-        // ignore limitArgOnError for correct lexicographic comparison of new limit
-        false,
-        // ignore includeErrorVariant for correct lexicographic comparison of new limit
-        false,
-      )
-    }
-
-    calcState.limitArgOnError =
-      addLimitOptions?.limitArg ?? limitArgOnError ?? null
-
-    // Here we also check that the new limit is stricter than the old one
-    const argLimits = calcArgsIndexes(calcState, args)
     if (argLimits == null) {
       return
     }
@@ -574,6 +603,10 @@ export function createVariantsIterator<Args extends Obj>(
       navigationState.attempts > 0 &&
       navigationState.attempts < attemptsPerVariant
     ) {
+      // Skip remaining attempts if variant became excluded (e.g., after error with includeErrorVariant: false)
+      if (isVariantNavigationAtLimit(navigationState)) {
+        return null
+      }
       navigationState.attempts++
       return injectSeed(navigationState.args)
     }
@@ -660,6 +693,8 @@ export function createVariantsIterator<Args extends Obj>(
     get tests() {
       return tests
     },
+    calcIndexes,
+    extendTemplates,
     addLimit,
     next,
   }
