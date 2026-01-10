@@ -456,9 +456,9 @@ describe('variantNavigation complex', () => {
       Array.from(advanceStates).sort(),
     )
 
-    console.log('advanceStates:', Array.from(advanceStates))
-    console.log('retreatStates:', Array.from(retreatStates))
-    console.log('randomStates:', Array.from(randomStates))
+    // console.log('advanceStates:', Array.from(advanceStates))
+    // console.log('retreatStates:', Array.from(retreatStates))
+    // console.log('randomStates:', Array.from(randomStates))
   })
 
   // Test for resetSubsequent bug in retreatVariantNavigation (line 306)
