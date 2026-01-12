@@ -130,20 +130,6 @@ function isParallelAborted(runContext: RunContext<any>): boolean {
 }
 
 /**
- * Returns next args or null if cycle ended.
- * In debug mode returns same args for replay.
- */
-function getNextArgs<Args extends Obj>(
-  runContext: RunContext<Args>,
-  currentArgs: ArgsWithSeed<Args> | null,
-): ArgsWithSeed<Args> | null {
-  if (runContext.state.debugMode) {
-    return currentArgs
-  }
-  return runContext.variantsIterator.next()
-}
-
-/**
  * Async version of cycle runner.
  * @param pendingArgs - args already fetched in sync mode before switching to async
  */
@@ -154,7 +140,7 @@ async function runCycleAsync<Args extends Obj>(
   const { pool, state, options } = runContext
   const { parallel, logOptions } = options
 
-  let currentArgs: ArgsWithSeed<Args> | null = pendingArgs ?? null
+  let currentArgs: ArgsWithSeed<Args> | null = null
 
   // Only check external abort for cycle continuation
   // Parallel abort (from findBestError) causes fallback to sequential, not cycle exit
@@ -172,12 +158,14 @@ async function runCycleAsync<Args extends Obj>(
     }
 
     try {
-      // Use pending args for first iteration if provided, then fetch new ones
+      if (pendingArgs != null) {
+        currentArgs = pendingArgs
+        pendingArgs = null
+      } else if (!runContext.state.debugMode) {
+        currentArgs = runContext.variantsIterator.next()
+      }
       if (currentArgs == null) {
-        currentArgs = getNextArgs(runContext, currentArgs)
-        if (currentArgs == null) {
-          break
-        }
+        break
       }
 
       const periodicResult = handlePeriodicTasks(runContext)
@@ -186,7 +174,6 @@ async function runCycleAsync<Args extends Obj>(
       }
 
       if (isExternalAborted(runContext)) {
-        currentArgs = null
         continue
       }
 
@@ -205,9 +192,6 @@ async function runCycleAsync<Args extends Obj>(
           await result
         }
       }
-
-      // Clear for next iteration to fetch new args
-      currentArgs = null
     } finally {
       if (slotHeld) {
         void pool!.release(1)
@@ -244,7 +228,9 @@ export function runIterationLoop<Args extends Obj>(
   // Only check external abort for cycle continuation
   // Parallel abort (from findBestError) causes fallback to sequential, not cycle exit
   while (!isExternalAborted(runContext)) {
-    currentArgs = getNextArgs(runContext, currentArgs)
+    if (!runContext.state.debugMode) {
+      currentArgs = runContext.variantsIterator.next()
+    }
     if (currentArgs == null) {
       break
     }
@@ -252,8 +238,7 @@ export function runIterationLoop<Args extends Obj>(
     const periodicResult = handlePeriodicTasks(runContext)
     if (isPromiseLike(periodicResult)) {
       // Switch to async mode, pass current args to continue from this point
-      const args = currentArgs
-      return periodicResult.then(() => runCycleAsync(runContext, args))
+      return periodicResult.then(() => runCycleAsync(runContext, currentArgs))
     }
 
     if (isExternalAborted(runContext)) {
@@ -269,7 +254,6 @@ export function runIterationLoop<Args extends Obj>(
 
     const result = runSequentialTest(runContext, currentArgs)
     if (isPromiseLike(result)) {
-      // Test was already run, continue async without this args
       return result.then(() => runCycleAsync(runContext))
     }
   }
