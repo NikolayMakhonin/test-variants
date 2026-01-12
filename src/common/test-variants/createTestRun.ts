@@ -71,7 +71,8 @@ export function createTestRun<Args extends Obj>(
     const beforeDebugger = Date.now()
 
     if (pauseDebuggerOnError) {
-      Function('debugger')()
+      // eslint-disable-next-line no-debugger
+      debugger
     }
     const pauseDuration = Date.now() - beforeDebugger
 

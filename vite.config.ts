@@ -33,6 +33,11 @@ export default defineConfig(({ mode, isSsrBuild, command }) => {
     build: {
       // minify: mode === 'production',
       // minify: false,
+      terserOptions: {
+        compress: {
+          drop_debugger: false,
+        },
+      },
       lib: {
         entry: {
           'common/index': 'src/common/index.ts',
