@@ -39,10 +39,11 @@ export function createTestRun<Args extends Obj>(
   options: TestVariantsCreateTestRunOptions<Args>,
 ): TestVariantsTestRun<Args> {
   const logOptions = options.log
+  const pauseDebuggerOnError = options.pauseDebuggerOnError ?? true
 
-  // Смысл в том чтобы после итераций отладки, вернуть оригинальную ошибку
-  // А если отладки не было, то вернуть последнюю ошибку,
-  // т.е. отладка не должна никак влиять на другой функционал
+  // Return original error after debug iterations complete
+  // If no debugging occurred, return the last error
+  // Debugging should not affect other functionality
   let firstErrorEvent: ErrorEvent<Args> | null = null
   let debugIterations = 0
 
@@ -69,7 +70,9 @@ export function createTestRun<Args extends Obj>(
 
     const beforeDebugger = Date.now()
 
-    // debugger
+    if (pauseDebuggerOnError) {
+      Function('debugger')()
+    }
     const pauseDuration = Date.now() - beforeDebugger
 
     // Debugger was attached and user stepped through - repeat variant for debugging

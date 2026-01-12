@@ -87,6 +87,8 @@ export type TestVariantsCreateTestRunOptions<Args extends Obj> = {
   onError?: null | OnErrorCallback<Args>
   /** Resolved logging options */
   log: RequiredNonNullable<TestVariantsLogOptions>
+  /** Pause debugger on error */
+  pauseDebuggerOnError?: null | boolean
 }
 
 export type TestVariantsCall<Args extends Obj> = <SavedArgs = Args>(

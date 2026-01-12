@@ -248,6 +248,10 @@ const result = await testVariants({
     tests,     // number of tests run before this mode change
   }) => void | Promise<void>,
 
+  // Pause debugger on error; requires IDE "step into library" enabled
+  // Repeats failing variant up to 5 times in debug mode
+  pauseDebuggerOnError: boolean | null, // default: true
+
   // Time controller for all internal delays, timeouts and getting current time
   // Used inside testVariants instead of direct setTimeout, Date.now calls, etc
   // Intended only for testing and debugging the test-variants library itself

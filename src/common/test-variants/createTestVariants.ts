@@ -19,6 +19,7 @@ export function createTestVariants<Args extends Obj>(
       const testRun = createTestRun<Args>(test, {
         onError: options?.onError,
         log: logOptions,
+        pauseDebuggerOnError: options?.pauseDebuggerOnError,
       })
 
       const timeController = options?.timeController ?? timeControllerDefault

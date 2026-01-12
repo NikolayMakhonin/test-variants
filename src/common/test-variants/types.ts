@@ -251,6 +251,8 @@ export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
   onError?: null | OnErrorCallback<Args>
   /** Callback invoked when iteration mode changes */
   onModeChange?: null | OnModeChangeCallback
+  /** Pause debugger on error */
+  pauseDebuggerOnError?: null | boolean
   /** Wait for garbage collection after iterations */
   GC_Iterations?: null | number
   /** Same as GC_Iterations but only for async test variants, required for 10000 and more of Promise rejections */
