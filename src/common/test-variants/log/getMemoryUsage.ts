@@ -10,7 +10,7 @@ export function getMemoryUsage(): number | null {
   // Node.js
   if (typeof process !== 'undefined' && process.memoryUsage) {
     try {
-      return process.memoryUsage().heapUsed
+      return process.memoryUsage.rss()
     } catch {
       // ignore
     }
