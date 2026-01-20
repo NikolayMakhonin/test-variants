@@ -11,7 +11,6 @@ import { TimeControllerMock } from '@flemist/time-controller'
 import type {
   ModeChangeEvent,
   TestVariantsLogType,
-  TestOptions,
 } from 'src/common/test-variants/types'
 
 describe('README comprehensive', () => {
@@ -128,7 +127,7 @@ describe('README comprehensive', () => {
     const mockTimeController = new TimeControllerMock()
 
     const testVariants = createTestVariants(
-      async (_args: { a: number }, options: TestOptions) => {
+      async (_args: { a: number }, options) => {
         // Check signal state DURING execution, not after completion
         // (cleanup aborts the signal after testVariants returns)
         signalWasAbortedDuringTest = options.abortSignal.aborted
@@ -219,7 +218,7 @@ describe('README comprehensive', () => {
     let signalAbortedInsideTest = false
 
     const testVariants = createTestVariants(
-      async ({ a }: { a: number }, options: TestOptions) => {
+      async ({ a }: { a: number }, options) => {
         callArgs.push(a)
         if (a === 3) {
           abortController.abort()
@@ -723,11 +722,9 @@ describe('README comprehensive', () => {
     const mockTime = new TimeControllerMock()
     let nowCalledValue: number | undefined
 
-    const testVariants = createTestVariants(
-      (_: { a: number }, options: TestOptions) => {
-        nowCalledValue = options.timeController.now()
-      },
-    )
+    const testVariants = createTestVariants((_: { a: number }, options) => {
+      nowCalledValue = options.timeController.now()
+    })
 
     mockTime.addTime(5000)
 

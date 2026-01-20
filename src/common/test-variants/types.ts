@@ -157,7 +157,7 @@ export type SaveErrorVariantsOptions<Args extends Obj, SavedArgs = Args> = {
 // region Test options
 
 /** Options passed to test function */
-export type TestOptions = {
+export type TestVariantsState = {
   abortSignal: IAbortSignalFast
   timeController: ITimeController
 }

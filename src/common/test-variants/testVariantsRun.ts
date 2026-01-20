@@ -14,7 +14,7 @@ import type {
   TestVariantsTestRun,
   TestVariantsRunOptionsInternal,
 } from './run/types'
-import type { TestOptions, TestVariantsResult } from './types'
+import type { TestVariantsState, TestVariantsResult } from './types'
 import { AbortErrorSilent } from 'src/common/test-variants/run/AbortErrorSilent'
 
 export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
@@ -45,12 +45,12 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     abortControllerParallel.signal,
   )
 
-  const testOptions: TestOptions = {
+  const testOptions: TestVariantsState = {
     abortSignal: abortSignalGlobal,
     timeController,
   }
 
-  const testOptionsParallel: TestOptions = {
+  const testOptionsParallel: TestVariantsState = {
     abortSignal: abortSignalParallel,
     timeController,
   }

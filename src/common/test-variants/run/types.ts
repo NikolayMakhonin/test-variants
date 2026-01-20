@@ -8,7 +8,7 @@ import type {
   ArgsWithSeed,
   OnErrorCallback,
   SaveErrorVariantsOptions,
-  TestOptions,
+  TestVariantsState,
   TestVariantsLogOptions,
   TestVariantsResult,
   TestVariantsRunOptions,
@@ -24,7 +24,7 @@ export type TestFuncResult = void | {
 export type TestVariantsTestRun<Args extends Obj> = (
   args: ArgsWithSeed<Args>,
   tests: number,
-  options: TestOptions,
+  options: TestVariantsState,
 ) => PromiseOrValue<TestFuncResult>
 
 /** Result of user's test function (number treated as iterationsSync) */
@@ -33,7 +33,7 @@ export type TestVariantsTestResult = number | void | TestFuncResult
 /** User's test function */
 export type TestVariantsTest<Args extends Obj> = (
   args: ArgsWithSeed<Args>,
-  options: TestOptions,
+  options: TestVariantsState,
 ) => PromiseOrValue<TestVariantsTestResult>
 
 /**
@@ -62,7 +62,7 @@ export type SaveErrorVariantsStoreReplayOptions<Args extends Obj> = {
   /** Iterator to add limits to */
   variantsIterator: VariantsIterator<Args>
   /** Options passed to test function */
-  testOptions: TestOptions
+  testOptions: TestVariantsState
   /** Whether findBestError is enabled */
   findBestErrorEnabled?: null | boolean
 }

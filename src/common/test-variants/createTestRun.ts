@@ -3,7 +3,7 @@ import { formatAny, type Obj } from '@flemist/simple-utils'
 import type {
   ArgsWithSeed,
   ErrorEvent,
-  TestOptions,
+  TestVariantsState,
   TestVariantsTestResult,
 } from './types'
 import type {
@@ -103,7 +103,7 @@ export function createTestRun<Args extends Obj>(
   return function testRun(
     args: ArgsWithSeed<Args>,
     tests: number,
-    testOptions: TestOptions,
+    testOptions: TestVariantsState,
   ): PromiseOrValue<TestFuncResult> {
     try {
       const promiseOrResult = test(args, testOptions)

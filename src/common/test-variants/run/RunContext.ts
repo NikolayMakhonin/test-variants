@@ -5,7 +5,7 @@ import type {
 import type { Obj } from '@flemist/simple-utils'
 import type { IPool } from '@flemist/time-limits'
 import type { VariantsIterator } from '../iterator/types'
-import type { TestOptions } from '../types'
+import type { TestVariantsState } from '../types'
 import type { RunState } from './createRunState'
 import type { RunOptionsResolved } from './resolveRunOptions'
 import type { TestVariantsTestRun } from './types'
@@ -15,8 +15,8 @@ export type RunContext<Args extends Obj> = {
   options: RunOptionsResolved<Args>
   testRun: TestVariantsTestRun<Args>
   variantsIterator: VariantsIterator<Args>
-  testOptions: TestOptions
-  testOptionsParallel: TestOptions
+  testOptions: TestVariantsState
+  testOptionsParallel: TestVariantsState
   abortControllerGlobal: IAbortControllerFast
   abortControllerParallel: IAbortControllerFast
   abortSignal: IAbortSignalFast
