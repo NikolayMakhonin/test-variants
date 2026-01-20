@@ -110,7 +110,7 @@ export type TestVariantsTemplate<Args extends Obj, Value> =
 export type ArgName<Args extends Obj> = Extract<keyof Args, string>
 
 export type TestVariantsTemplates<Args extends Obj> = {
-  [key in ArgName<Args>]: TestVariantsTemplate<Args, Args[key]>
+  [key in keyof Args]: TestVariantsTemplate<Args, Args[key]>
 }
 
 export type TestVariantsTemplatesExtra<Args extends Obj> = {
@@ -151,9 +151,12 @@ export type TestVariantsTemplatesExt<
   Args extends Obj,
   ArgsExtra extends Obj,
 > = TestVariantsTemplates<{
-  [key in ArgName<Args | ArgsExtra>]: key extends ArgName<Args>
+  [key in keyof Args | keyof ArgsExtra]: key extends keyof Args
     ? Args[key]
-    : key extends ArgName<ArgsExtra>
+    : key extends keyof ArgsExtra
       ? ArgsExtra[key]
       : never
-}>
+}> & {
+  /** Use getSeed option instead */
+  seed?: never
+}

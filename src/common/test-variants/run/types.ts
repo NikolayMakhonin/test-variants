@@ -96,5 +96,5 @@ export type TestVariantsCall<Args extends Obj> = <SavedArgs = Args>(
 ) => PromiseOrValue<TestVariantsResult<Args>>
 
 export type TestVariantsSetArgs<Args extends Obj> = <ArgsExtra extends Obj>(
-  args: TestVariantsTemplatesExt<Omit<Args, 'seed'>, Omit<ArgsExtra, 'seed'>>,
+  args: TestVariantsTemplatesExt<Omit<Args, 'seed'>, ArgsExtra>,
 ) => TestVariantsCall<Args>

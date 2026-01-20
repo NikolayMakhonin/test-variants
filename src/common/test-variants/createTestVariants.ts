@@ -51,3 +51,14 @@ export function createTestVariants<Args extends Obj>(
     }
   }
 }
+
+/*
+const testVariants = createTestVariants((args: { x: number; y: string }) => {})
+const result = testVariants({
+  x: [1, 2, 3],
+  y: ['a', 'b'],
+  z: [true, false],
+  seed: [42],
+  f: ({ x, y, z, seed }) => [[x, y, z, seed]],
+})()
+*/

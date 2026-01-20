@@ -36,7 +36,7 @@ export function createTestVariants<Args extends Obj>(
 ): TestVariantsSetArgs<Args> {
   const setArgs = createTestVariantsCommon(test)
   return function testVariantsArgs<ArgsExtra extends Obj>(
-    args: TestVariantsTemplatesExt<Omit<Args, 'seed'>, Omit<ArgsExtra, 'seed'>>,
+    args: TestVariantsTemplatesExt<Omit<Args, 'seed'>, ArgsExtra>,
   ): TestVariantsCall<Args> {
     const call = setArgs(args)
     return function testVariantsCall(options) {
