@@ -1,10 +1,11 @@
 import type {
+  TestVariantsLogFormat,
   TestVariantsLogFunc,
   TestVariantsLogOptions,
   TestVariantsLogType,
 } from 'src/common/test-variants/types'
 import { log } from 'src/common/helpers/log'
-import type { RequiredNonNullable } from '@flemist/simple-utils'
+import { formatAny, type RequiredNonNullable } from '@flemist/simple-utils'
 
 /** Default log function - outputs using log helper */
 const logFuncDefault: TestVariantsLogFunc = (
@@ -12,6 +13,21 @@ const logFuncDefault: TestVariantsLogFunc = (
   message: string,
 ): void => {
   log(message)
+}
+
+/** Default format function */
+const logFormatDefault: TestVariantsLogFormat = (obj: any): string => {
+  return formatAny(obj, {
+    pretty: true,
+    maxDepth: 20,
+    maxItems: 100,
+    maxStringLength: 5000,
+    customToString: o => {
+      if (typeof o === 'function') {
+        return `function ${o.name || 'anonymous'}()`
+      }
+    },
+  })
 }
 
 /** Default log options when logging is enabled */
@@ -23,6 +39,7 @@ export const logOptionsDefault: RequiredNonNullable<TestVariantsLogOptions> = {
   modeChange: true,
   debug: false,
   func: logFuncDefault,
+  format: logFormatDefault,
 }
 
 /** Log options when logging is disabled */
@@ -34,6 +51,7 @@ export const logOptionsDisabled: RequiredNonNullable<TestVariantsLogOptions> = {
   modeChange: false,
   debug: false,
   func: logFuncDefault,
+  format: logFormatDefault,
 }
 
 /** Resolve log options from various input formats */
@@ -54,5 +72,6 @@ export function resolveLogOptions(
     modeChange: logRaw.modeChange ?? logOptionsDefault.modeChange,
     debug: logRaw.debug ?? logOptionsDefault.debug,
     func: logRaw.func ?? logOptionsDefault.func,
+    format: logRaw.format ?? logOptionsDefault.format,
   }
 }

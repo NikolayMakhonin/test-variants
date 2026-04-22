@@ -1,5 +1,5 @@
 import { isPromiseLike, type PromiseOrValue } from '@flemist/async-utils'
-import { formatAny, type Obj } from '@flemist/simple-utils'
+import type { Obj } from '@flemist/simple-utils'
 import type {
   ArgsWithSeed,
   ErrorEvent,
@@ -63,7 +63,7 @@ export function createTestRun<Args extends Obj>(
       if (logOptions.error) {
         logOptions.func(
           'error',
-          `[test-variants] error variant: ${formatAny(args, { pretty: true })}\ntests: ${tests}\n${formatAny(error)}`,
+          `[test-variants] error variant: ${logOptions.format(args)}\ntests: ${tests}\n${logOptions.format(error)}`,
         )
       }
     }

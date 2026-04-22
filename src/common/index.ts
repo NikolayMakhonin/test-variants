@@ -12,6 +12,7 @@ export {
   type SaveErrorVariantsOptions,
   type TestVariantsBestError,
   type FindBestErrorOptions,
+  type TestVariantsLogFormat,
   type TestVariantsLogOptions,
   type TestVariantsRunOptions,
   type TestVariantsResult,

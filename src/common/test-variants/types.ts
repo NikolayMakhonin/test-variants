@@ -95,13 +95,19 @@ export type LimitArgOnError = (options: LimitArgOnErrorOptions) => boolean
 // region Log options
 
 /** Log entry type for custom log function */
-export type TestVariantsLogType = Exclude<keyof TestVariantsLogOptions, 'func'>
+export type TestVariantsLogType = Exclude<
+  keyof TestVariantsLogOptions,
+  'func' | 'format'
+>
 
 /** Custom log function signature */
 export type TestVariantsLogFunc = (
   type: TestVariantsLogType,
   message: string,
 ) => void
+
+/** Custom format function for log output; converts any value to string */
+export type TestVariantsLogFormat = (obj: any) => string
 
 /** Logging options for test-variants */
 export type TestVariantsLogOptions = {
@@ -119,6 +125,8 @@ export type TestVariantsLogOptions = {
   debug?: null | boolean
   /** Custom log function; receives log type and formatted message */
   func?: null | TestVariantsLogFunc
+  /** Custom formatter for objects in log messages */
+  format?: null | TestVariantsLogFormat
 }
 
 // endregion

@@ -97,6 +97,9 @@ const result = await testVariants({
     debug: boolean,           // default: false
     // custom log function; receives log type and formatted message
     func: (type: 'start' | 'progress' | 'completed' | 'error' | 'modeChange' | 'debug', message: string) => void,
+    // custom formatter for objects in log messages (args, errors, etc)
+    // default uses formatAny with pretty printing
+    format: (obj: any) => string,
   },
 
   // for aborting async operations inside the test
