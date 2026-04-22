@@ -22,11 +22,8 @@ const logFormatDefault: TestVariantsLogFormat = (obj: any): string => {
     maxDepth: 20,
     maxItems: 100,
     maxStringLength: 5000,
-    customToString: o => {
-      if (typeof o === 'function') {
-        return `function ${o.name || 'anonymous'}()`
-      }
-    },
+    dontExpandClassInstances: true,
+    dontExpandFunctions: true,
   })
 }
 
