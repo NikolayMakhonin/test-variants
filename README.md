@@ -235,6 +235,22 @@ const result = await testVariants({
     extendTemplates: boolean, // default: false
   },
 
+  // Called before each single test run
+  onStart: ({
+    args,   // test parameters of the variant about to run (includes seed if getSeed is set)
+    tests,  // index of this test run; equals total tests run before this one (including attemptsPerVariant)
+  }) => void | Promise<void>,
+
+  // Called after each single test run, on both success and error
+  // On success: result is set, error is absent
+  // On error: error is set, result is absent
+  onEnd: ({
+    args,    // test parameters of the variant that just ran (includes seed if getSeed is set)
+    tests,   // index of this test run; same value as in the matching onStart event
+    result,  // { iterationsSync, iterationsAsync } returned by the test; absent on error
+    error,   // the error caught via try..catch; absent on success
+  }) => void | Promise<void>,
+
   // Called when an error occurs in the test
   // before logging and throwing exception
   onError: ({

@@ -7,6 +7,8 @@ import type {
 import type {
   ArgsWithSeed,
   OnErrorCallback,
+  OnTestEndCallback,
+  OnTestStartCallback,
   SaveErrorVariantsOptions,
   TestVariantsState,
   TestVariantsLogOptions,
@@ -15,7 +17,7 @@ import type {
 } from '../types'
 
 /** Result of test run (internal format with separate sync/async counts) */
-export type TestFuncResult = void | {
+export type TestFuncResult = {
   iterationsAsync: number
   iterationsSync: number
 }
@@ -25,7 +27,7 @@ export type TestVariantsTestRun<Args extends Obj> = (
   args: ArgsWithSeed<Args>,
   tests: number,
   options: TestVariantsState,
-) => PromiseOrValue<TestFuncResult>
+) => PromiseOrValue<void | TestFuncResult>
 
 /** Result of user's test function (number treated as iterationsSync) */
 export type TestVariantsTestResult = number | void | TestFuncResult
@@ -84,6 +86,8 @@ export type TestVariantsRunOptionsInternal<
 }
 
 export type TestVariantsCreateTestRunOptions<Args extends Obj> = {
+  onStart?: null | OnTestStartCallback<Args>
+  onEnd?: null | OnTestEndCallback<Args>
   onError?: null | OnErrorCallback<Args>
   /** Resolved logging options */
   log: RequiredNonNullable<TestVariantsLogOptions>

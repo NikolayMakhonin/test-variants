@@ -40,6 +40,8 @@ export function createTestRun<Args extends Obj>(
 ): TestVariantsTestRun<Args> {
   const logOptions = options.log
   const pauseDebuggerOnError = options.pauseDebuggerOnError ?? true
+  const onStart = options.onStart
+  const onEnd = options.onEnd
 
   // Return original error after debug iterations complete
   // If no debugging occurred, return the last error
@@ -104,21 +106,42 @@ export function createTestRun<Args extends Obj>(
     args: ArgsWithSeed<Args>,
     tests: number,
     testOptions: TestVariantsState,
-  ): PromiseOrValue<TestFuncResult> {
+  ): PromiseOrValue<void | TestFuncResult> {
+    if (onStart) {
+      onStart({ args, tests })
+    }
     try {
       const promiseOrResult = test(args, testOptions)
 
       if (isPromiseLike(promiseOrResult)) {
         return promiseOrResult.then(
-          value => normalizeTestResult(value, true),
-          err => handleTestError(err, args, tests),
+          value => {
+            const result = normalizeTestResult(value, true)
+            if (onEnd) {
+              onEnd({ args, tests, result })
+            }
+            return result
+          },
+          err => {
+            if (onEnd && !(err instanceof AbortErrorSilent)) {
+              onEnd({ args, tests, error: err })
+            }
+            return handleTestError(err, args, tests)
+          },
         )
       }
 
-      return normalizeTestResult(promiseOrResult, false)
+      const result = normalizeTestResult(promiseOrResult, false)
+      if (onEnd) {
+        onEnd({ args, tests, result })
+      }
+      return result
     } catch (err) {
       if (err instanceof AbortErrorSilent) {
         return
+      }
+      if (onEnd) {
+        onEnd({ args, tests, error: err })
       }
       return handleTestError(err, args, tests)
     }

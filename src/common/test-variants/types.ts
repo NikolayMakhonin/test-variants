@@ -2,6 +2,7 @@ import type { IAbortSignalFast } from '@flemist/abort-controller-fast'
 import type { PromiseOrValue } from '@flemist/async-utils'
 import type { Obj } from '@flemist/simple-utils'
 import type { ITimeController } from '@flemist/time-controller'
+import type { TestFuncResult } from './run/types'
 
 // region Re-exports for public types from submodules
 
@@ -223,6 +224,40 @@ export type OnErrorCallback<Args extends Obj> = (
 
 // endregion
 
+// region Test start event
+
+/** Test start event passed to onStart callback */
+export type TestStartEvent<Args extends Obj> = {
+  /** Args of the variant about to run (including seed if getSeed provided) */
+  args: Args
+  /** Index of this test run; equals total tests run before this one (including attemptsPerVariant) */
+  tests: number
+}
+
+/** Callback invoked before each single test run */
+export type OnTestStartCallback<Args extends Obj> = (
+  event: TestStartEvent<Args>,
+) => PromiseOrValue<void>
+
+// endregion
+
+// region Test end event
+
+/** Test end event passed to onEnd callback */
+export type TestEndEvent<Args extends Obj> = TestStartEvent<Args> & {
+  /** Iteration counts returned by the test; absent when the test threw */
+  result?: TestFuncResult
+  /** Error thrown by the test; absent on success */
+  error?: any
+}
+
+/** Callback invoked after each single test run, on both success and error */
+export type OnTestEndCallback<Args extends Obj> = (
+  event: TestEndEvent<Args>,
+) => PromiseOrValue<void>
+
+// endregion
+
 // region Mode change event
 
 /** Mode change event passed to onModeChange callback */
@@ -255,6 +290,10 @@ export type ParallelOptions = {
 // region Run options
 
 export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
+  /** Callback invoked before each single test run */
+  onStart?: null | OnTestStartCallback<Args>
+  /** Callback invoked after each single test run, on both success and error */
+  onEnd?: null | OnTestEndCallback<Args>
   /** Callback invoked when a test variant throws an error */
   onError?: null | OnErrorCallback<Args>
   /** Callback invoked when iteration mode changes */

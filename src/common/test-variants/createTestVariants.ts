@@ -17,6 +17,8 @@ export function createTestVariants<Args extends Obj>(
     return async function testVariantsCall(options) {
       const logOptions = resolveLogOptions(options?.log)
       const testRun = createTestRun<Args>(test, {
+        onStart: options?.onStart,
+        onEnd: options?.onEnd,
         onError: options?.onError,
         log: logOptions,
         pauseDebuggerOnError: options?.pauseDebuggerOnError,
