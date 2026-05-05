@@ -326,8 +326,12 @@ export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
   limitTime?: null | number
   /** Time controller for testable time-dependent operations; null uses timeControllerDefault */
   timeController?: null | ITimeController
+  /** Throws TimeoutError if single test run exceeds this timeout. Minimum is 100ms */
+  timeout?: null | number | ((args: Args) => number | null | undefined)
 }
 
 // endregion
 
 // endregion
+
+export class TimeoutError extends Error {}

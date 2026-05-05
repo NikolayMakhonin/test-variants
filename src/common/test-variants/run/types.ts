@@ -93,6 +93,8 @@ export type TestVariantsCreateTestRunOptions<Args extends Obj> = {
   log: RequiredNonNullable<TestVariantsLogOptions>
   /** Pause debugger on error */
   pauseDebuggerOnError?: null | boolean
+  /** Throws TimeoutError if single test run exceeds this timeout. Minimum is 100ms */
+  timeout?: null | number | ((args: Args) => number | null | undefined)
 }
 
 export type TestVariantsCall<Args extends Obj> = <SavedArgs = Args>(

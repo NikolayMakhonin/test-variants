@@ -275,6 +275,11 @@ const result = await testVariants({
   // Used inside testVariants instead of direct setTimeout, Date.now calls, etc
   // Intended only for testing and debugging the test-variants library itself
   timeController: ITimeController, // default: null - use timeControllerDefault
+
+  // Maximum duration for a single test run (milliseconds)
+  // Throws TimeoutError if exceeded
+  // Function form returns timeout per variant; null/undefined disables for that variant
+  timeout: number | ((args: Args) => number | null | undefined), // default: null - no timeout
 })
 
 // Result:

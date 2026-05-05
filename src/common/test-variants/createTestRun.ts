@@ -1,10 +1,16 @@
-import { isPromiseLike, type PromiseOrValue } from '@flemist/async-utils'
-import type { Obj } from '@flemist/simple-utils'
-import type {
-  ArgsWithSeed,
-  ErrorEvent,
-  TestVariantsState,
-  TestVariantsTestResult,
+import {
+  abortSignalToPromise,
+  combineAbortSignals,
+  isPromiseLike,
+  type PromiseOrValue,
+} from '@flemist/async-utils'
+import type { Obj, Unsubscribe } from '@flemist/simple-utils'
+import {
+  type ArgsWithSeed,
+  type ErrorEvent,
+  type TestVariantsState,
+  type TestVariantsTestResult,
+  TimeoutError,
 } from './types'
 import type {
   TestFuncResult,
@@ -13,11 +19,30 @@ import type {
   TestVariantsTestRun,
 } from './run/types'
 import { AbortErrorSilent } from 'src/common/test-variants/run/AbortErrorSilent'
+import { NowObservable } from './NowObservable'
+import { AbortControllerFast } from '@flemist/abort-controller-fast'
 
 /** Minimum pause time (ms) to detect JS debugger stepping */
 const DEBUG_PAUSE_THRESHOLD_MS = 50
 /** Maximum debug iterations before throwing error */
 const MAX_DEBUG_ITERATIONS = 5
+
+function resolveTimeout<Args extends Obj>(
+  timeout:
+    | null
+    | undefined
+    | number
+    | ((args: Args) => number | null | undefined),
+  args: Args,
+): number | null {
+  if (timeout == null) {
+    return null
+  }
+  if (typeof timeout === 'number') {
+    return timeout
+  }
+  return timeout(args) ?? null
+}
 
 function normalizeTestResult(
   value: TestVariantsTestResult,
@@ -56,7 +81,7 @@ export function createTestRun<Args extends Obj>(
    * - Debugger is attached (pause > threshold)
    * - Debug iteration limit not reached
    *
-   * Otherwise throws the error.
+   * Otherwise, throws the error.
    */
   function handleTestError(error: unknown, args: Args, tests: number): void {
     if (firstErrorEvent == null) {
@@ -102,6 +127,8 @@ export function createTestRun<Args extends Obj>(
     throw errorEvent.error
   }
 
+  const nowObservable = new NowObservable(100)
+
   return function testRun(
     args: ArgsWithSeed<Args>,
     tests: number,
@@ -110,12 +137,53 @@ export function createTestRun<Args extends Obj>(
     if (onStart) {
       onStart({ args, tests })
     }
+
+    const timeoutTime = resolveTimeout(options.timeout, args)
+    let timeStart: number | null = null
+    let actualTestOptions = testOptions
+    let timeoutAbortController: AbortControllerFast | null = null
+    if (timeoutTime) {
+      timeStart = Date.now()
+      timeoutAbortController = new AbortControllerFast()
+      const abortSignal = combineAbortSignals(
+        testOptions.abortSignal,
+        timeoutAbortController.signal,
+      )
+      actualTestOptions = {
+        abortSignal,
+        timeController: testOptions.timeController,
+      }
+    }
+
+    function abortTimeout(): void {
+      timeoutAbortController!.abort(
+        new TimeoutError(
+          `[test-variants] test timeout ${timeoutTime}ms exceeded`,
+        ),
+      )
+    }
+
     try {
-      const promiseOrResult = test(args, testOptions)
+      let promiseOrResult = test(args, actualTestOptions)
 
       if (isPromiseLike(promiseOrResult)) {
+        let timeoutUnsubscribe: Unsubscribe | null = null
+        if (timeoutAbortController) {
+          timeoutUnsubscribe = nowObservable.subscribe(() => {
+            if (Date.now() - timeStart! >= timeoutTime!) {
+              abortTimeout()
+              timeoutUnsubscribe!()
+            }
+          })
+          promiseOrResult = Promise.race([
+            promiseOrResult,
+            abortSignalToPromise(timeoutAbortController.signal),
+          ])
+        }
+
         return promiseOrResult.then(
           value => {
+            timeoutUnsubscribe?.()
             const result = normalizeTestResult(value, true)
             if (onEnd) {
               onEnd({ args, tests, result })
@@ -123,12 +191,18 @@ export function createTestRun<Args extends Obj>(
             return result
           },
           err => {
+            timeoutUnsubscribe?.()
             if (onEnd && !(err instanceof AbortErrorSilent)) {
               onEnd({ args, tests, error: err })
             }
             return handleTestError(err, args, tests)
           },
         )
+      }
+
+      if (timeStart != null && Date.now() - timeStart >= timeoutTime!) {
+        abortTimeout()
+        timeoutAbortController!.signal.throwIfAborted()
       }
 
       const result = normalizeTestResult(promiseOrResult, false)

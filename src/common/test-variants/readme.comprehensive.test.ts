@@ -786,6 +786,87 @@ describe('README comprehensive', () => {
 
   // endregion
 
+  // region timeout
+
+  it('timeout: async test exceeding timeout throws TimeoutError', async () => {
+    const testVariants = createTestVariants(async ({ a }: { a: number }) => {
+      await new Promise(r => setTimeout(r, a))
+    })
+
+    await expect(
+      testVariants({ a: [500] })({
+        log: false,
+        timeout: 100,
+      }),
+    ).rejects.toThrow('timeout')
+  })
+
+  it('timeout: async test completing before timeout succeeds', async () => {
+    const calls: number[] = []
+
+    const testVariants = createTestVariants(async ({ a }: { a: number }) => {
+      await new Promise(r => setTimeout(r, 10))
+      calls.push(a)
+    })
+
+    await testVariants({ a: [1, 2, 3] })({
+      log: false,
+      timeout: 5000,
+    })
+
+    expect(calls).toEqual([1, 2, 3])
+  })
+
+  it('timeout: function form receives args and returns per-variant timeout', async () => {
+    const errors: number[] = []
+
+    const testVariants = createTestVariants(async ({ a }: { a: number }) => {
+      await new Promise(r => setTimeout(r, 200))
+    })
+
+    await testVariants({ a: [1, 2] })({
+      log: false,
+      timeout: ({ a }) => (a === 1 ? 100 : 5000),
+      onError: event => errors.push((event.args as { a: number }).a),
+      findBestError: { dontThrowIfError: true },
+    })
+
+    expect(errors).toContain(1)
+  })
+
+  it('timeout: null from function form disables timeout for that variant', async () => {
+    const calls: number[] = []
+
+    const testVariants = createTestVariants(async ({ a }: { a: number }) => {
+      await new Promise(r => setTimeout(r, 10))
+      calls.push(a)
+    })
+
+    await testVariants({ a: [1, 2] })({
+      log: false,
+      timeout: () => null,
+    })
+
+    expect(calls).toEqual([1, 2])
+  })
+
+  it('timeout: sync tests are not affected by timeout', async () => {
+    const calls: number[] = []
+
+    const testVariants = createTestVariants(({ a }: { a: number }) => {
+      calls.push(a)
+    })
+
+    await testVariants({ a: [1, 2, 3] })({
+      log: false,
+      timeout: 1,
+    })
+
+    expect(calls).toEqual([1, 2, 3])
+  })
+
+  // endregion
+
   // region Sync mode optimization
 
   it('sync tests execute synchronously (no await overhead)', async () => {
