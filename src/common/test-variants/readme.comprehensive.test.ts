@@ -850,7 +850,7 @@ describe('README comprehensive', () => {
     expect(calls).toEqual([1, 2])
   })
 
-  it('timeout: sync tests are not affected by timeout', async () => {
+  it('timeout: sync test completing within timeout succeeds', async () => {
     const calls: number[] = []
 
     const testVariants = createTestVariants(({ a }: { a: number }) => {
