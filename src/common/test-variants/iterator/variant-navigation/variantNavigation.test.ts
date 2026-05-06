@@ -421,7 +421,7 @@ describe('variantNavigation complex', () => {
         templates: {
           a: [1, 2],
           b: ({ a }) => (a % 2 === 0 ? [] : [3, 4]),
-          c: ({ b }: { b: number }) => (b % 2 === 1 ? [5, 6] : [7, 8, 9]),
+          c: ({ b }) => ((b as number) % 2 === 1 ? [5, 6] : [7, 8, 9]),
         },
         extra: {},
       },
