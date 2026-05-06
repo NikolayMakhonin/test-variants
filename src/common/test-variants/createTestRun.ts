@@ -2,9 +2,10 @@ import {
   abortSignalToPromise,
   combineAbortSignals,
   isPromiseLike,
+  type Obj,
   type PromiseOrValue,
-} from '@flemist/async-utils'
-import type { Obj, Unsubscribe } from '@flemist/simple-utils'
+  type Unsubscribe,
+} from '@flemist/simple-utils'
 import {
   type ArgsWithSeed,
   type ErrorEvent,
@@ -170,7 +171,7 @@ export function createTestRun<Args extends Obj>(
         let timeoutUnsubscribe: Unsubscribe | null = null
         if (timeoutAbortController) {
           timeoutUnsubscribe = nowObservable.subscribe(() => {
-            if (Date.now() - timeStart! >= timeoutTime!) {
+            if (Date.now() - timeStart! > timeoutTime!) {
               abortTimeout()
               timeoutUnsubscribe!()
             }
@@ -200,7 +201,7 @@ export function createTestRun<Args extends Obj>(
         )
       }
 
-      if (timeStart != null && Date.now() - timeStart >= timeoutTime!) {
+      if (timeStart != null && Date.now() - timeStart > timeoutTime!) {
         abortTimeout()
         timeoutAbortController!.signal.throwIfAborted()
       }

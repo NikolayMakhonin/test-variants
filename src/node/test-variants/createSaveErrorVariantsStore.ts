@@ -1,6 +1,9 @@
 import * as path from 'path'
-import { isPromiseLike } from '@flemist/async-utils'
-import { deepEqualJsonLike, type Obj } from '@flemist/simple-utils'
+import {
+  deepEqualJsonLike,
+  isPromiseLike,
+  type Obj,
+} from '@flemist/simple-utils'
 import { fileLock } from '@flemist/simple-utils/node'
 import type {
   ArgsWithSeed,

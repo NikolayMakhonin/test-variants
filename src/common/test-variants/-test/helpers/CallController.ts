@@ -4,7 +4,7 @@ import {
   IAbortSignalFast,
 } from '@flemist/abort-controller-fast'
 import { TimeControllerMock } from '@flemist/time-controller'
-import { delay, PromiseOrValue } from '@flemist/async-utils'
+import { delay, PromiseOrValue } from '@flemist/simple-utils'
 import { isLogEnabled } from '../log'
 import { log } from 'src/common/helpers/log'
 import type { TestFuncResult } from 'src/common/test-variants/run/types'

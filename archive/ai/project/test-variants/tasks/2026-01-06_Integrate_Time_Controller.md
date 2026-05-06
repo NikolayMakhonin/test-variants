@@ -5,7 +5,7 @@ import type {
   TimeControllerMock, // manually control only
   timeControllerDefault, // based on setTimeout
 } from '@flemist/time-controller'
-import { delay, waitMicrotasks } from '@flemist/async-utils'
+import { delay, waitMicrotasks } from '@flemist/simple-utils'
 
 const timeController = new TimeControllerMock()
 

@@ -1,6 +1,5 @@
 import { AbortControllerFast } from '@flemist/abort-controller-fast'
-import { combineAbortSignals } from '@flemist/async-utils'
-import type { Obj } from '@flemist/simple-utils'
+import { combineAbortSignals, type Obj } from '@flemist/simple-utils'
 import { Pool } from '@flemist/time-limits'
 import { garbageCollect } from 'src/common/garbage-collect/garbageCollect'
 import type { VariantsIterator } from './iterator/types'

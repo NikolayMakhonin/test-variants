@@ -1,5 +1,5 @@
 import { resetLog } from 'src/common/helpers/log'
-import { isPromiseLike } from '@flemist/async-utils'
+import { isPromiseLike } from '@flemist/simple-utils'
 
 export let logEnabled = false
 

@@ -1,5 +1,8 @@
-import type { PromiseOrValue } from '@flemist/async-utils'
-import type { Obj, RequiredNonNullable } from '@flemist/simple-utils'
+import type {
+  Obj,
+  PromiseOrValue,
+  RequiredNonNullable,
+} from '@flemist/simple-utils'
 import type {
   TestVariantsTemplatesExt,
   VariantsIterator,

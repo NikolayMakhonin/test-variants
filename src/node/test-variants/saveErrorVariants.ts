@@ -1,7 +1,6 @@
 import * as fs from 'fs'
 import * as path from 'path'
-import { formatDateFileName } from '@flemist/simple-utils'
-import type { Obj } from '@flemist/simple-utils'
+import { formatDateFileName, type Obj } from '@flemist/simple-utils'
 import type {
   ArgsWithSeed,
   GenerateErrorVariantFilePathOptions,

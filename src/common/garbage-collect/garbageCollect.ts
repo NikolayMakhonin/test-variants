@@ -1,4 +1,4 @@
-import { waitMicrotasks } from '@flemist/async-utils'
+import { waitMicrotasks } from '@flemist/simple-utils'
 
 /**
  * Wait for garbage collection and return 0.

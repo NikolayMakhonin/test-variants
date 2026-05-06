@@ -1,6 +1,5 @@
 import type { IAbortSignalFast } from '@flemist/abort-controller-fast'
-import type { PromiseOrValue } from '@flemist/async-utils'
-import type { Obj } from '@flemist/simple-utils'
+import type { Obj, PromiseOrValue } from '@flemist/simple-utils'
 import type { ITimeController } from '@flemist/time-controller'
 import type { TestFuncResult } from './run/types'
 

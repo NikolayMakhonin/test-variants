@@ -1,5 +1,8 @@
-import { isPromiseLike, type PromiseOrValue } from '@flemist/async-utils'
-import type { Obj } from '@flemist/simple-utils'
+import {
+  isPromiseLike,
+  type Obj,
+  type PromiseOrValue,
+} from '@flemist/simple-utils'
 import { poolWait } from '@flemist/time-limits'
 import type { ArgsWithSeed } from '../types'
 import { handleErrorParallel, handleErrorSequential } from './errorHandlers'

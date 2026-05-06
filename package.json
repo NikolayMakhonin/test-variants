@@ -1,6 +1,6 @@
 {
   "name": "@flemist/test-variants",
-  "version": "5.0.13",
+  "version": "5.0.14",
   "description": "Runs a test function with all possible combinations of its parameters.",
   "sideEffects": false,
   "types": "build/common/index.d.ts",
@@ -143,8 +143,7 @@
   },
   "dependencies": {
     "@flemist/abort-controller-fast": "^1.0.0",
-    "@flemist/async-utils": "^1.2.8",
-    "@flemist/simple-utils": "^2.1.15",
+    "@flemist/simple-utils": "^2.2.2",
     "@flemist/time-controller": "^1.0.4",
     "@flemist/time-limits": "^2.0.4",
     "tslib": ">=2.8.1"

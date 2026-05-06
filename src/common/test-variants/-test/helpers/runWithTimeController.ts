@@ -1,5 +1,5 @@
 import type { TimeControllerMock } from '@flemist/time-controller'
-import { isPromiseLike, waitTimeControllerMock } from '@flemist/async-utils'
+import { isPromiseLike, waitTimeControllerMock } from '@flemist/simple-utils'
 import { TestError } from './TestError'
 
 export type AwaitResult<T> = {
