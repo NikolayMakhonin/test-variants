@@ -827,7 +827,9 @@ describe('README comprehensive', () => {
     await testVariants({ a: [1, 2] })({
       log: false,
       timeout: ({ a }) => (a === 1 ? 100 : 5000),
-      onError: event => errors.push((event.args as { a: number }).a),
+      onError: event => {
+        errors.push((event.args as { a: number }).a)
+      },
       findBestError: { dontThrowIfError: true },
     })
 
