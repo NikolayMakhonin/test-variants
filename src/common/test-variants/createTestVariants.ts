@@ -16,6 +16,10 @@ export function createTestVariants<Args extends Obj>(
   return function testVariantsArgs(args) {
     return async function testVariantsCall(options) {
       const logOptions = resolveLogOptions(options?.log)
+      const timeController = options?.timeController ?? timeControllerDefault
+      const startMemory = getMemoryUsage()
+      const state = createRunState(timeController, startMemory)
+
       const testRun = createTestRun<Args>(test, {
         onStart: options?.onStart,
         onEnd: options?.onEnd,
@@ -23,11 +27,8 @@ export function createTestVariants<Args extends Obj>(
         log: logOptions,
         pauseDebuggerOnError: options?.pauseDebuggerOnError,
         timeout: options?.timeout,
+        state,
       })
-
-      const timeController = options?.timeController ?? timeControllerDefault
-      const startMemory = getMemoryUsage()
-      const state = createRunState(timeController, startMemory)
 
       const userOnModeChange = options?.onModeChange
       function onModeChange(event: ModeChangeEvent): void {

@@ -119,6 +119,9 @@ const result = await testVariants({
   // Maximum total number of tests run (including attemptsPerVariant)
   limitTests: number,         // default: null - unlimited
   // Maximum total runtime of testVariants
+  // Does not interrupt a running test, only prevents starting the next iteration
+  // Use timeout to interrupt individual tests
+  // Not applied during saveErrorVariants replay to ensure all previously failing variants are verified
   limitTime: number,          // default: null - unlimited, (milliseconds)
   // Test terminates when min(completedCount) across sequential modes (forward/backward) >= cycles
   // Random mode is excluded from this calculation - it is limited only by global limits
@@ -143,6 +146,7 @@ const result = await testVariants({
       // maximum number of attempted full passes of all variants, before mode switch
       cycles: number,             // default: 1
       // maximum runtime before mode switch
+      // does not interrupt a running test, only prevents starting the next iteration
       limitTime: number,          // default: null - unlimited, (milliseconds)
       // maximum number of tests run before mode switch (including attemptsPerVariant)
       limitTests: number,         // default: null - unlimited
@@ -321,11 +325,11 @@ The internal implementation operates in a faster synchronous mode (without await
 ```
 [test-variants] start, memory: 139MB
 [test-variants] mode[0]: random
-[test-variants] cycle: 3, variant: 65 (1.0s), tests: 615 (5.0s), async: 12, memory: 148MB (+8.8MB)
+[test-variants] cycle: 3, variant: 65 (1.0s), tests: 615 (5.0s), maxTime: 0.1s, async: 12, memory: 148MB (+8.8MB)
 [test-variants] mode[1]: backward, limitTests=10
-[test-variants] cycle: 5, variant: 65/100 (2.0s), tests: 615 (6.0s), async: 123, memory: 139MB (-8.8MB)
+[test-variants] cycle: 5, variant: 65/100 (2.0s), tests: 615 (6.0s), maxTime: 0.2s, async: 123, memory: 139MB (-8.8MB)
 [test-variants] mode[2]: forward, limitTests=100, limitTime=10.9m
-[test-variants] end, tests: 815 (7.0s), async: 123, memory: 138MB (-1.0MB)
+[test-variants] end, tests: 815 (7.0s), maxTime: 0.2s, async: 123, memory: 138MB (-1.0MB)
 ...
 ```
 

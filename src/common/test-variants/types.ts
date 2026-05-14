@@ -26,7 +26,7 @@ export type ArgsWithSeed<Args extends Obj> = Args & { seed: any }
 
 /** Base mode configuration shared by all modes */
 export type BaseModeConfig = {
-  /** Maximum time in ms for this phase */
+  /** Maximum time in ms for this phase; does not interrupt a running test, only prevents starting the next iteration */
   limitTime?: null | number
   /** Maximum total picks in this phase */
   limitTests?: null | number
@@ -321,11 +321,11 @@ export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
   saveErrorVariants?: null | SaveErrorVariantsOptions<Args, SavedArgs>
   /** Tests only first N variants, ignores the rest. If null or not specified, tests all variants */
   limitTests?: null | number
-  /** Maximum test run duration in milliseconds; when exceeded, iteration stops and current results are returned */
+  /** Maximum total duration in milliseconds; does not interrupt a running test, only prevents starting the next iteration; use timeout to interrupt individual tests; not applied during saveErrorVariants replay to ensure all previously failing variants are verified */
   limitTime?: null | number
   /** Time controller for testable time-dependent operations; null uses timeControllerDefault */
   timeController?: null | ITimeController
-  /** Throws TimeoutError if single test run exceeds this timeout. Minimum is 100ms */
+  /** Throws TimeoutError if single test run exceeds this timeout */
   timeout?: null | number | ((args: Args) => number | null | undefined)
 }
 

@@ -60,6 +60,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
       variantsIterator,
       testOptions,
       findBestErrorEnabled: !!findBestError,
+      state,
     })
   }
 

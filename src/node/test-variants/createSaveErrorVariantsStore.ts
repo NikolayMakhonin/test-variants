@@ -54,8 +54,13 @@ class SaveErrorVariantsStoreNode<Args extends Obj, SavedArgs = Args>
   async replay(
     options: SaveErrorVariantsStoreReplayOptions<Args>,
   ): Promise<void> {
-    const { testRun, variantsIterator, testOptions, findBestErrorEnabled } =
-      options
+    const {
+      testRun,
+      variantsIterator,
+      testOptions,
+      findBestErrorEnabled,
+      state,
+    } = options
     const useToFindBestError = this.options.useToFindBestError
     const limitArg = this.options.limitArg ?? false
     const extendTemplates = this.options.extendTemplates ?? false
@@ -115,7 +120,9 @@ class SaveErrorVariantsStoreNode<Args extends Obj, SavedArgs = Args>
       const args = filesArgs[argsIndex]
       for (let retry = 0; retry < attemptsPerVariant; retry++) {
         try {
-          const promiseOrResult = testRun(args, 0, testOptions)
+          const tests = state.tests
+          state.tests++
+          const promiseOrResult = testRun(args, tests, testOptions)
           if (isPromiseLike(promiseOrResult)) {
             await promiseOrResult
           }

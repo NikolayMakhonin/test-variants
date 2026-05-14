@@ -18,6 +18,7 @@ import type {
   TestVariantsResult,
   TestVariantsRunOptions,
 } from '../types'
+import type { RunState } from './createRunState'
 
 /** Result of test run (internal format with separate sync/async counts) */
 export type TestFuncResult = {
@@ -70,6 +71,8 @@ export type SaveErrorVariantsStoreReplayOptions<Args extends Obj> = {
   testOptions: TestVariantsState
   /** Whether findBestError is enabled */
   findBestErrorEnabled?: null | boolean
+  /** Mutable run state for tracking test count during replay */
+  state: RunState
 }
 
 /** Factory function for creating SaveErrorVariantsStore */
@@ -96,8 +99,10 @@ export type TestVariantsCreateTestRunOptions<Args extends Obj> = {
   log: RequiredNonNullable<TestVariantsLogOptions>
   /** Pause debugger on error */
   pauseDebuggerOnError?: null | boolean
-  /** Throws TimeoutError if single test run exceeds this timeout. Minimum is 100ms */
+  /** Throws TimeoutError if single test run exceeds this timeout */
   timeout?: null | number | ((args: Args) => number | null | undefined)
+  /** Mutable run state for tracking statistics across all test calls */
+  state: RunState
 }
 
 export type TestVariantsCall<Args extends Obj> = <SavedArgs = Args>(

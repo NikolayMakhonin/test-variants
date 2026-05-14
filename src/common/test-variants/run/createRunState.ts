@@ -16,6 +16,8 @@ export type RunState = {
   /** Sum of iterationsSync + iterationsAsync from test results */
   iterations: number
   iterationsAsync: number
+  /** Maximum duration of a single test run in ms */
+  maxTestDuration: number
 
   // Logging state
   prevLogTime: number
@@ -43,6 +45,7 @@ export function createRunState(
     tests: 0,
     iterations: 0,
     iterationsAsync: 0,
+    maxTestDuration: 0,
     prevLogTime: startTime,
     prevLogMemory: startMemory,
     pendingModeChange: null,
