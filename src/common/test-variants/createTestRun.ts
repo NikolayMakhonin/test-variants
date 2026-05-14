@@ -182,11 +182,10 @@ export function createTestRun<Args extends Obj>(
     }
 
     const timeoutTime = resolveTimeout(options.timeout, args)
-    let timeStart: number | null = null
+    const timeStart = Date.now()
     let actualTestOptions = testOptions
     let timeoutAbortController: AbortControllerFast | null = null
     if (timeoutTime) {
-      timeStart = Date.now()
       timeoutAbortController = new AbortControllerFast()
       const abortSignal = combineAbortSignals(
         testOptions.abortSignal,
@@ -206,6 +205,13 @@ export function createTestRun<Args extends Obj>(
       )
     }
 
+    function updateMaxTestDuration(): void {
+      const duration = Date.now() - timeStart
+      if (duration > state.maxTestDuration) {
+        state.maxTestDuration = duration
+      }
+    }
+
     try {
       let promiseOrResult = test(args, actualTestOptions)
 
@@ -213,7 +219,7 @@ export function createTestRun<Args extends Obj>(
         let timeoutUnsubscribe: Unsubscribe | null = null
         if (timeoutAbortController) {
           timeoutUnsubscribe = nowObservable.subscribe(() => {
-            if (Date.now() - timeStart! > timeoutTime!) {
+            if (Date.now() - timeStart > timeoutTime!) {
               abortTimeout()
               timeoutUnsubscribe!()
             }
@@ -227,6 +233,7 @@ export function createTestRun<Args extends Obj>(
         return promiseOrResult.then(
           value => {
             timeoutUnsubscribe?.()
+            updateMaxTestDuration()
             const result = normalizeTestResult(value, true)
             if (onEnd) {
               onEnd({ args, tests, result })
@@ -235,6 +242,7 @@ export function createTestRun<Args extends Obj>(
           },
           err => {
             timeoutUnsubscribe?.()
+            updateMaxTestDuration()
             if (onEnd && !(err instanceof AbortErrorSilent)) {
               onEnd({ args, tests, error: err })
             }
@@ -243,7 +251,9 @@ export function createTestRun<Args extends Obj>(
         )
       }
 
-      if (timeStart != null && Date.now() - timeStart > timeoutTime!) {
+      updateMaxTestDuration()
+
+      if (timeoutAbortController && Date.now() - timeStart > timeoutTime!) {
         abortTimeout()
         timeoutAbortController!.signal.throwIfAborted()
       }
@@ -254,6 +264,7 @@ export function createTestRun<Args extends Obj>(
       }
       return result
     } catch (err) {
+      updateMaxTestDuration()
       if (err instanceof AbortErrorSilent) {
         return
       }
