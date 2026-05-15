@@ -330,7 +330,8 @@ The internal implementation operates in a faster synchronous mode (without await
 ```
 [test-variants] replay skipped, args not in template; file: tmp/test/variants/2025-01-01_10-00-00.json
 [test-variants] replay, files: 2/3, memory: 139MB
-[test-variants] replay end, tests: 20 (1.5s), maxTime: 0.1s, async: 0, memory: 148MB (+8.8MB)
+[test-variants] replay, tests: 10 (5.0s), maxTime: 0.1s, async: 0, memory: 148MB (+8.8MB)
+[test-variants] replay end, tests: 20 (10.5s), maxTime: 0.1s, async: 0, memory: 148MB (+8.8MB)
 [test-variants] start, memory: 139MB
 [test-variants] mode[0]: random
 [test-variants] tests: 615 (5.0s), maxTime: 0.1s, async: 12, memory: 148MB (+8.8MB)

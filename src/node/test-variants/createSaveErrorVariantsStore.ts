@@ -124,17 +124,13 @@ class SaveErrorVariantsStoreNode<Args extends Obj, SavedArgs = Args>
     }
 
     const logReplay = logOptions.replay
-    let replayStartTime: number = 0
-    let startTests: number = 0
-    let startIterationsAsync: number = 0
-    let startMemory: number | null = null
+    const progressInterval = logOptions.replay && logOptions.progress
+    const replayStartTime = timeControllerInternal.now()
+    const startTests = state.tests
+    const startIterationsAsync = state.iterationsAsync
+    const startMemory = getMemoryUsage()
 
     if (logReplay) {
-      replayStartTime = timeControllerInternal.now()
-      startTests = state.tests
-      startIterationsAsync = state.iterationsAsync
-      startMemory = getMemoryUsage()
-
       let startMsg = `[test-variants] replay, files: ${filesArgs.length}/${files.length}`
       if (startMemory != null) {
         startMsg += `, memory: ${formatBytes(startMemory)}`
@@ -153,6 +149,9 @@ class SaveErrorVariantsStoreNode<Args extends Obj, SavedArgs = Args>
     // specified in the file name.
     filesArgs.sort(compareArgs)
 
+    let prevProgressTime = replayStartTime
+    let prevProgressMemory = startMemory
+
     for (
       let argsIndex = 0, len = filesArgs.length;
       argsIndex < len;
@@ -160,6 +159,28 @@ class SaveErrorVariantsStoreNode<Args extends Obj, SavedArgs = Args>
     ) {
       const args = filesArgs[argsIndex]
       for (let retry = 0; retry < attemptsPerVariant; retry++) {
+        if (progressInterval) {
+          const now = timeControllerInternal.now()
+          if (now - prevProgressTime >= progressInterval) {
+            prevProgressTime = now
+            const elapsed = now - replayStartTime
+            const stats = formatTestStats(
+              state.tests - startTests,
+              elapsed,
+              state.maxTestDuration,
+              state.iterationsAsync - startIterationsAsync,
+              prevProgressMemory,
+            )
+            if (stats.memory != null) {
+              prevProgressMemory = stats.memory
+            }
+            logOptions.func(
+              'progress',
+              `[test-variants] replay, ${stats.message}`,
+            )
+          }
+        }
+
         try {
           const tests = state.tests
           state.tests++
