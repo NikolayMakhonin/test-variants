@@ -20,6 +20,11 @@ import {
   saveErrorVariantFile,
 } from './saveErrorVariants'
 import { compareLexicographic } from 'src/common/test-variants/iterator/helpers/compareLexicographic'
+import { getMemoryUsage } from 'src/common/test-variants/log/getMemoryUsage'
+import {
+  formatBytes,
+  formatTestStats,
+} from 'src/common/test-variants/log/format'
 
 /** Node.js implementation of SaveErrorVariantsStore using file system */
 class SaveErrorVariantsStoreNode<Args extends Obj, SavedArgs = Args>
@@ -60,6 +65,8 @@ class SaveErrorVariantsStoreNode<Args extends Obj, SavedArgs = Args>
       testOptions,
       findBestErrorEnabled,
       state,
+      logOptions,
+      timeControllerInternal,
     } = options
     const useToFindBestError = this.options.useToFindBestError
     const limitArg = this.options.limitArg ?? false
@@ -82,6 +89,10 @@ class SaveErrorVariantsStoreNode<Args extends Obj, SavedArgs = Args>
     }
 
     const files = await readErrorVariantFiles(this.options.dir)
+    if (files.length === 0) {
+      return
+    }
+
     const filesArgs: ArgsWithSeed<Args>[] = []
     for (
       let fileIndex = 0, filesLen = files.length;
@@ -98,7 +109,37 @@ class SaveErrorVariantsStoreNode<Args extends Obj, SavedArgs = Args>
       }
       if (getIndexes(args) != null) {
         filesArgs.push(args)
+      } else {
+        if (logOptions.replay) {
+          logOptions.func(
+            'replay',
+            `[test-variants] replay skipped, args not in template; file: ${filePath}`,
+          )
+        }
       }
+    }
+
+    if (filesArgs.length === 0) {
+      return
+    }
+
+    const logReplay = logOptions.replay
+    let replayStartTime: number = 0
+    let startTests: number = 0
+    let startIterationsAsync: number = 0
+    let startMemory: number | null = null
+
+    if (logReplay) {
+      replayStartTime = timeControllerInternal.now()
+      startTests = state.tests
+      startIterationsAsync = state.iterationsAsync
+      startMemory = getMemoryUsage()
+
+      let startMsg = `[test-variants] replay, files: ${filesArgs.length}/${files.length}`
+      if (startMemory != null) {
+        startMsg += `, memory: ${formatBytes(startMemory)}`
+      }
+      logOptions.func('replay', startMsg)
     }
 
     function compareArgs(a: ArgsWithSeed<Args>, b: ArgsWithSeed<Args>): number {
@@ -137,6 +178,18 @@ class SaveErrorVariantsStoreNode<Args extends Obj, SavedArgs = Args>
           throw error
         }
       }
+    }
+
+    if (logReplay) {
+      const elapsed = timeControllerInternal.now() - replayStartTime
+      const stats = formatTestStats(
+        state.tests - startTests,
+        elapsed,
+        state.maxTestDuration,
+        state.iterationsAsync - startIterationsAsync,
+        startMemory,
+      )
+      logOptions.func('replay', `[test-variants] replay end, ${stats.message}`)
     }
   }
 }

@@ -83,6 +83,8 @@ const result = await testVariants({
   // Console output parameters, default: true
   log: true, // all console output parameters default
   log: boolean | {
+    // saved error variants replay logging; default true
+    replay: boolean,          // default: true
     // message about test start
     start: boolean,           // default: true
     // every N milliseconds shows progress info and statistics; false/0 to disable
@@ -96,7 +98,7 @@ const result = await testVariants({
     // debug logging for internal behavior
     debug: boolean,           // default: false
     // custom log function; receives log type and formatted message
-    func: (type: 'start' | 'progress' | 'completed' | 'error' | 'modeChange' | 'debug', message: string) => void,
+    func: (type: 'replay' | 'start' | 'progress' | 'completed' | 'error' | 'modeChange' | 'debug', message: string) => void,
     // custom formatter for objects in log messages (args, errors, etc)
     // default uses formatAny with pretty printing
     format: (obj: any) => string,
@@ -275,10 +277,13 @@ const result = await testVariants({
   // Repeats failing variant up to 5 times in debug mode
   pauseDebuggerOnError: boolean | null, // default: true
 
-  // Time controller for all internal delays, timeouts and getting current time
-  // Used inside testVariants instead of direct setTimeout, Date.now calls, etc
-  // Intended only for testing and debugging the test-variants library itself
+  // Time controller for time-dependent operations inside user tests
+  // Passed to test function via testOptions.timeController
   timeController: ITimeController, // default: null - use timeControllerDefault
+
+  // Time controller for internal library timing instead of direct setTimeout, Date.now calls, etc
+  // Intended only for testing and debugging the test-variants library itself
+  timeControllerInternal: ITimeController, // default: null - use timeControllerDefault
 
   // Maximum duration for a single test run (milliseconds)
   // Throws TimeoutError if exceeded
@@ -323,11 +328,14 @@ The internal implementation operates in a faster synchronous mode (without await
 
 ### Logs format
 ```
+[test-variants] replay skipped, args not in template; file: tmp/test/variants/2025-01-01_10-00-00.json
+[test-variants] replay, files: 2/3, memory: 139MB
+[test-variants] replay end, tests: 20 (1.5s), maxTime: 0.1s, async: 0, memory: 148MB (+8.8MB)
 [test-variants] start, memory: 139MB
 [test-variants] mode[0]: random
-[test-variants] cycle: 3, variant: 65 (1.0s), tests: 615 (5.0s), maxTime: 0.1s, async: 12, memory: 148MB (+8.8MB)
+[test-variants] tests: 615 (5.0s), maxTime: 0.1s, async: 12, memory: 148MB (+8.8MB)
 [test-variants] mode[1]: backward, limitTests=10
-[test-variants] cycle: 5, variant: 65/100 (2.0s), tests: 615 (6.0s), maxTime: 0.2s, async: 123, memory: 139MB (-8.8MB)
+[test-variants] tests: 615 (6.0s), maxTime: 0.2s, async: 123, memory: 139MB (-8.8MB)
 [test-variants] mode[2]: forward, limitTests=100, limitTime=10.9m
 [test-variants] end, tests: 815 (7.0s), maxTime: 0.2s, async: 123, memory: 138MB (-1.0MB)
 ...

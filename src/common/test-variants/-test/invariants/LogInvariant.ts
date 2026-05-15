@@ -76,6 +76,7 @@ export class LogInvariant {
   private _logModeChangeCount = 0
   private _logErrorCount = 0
   private _logDebugCount = 0
+  private _logReplayCount = 0
   private _anyLogAfterCompleted = false
 
   /** Stores expected mode info for validation when modeChange log is received */
@@ -137,6 +138,11 @@ export class LogInvariant {
 
     if (type === 'debug') {
       this._validateDebugLog(message)
+      return
+    }
+
+    if (type === 'replay') {
+      this._validateReplayLog()
       return
     }
 
@@ -269,6 +275,14 @@ export class LogInvariant {
     this._logDebugCount++
   }
 
+  private _validateReplayLog(): void {
+    if (!this._logOptions.replay) {
+      throw new Error(`[test][LogInvariant] replay log when disabled`)
+    }
+
+    this._logReplayCount++
+  }
+
   /**
    * Run after test variants completion
    *
@@ -334,6 +348,12 @@ export class LogInvariant {
       )
     }
 
+    if (!this._logOptions.replay && this._logReplayCount !== 0) {
+      throw new Error(
+        `[test][LogInvariant] replay log count ${this._logReplayCount} !== 0 when disabled`,
+      )
+    }
+
     if (this._logOptions.error && this._logErrorCount !== onErrorCount) {
       throw new Error(
         `[test][LogInvariant] error log count ${this._logErrorCount} !== onErrorCount ${onErrorCount}`,
@@ -363,5 +383,9 @@ export class LogInvariant {
 
   get logDebugCount(): number {
     return this._logDebugCount
+  }
+
+  get logReplayCount(): number {
+    return this._logReplayCount
   }
 }

@@ -72,6 +72,7 @@ function generateLogOptions(
   // Always consume the same random values to keep RNG sequence consistent
   // between normal runs and logged runs (for reproducible error variants)
   const enabled = generateBoolean(rnd, options.withLog)
+  const replay = generateBoolean(rnd, enabled)
   const start = generateBoolean(rnd, enabled)
   const progressEnabled = generateBoolean(rnd, enabled)
   const progress = progressEnabled ? generateBoundaryInt(rnd, TIME_MAX) : false
@@ -82,6 +83,7 @@ function generateLogOptions(
 
   if (isLogEnabled()) {
     return Object.freeze({
+      replay: true,
       start: true,
       progress: 0,
       completed: true,
@@ -92,6 +94,7 @@ function generateLogOptions(
     })
   }
   return Object.freeze({
+    replay,
     start,
     progress,
     completed,

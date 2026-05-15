@@ -16,9 +16,10 @@ export function createTestVariants<Args extends Obj>(
   return function testVariantsArgs(args) {
     return async function testVariantsCall(options) {
       const logOptions = resolveLogOptions(options?.log)
-      const timeController = options?.timeController ?? timeControllerDefault
+      const timeControllerInternal =
+        options?.timeControllerInternal ?? timeControllerDefault
       const startMemory = getMemoryUsage()
-      const state = createRunState(timeController, startMemory)
+      const state = createRunState(timeControllerInternal, startMemory)
 
       const testRun = createTestRun<Args>(test, {
         onStart: options?.onStart,
@@ -44,7 +45,7 @@ export function createTestVariants<Args extends Obj>(
         equals: options?.findBestError?.equals,
         limitArgOnError: options?.findBestError?.limitArgOnError,
         includeErrorVariant: options?.findBestError?.includeErrorVariant,
-        timeController,
+        timeControllerInternal,
         onModeChange,
         limitCompletionCount: options?.cycles ?? 1,
         limitTests: options?.limitTests,

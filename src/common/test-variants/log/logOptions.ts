@@ -29,6 +29,7 @@ const logFormatDefault: TestVariantsLogFormat = (obj: any): string => {
 
 /** Default log options when logging is enabled */
 export const logOptionsDefault: RequiredNonNullable<TestVariantsLogOptions> = {
+  replay: true,
   start: true,
   progress: 5000,
   completed: true,
@@ -41,6 +42,7 @@ export const logOptionsDefault: RequiredNonNullable<TestVariantsLogOptions> = {
 
 /** Log options when logging is disabled */
 export const logOptionsDisabled: RequiredNonNullable<TestVariantsLogOptions> = {
+  replay: false,
   start: false,
   progress: false,
   completed: false,
@@ -62,6 +64,7 @@ export function resolveLogOptions(
     return logOptionsDefault
   }
   return {
+    replay: logRaw.replay ?? logOptionsDefault.replay,
     start: logRaw.start ?? logOptionsDefault.start,
     progress: logRaw.progress ?? logOptionsDefault.progress,
     completed: logRaw.completed ?? logOptionsDefault.completed,

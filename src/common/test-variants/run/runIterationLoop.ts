@@ -108,7 +108,7 @@ function handlePeriodicTasks(
   runContext: RunContext<any>,
 ): PromiseOrValue<void> {
   const { options, state } = runContext
-  const { logOptions, timeController, GC_Interval } = options
+  const { logOptions, timeControllerInternal, GC_Interval } = options
 
   if (!logOptions.progress && !GC_Interval) {
     return
@@ -116,7 +116,7 @@ function handlePeriodicTasks(
 
   logProgress(runContext)
 
-  const now = timeController.now()
+  const now = timeControllerInternal.now()
   if (shouldTriggerGC(runContext, now)) {
     return triggerGC(state, now)
   }

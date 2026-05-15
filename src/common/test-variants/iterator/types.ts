@@ -46,8 +46,8 @@ export type VariantsIteratorOptions<Args extends Obj> = {
   getSeed?: null | ((params: GetSeedParams) => any)
   /** Iteration modes (variant traversal methods); each mode runs until its limits are reached */
   iterationModes?: null | readonly ModeConfig[]
-  /** Time controller for testable time-dependent operations; null uses timeControllerDefault */
-  timeController?: null | ITimeController
+  /** Time controller for internal library timing; null uses timeControllerDefault */
+  timeControllerInternal?: null | ITimeController
   /** Callback invoked when iteration mode changes */
   onModeChange?: null | OnModeChangeCallback
   /** Global completion count limit; default 1 */

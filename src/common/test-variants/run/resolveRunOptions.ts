@@ -66,6 +66,7 @@ export type RunOptionsResolved<Args extends Obj> = {
   findBestError: FindBestErrorOptions | null | undefined
   dontThrowIfError: boolean | null | undefined
   timeController: ITimeController
+  timeControllerInternal: ITimeController
   /** Maximum number of parallel threads */
   parallel: number
   /** Switch to sequential mode after first error in findBestError mode */
@@ -98,6 +99,8 @@ export function resolveRunOptions<Args extends Obj, SavedArgs = Args>(
     findBestError,
     dontThrowIfError: findBestError?.dontThrowIfError,
     timeController: options?.timeController ?? timeControllerDefault,
+    timeControllerInternal:
+      options?.timeControllerInternal ?? timeControllerDefault,
     parallel,
     sequentialOnError,
   }

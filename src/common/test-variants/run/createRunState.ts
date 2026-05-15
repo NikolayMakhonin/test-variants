@@ -33,10 +33,10 @@ export type RunState = {
 
 /** Create initial run state */
 export function createRunState(
-  timeController: ITimeController,
+  timeControllerInternal: ITimeController,
   startMemory: number | null,
 ): RunState {
-  const startTime = timeController.now()
+  const startTime = timeControllerInternal.now()
 
   return {
     startTime,

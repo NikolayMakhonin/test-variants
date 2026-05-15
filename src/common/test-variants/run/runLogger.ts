@@ -1,14 +1,7 @@
 import type { RequiredNonNullable } from '@flemist/simple-utils'
-import { formatBytes, formatDuration, formatModeConfig } from '../log/format'
-import { getMemoryUsage } from '../log/getMemoryUsage'
+import { formatBytes, formatModeConfig, formatTestStats } from '../log/format'
 import type { TestVariantsLogOptions } from '../types'
 import type { RunContext } from './RunContext'
-
-function formatMemoryDiff(current: number, previous: number): string {
-  const diff = current - previous
-  const sign = diff >= 0 ? '+' : ''
-  return `${formatBytes(current)} (${sign}${formatBytes(diff)})`
-}
 
 export function logStart(
   logOptions: RequiredNonNullable<TestVariantsLogOptions>,
@@ -27,23 +20,21 @@ export function logStart(
 
 export function logCompleted(runContext: RunContext<any>): void {
   const { options, state } = runContext
-  const { logOptions, timeController } = options
+  const { logOptions, timeControllerInternal } = options
 
   if (!logOptions.completed) {
     return
   }
 
-  const totalElapsed = timeController.now() - state.startTime
-  let msg = `[test-variants] end, tests: ${state.tests} (${formatDuration(totalElapsed)}), maxTime: ${formatDuration(state.maxTestDuration)}, async: ${state.iterationsAsync}`
-
-  if (state.startMemory != null) {
-    const memory = getMemoryUsage()
-    if (memory != null) {
-      msg += `, memory: ${formatMemoryDiff(memory, state.startMemory)}`
-    }
-  }
-
-  logOptions.func('completed', msg)
+  const totalElapsed = timeControllerInternal.now() - state.startTime
+  const stats = formatTestStats(
+    state.tests,
+    totalElapsed,
+    state.maxTestDuration,
+    state.iterationsAsync,
+    state.startMemory,
+  )
+  logOptions.func('completed', `[test-variants] end, ${stats.message}`)
 }
 
 /** Log pending mode change and clear it */
@@ -98,8 +89,8 @@ function estimateCycleTime(
 
 // function formatVariantProgress(runContext: RunContext<any>): string {
 //   const { options, variantsIterator, state } = runContext
-//   const { findBestError, timeController } = options
-//   const elapsedTime = timeController.now() - state.cycleStartTime
+//   const { findBestError, timeControllerInternal } = options
+//   const elapsedTime = timeControllerInternal.now() - state.cycleStartTime
 //   const elapsedStr = formatDuration(elapsedTime)
 //
 //   if (!findBestError) {
@@ -130,8 +121,8 @@ function estimateCycleTime(
 /** Returns true if logging was performed */
 export function logProgress(runContext: RunContext<any>): boolean {
   const { options, state } = runContext
-  const { logOptions, timeController } = options
-  const now = timeController.now()
+  const { logOptions, timeControllerInternal } = options
+  const now = timeControllerInternal.now()
 
   if (!logOptions.progress || now - state.prevLogTime < logOptions.progress) {
     return false
@@ -142,17 +133,18 @@ export function logProgress(runContext: RunContext<any>): boolean {
 
   const totalElapsed = now - state.startTime
   // let msg = `[test-variants] ${formatVariantProgress(runContext)}`
-  let msg = `[test-variants] tests: ${state.tests} (${formatDuration(totalElapsed)}), maxTime: ${formatDuration(state.maxTestDuration)}, async: ${state.iterationsAsync}`
-
-  if (state.prevLogMemory != null) {
-    const memory = getMemoryUsage()
-    if (memory != null) {
-      msg += `, memory: ${formatMemoryDiff(memory, state.prevLogMemory)}`
-      state.prevLogMemory = memory
-    }
+  const stats = formatTestStats(
+    state.tests,
+    totalElapsed,
+    state.maxTestDuration,
+    state.iterationsAsync,
+    state.prevLogMemory,
+  )
+  if (stats.memory != null) {
+    state.prevLogMemory = stats.memory
   }
 
-  logOptions.func('progress', msg)
+  logOptions.func('progress', `[test-variants] ${stats.message}`)
   state.prevLogTime = now
 
   return true

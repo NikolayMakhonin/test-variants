@@ -265,6 +265,7 @@ async function executeStressTest(options: StressTestArgs): Promise<void> {
         ...runOptions,
         abortSignal: callController.abortSignal,
         timeController: callController.timeController,
+        timeControllerInternal: callController.timeController,
       }),
   )
 

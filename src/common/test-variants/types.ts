@@ -111,6 +111,8 @@ export type TestVariantsLogFormat = (obj: any) => string
 
 /** Logging options for test-variants */
 export type TestVariantsLogOptions = {
+  /** Log saved error variants replay; default true */
+  replay?: null | boolean
   /** Log at test start with memory info; default true */
   start?: null | boolean
   /** Progress log interval in ms; false/0 to disable; default 5000 */
@@ -167,6 +169,7 @@ export type SaveErrorVariantsOptions<Args extends Obj, SavedArgs = Args> = {
 /** Options passed to test function */
 export type TestVariantsState = {
   abortSignal: IAbortSignalFast
+  /** For time-dependent operations inside user tests; same instance as timeController run option */
   timeController: ITimeController
 }
 
@@ -323,8 +326,10 @@ export type TestVariantsRunOptions<Args extends Obj = Obj, SavedArgs = Args> = {
   limitTests?: null | number
   /** Maximum total duration in milliseconds; does not interrupt a running test, only prevents starting the next iteration; use timeout to interrupt individual tests; not applied during saveErrorVariants replay to ensure all previously failing variants are verified */
   limitTime?: null | number
-  /** Time controller for testable time-dependent operations; null uses timeControllerDefault */
+  /** Time controller for time-dependent operations inside user tests; null uses timeControllerDefault */
   timeController?: null | ITimeController
+  /** Time controller for internal library timing; null uses timeControllerDefault */
+  timeControllerInternal?: null | ITimeController
   /** Throws TimeoutError if single test run exceeds this timeout */
   timeout?: null | number | ((args: Args) => number | null | undefined)
 }

@@ -30,6 +30,7 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
     findBestError,
     dontThrowIfError,
     timeController,
+    timeControllerInternal,
     parallel,
   } = optionsResolved
 
@@ -61,6 +62,8 @@ export async function testVariantsRun<Args extends Obj, SavedArgs = Args>(
       testOptions,
       findBestErrorEnabled: !!findBestError,
       state,
+      logOptions,
+      timeControllerInternal,
     })
   }
 

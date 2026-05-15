@@ -52,7 +52,8 @@ export function createVariantsIterator<Args extends Obj>(
     limitTime,
   } = options
 
-  const timeController = options.timeController ?? timeControllerDefault
+  const timeControllerInternal =
+    options.timeControllerInternal ?? timeControllerDefault
 
   // Clone templates to allow mutation (extendTemplatesWithExtraArgs)
   const templates: TestVariantsTemplatesWithExtra<Args, any> = {
@@ -78,7 +79,7 @@ export function createVariantsIterator<Args extends Obj>(
   function initialize(): void {
     if (!initialized) {
       initialized = true
-      startTime = timeController.now()
+      startTime = timeControllerInternal.now()
       createModeStates()
       modeIndex = 0
       callOnModeChange()
@@ -279,7 +280,10 @@ export function createVariantsIterator<Args extends Obj>(
   }
 
   function isGlobalLimitTimeReached(): boolean {
-    if (limitTime != null && timeController.now() - startTime >= limitTime) {
+    if (
+      limitTime != null &&
+      timeControllerInternal.now() - startTime >= limitTime
+    ) {
       return true
     }
     return false
@@ -489,7 +493,7 @@ export function createVariantsIterator<Args extends Obj>(
     if (
       modeConfig.limitTime != null &&
       modeState.startTime != null &&
-      timeController.now() - modeState.startTime >= modeConfig.limitTime
+      timeControllerInternal.now() - modeState.startTime >= modeConfig.limitTime
     ) {
       return true
     }
@@ -555,7 +559,7 @@ export function createVariantsIterator<Args extends Obj>(
       if (args != null) {
         if (modeState.startTime == null) {
           // Alternative condition is modeState.testsInLastTurn === 0
-          modeState.startTime = timeController.now()
+          modeState.startTime = timeControllerInternal.now()
         }
 
         // Produce test args
@@ -576,7 +580,7 @@ export function createVariantsIterator<Args extends Obj>(
 
     if (modeState.startTime == null) {
       // Alternative condition is modeState.testsInLastTurn === 0
-      modeState.startTime = timeController.now()
+      modeState.startTime = timeControllerInternal.now()
     }
 
     return injectSeed(navigationState.args)

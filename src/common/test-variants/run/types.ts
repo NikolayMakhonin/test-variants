@@ -3,6 +3,7 @@ import type {
   PromiseOrValue,
   RequiredNonNullable,
 } from '@flemist/simple-utils'
+import type { ITimeController } from '@flemist/time-controller'
 import type {
   TestVariantsTemplatesExt,
   VariantsIterator,
@@ -73,6 +74,10 @@ export type SaveErrorVariantsStoreReplayOptions<Args extends Obj> = {
   findBestErrorEnabled?: null | boolean
   /** Mutable run state for tracking test count during replay */
   state: RunState
+  /** Resolved logging options */
+  logOptions: RequiredNonNullable<TestVariantsLogOptions>
+  /** Time controller for internal library timing */
+  timeControllerInternal: ITimeController
 }
 
 /** Factory function for creating SaveErrorVariantsStore */
